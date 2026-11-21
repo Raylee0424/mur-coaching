@@ -167,3 +167,214 @@ describe('baseline prefill', () => {
     expect(setExerciseId(touched, key, 'squat', { weightKg: 100, reps: 5 }).exercises[0]?.sets[0]).toMatchObject({ weight: '', reps: '8' });
   });
 });
+
+import {
+  commitSet,
+  dropEmptyExercises,
+  editSetValues,
+  eyebrow,
+  formatClock,
+  formatStepValue,
+  formatTargetLine,
+  nextSetDefaults,
+  restClock,
+  rpeError,
+  rpeGuideRows,
+  setLabel,
+  startFreeform,
+  startFromLastLog,
+  startFromToday,
+  stepValue,
+  weightStepFor,
+} from './logger-model';
+
+describe('steppers', () => {
+  it('steps and clamps without float noise', () => {
+    expect(stepValue(157.5, 2.5, 0, 9999)).toBe(160);
+    expect(stepValue(0.1, 0.2, 0, 10)).toBe(0.3);
+    expect(stepValue(1, -1, 1, 1000)).toBe(1);
+    expect(stepValue(9.5, 0.5, 1, 10)).toBe(10);
+    expect(stepValue(10, 0.5, 1, 10)).toBe(10);
+  });
+
+  it('flags RPE outside 6.0-10.0', () => {
+    expect(rpeError(8)).toBeNull();
+    expect(rpeError(6)).toBeNull();
+    expect(rpeError(10)).toBeNull();
+    expect(rpeError(5.5)).toMatch(/between 6\.0 and 10\.0/);
+  });
+
+  it('picks the weight step from the exercise increment', () => {
+    expect(weightStepFor(2.5, 'KG')).toBe(2.5);
+    expect(weightStepFor(1.25, 'KG')).toBe(1.25);
+    expect(weightStepFor(0, 'KG')).toBe(2.5);
+    expect(weightStepFor(2.5, 'LB')).toBe(5);
+    expect(weightStepFor(1.25, 'LB')).toBe(2.5);
+    expect(weightStepFor(5, 'LB')).toBe(10);
+  });
+
+  it('formats stepper values like the design', () => {
+    expect(formatStepValue('weight', 157.5)).toBe('157.5');
+    expect(formatStepValue('weight', 160)).toBe('160');
+    expect(formatStepValue('reps', 5)).toBe('5');
+    expect(formatStepValue('rpe', 8)).toBe('8.0');
+  });
+});
+
+describe('targets and labels', () => {
+  it('formats a target line in the display unit', () => {
+    expect(formatTargetLine({ weightKg: 157.5, repsMin: 5, repsMax: 5, rpe: 8.5 }, 'KG')).toBe('157.5 kg × 5 @ RPE 8.5');
+    expect(formatTargetLine({ weightKg: 100, repsMin: 6, repsMax: 8, rpe: null }, 'KG')).toBe('100 kg × 6–8');
+    expect(formatTargetLine({ weightKg: 102.06, repsMin: 5, repsMax: 5, rpe: null }, 'LB')).toBe('225 lb × 5');
+    expect(formatTargetLine({ weightKg: null, repsMin: 8, repsMax: 12, rpe: null }, 'KG')).toBe('8–12 reps');
+    expect(formatTargetLine({ weightKg: null, repsMin: null, repsMax: null, rpe: null }, 'KG')).toBe('');
+  });
+
+  it('numbers the set against the prescription', () => {
+    const plan = { name: 'Squat', plannedSets: 3, restSeconds: 180, target: null, previous: [], weightStep: 2.5 };
+    expect(setLabel(plan, 0)).toBe('SET 1 OF 3');
+    expect(setLabel(plan, 2)).toBe('SET 3 OF 3');
+    expect(setLabel(plan, 3)).toBe('SET 4 · EXTRA');
+    expect(setLabel({ ...plan, plannedSets: 0 }, 1)).toBe('SET 2');
+    expect(setLabel(undefined, 0)).toBe('SET 1');
+  });
+
+  it('builds the logger eyebrow', () => {
+    const plan = {
+      name: 'Squat',
+      plannedSets: 3,
+      restSeconds: null,
+      target: { weightKg: 157.5, repsMin: 5, repsMax: 5, rpe: 8.5 },
+      previous: [],
+      weightStep: 2.5,
+    };
+    expect(eyebrow(plan, 1, 'KG')).toBe('SET 2 OF 3 · TARGET: 157.5 kg × 5 @ RPE 8.5');
+    const repeat = { ...plan, target: null, previous: [{ weight: 100, reps: 8, rpe: 8 }] };
+    expect(eyebrow(repeat, 0, 'KG')).toBe('SET 1 OF 3 · LAST TIME: 100 kg × 8 @ RPE 8.0');
+    expect(eyebrow(undefined, 0, 'KG')).toBe('SET 1');
+  });
+});
+
+describe('set flow', () => {
+  const today = {
+    id: 'w1',
+    assignmentId: 'a1',
+    exercises: [
+      {
+        workoutExerciseId: 'we1',
+        exerciseId: 'squat',
+        name: 'Squat',
+        sets: 3,
+        restSeconds: 180,
+        target: { weightKg: '157.50', repsMin: 5, repsMax: 5, rpe: '8.5' },
+      },
+      {
+        workoutExerciseId: 'we2',
+        exerciseId: 'rdl',
+        name: 'RDL',
+        sets: 2,
+        restSeconds: null,
+        target: { weightKg: null, repsMin: 8, repsMax: 10, rpe: null },
+      },
+    ],
+  };
+
+  it('starts from today with empty sets, links and prefilled defaults', () => {
+    const { draft, plans } = startFromToday(today, { squat: 2.5, rdl: 5 }, NOW_LOCAL, 'KG');
+    expect(draft.assignmentId).toBe('a1');
+    expect(draft.workoutId).toBe('w1');
+    expect(draft.exercises.map((e) => [e.exerciseId, e.workoutExerciseId, e.sets.length])).toEqual([
+      ['squat', 'we1', 0],
+      ['rdl', 'we2', 0],
+    ]);
+    const [a, b] = draft.exercises;
+    expect(plans[a!.key]).toMatchObject({ plannedSets: 3, restSeconds: 180, weightStep: 2.5 });
+    expect(nextSetDefaults(plans[a!.key], [], 'KG')).toEqual({ weight: 157.5, reps: 5, rpe: 8.5 });
+    expect(nextSetDefaults(plans[b!.key], [], 'KG')).toEqual({ weight: 0, reps: 8, rpe: 8 });
+    expect(plans[b!.key]?.weightStep).toBe(5);
+  });
+
+  it('logs sets, defaults the next one to the previous set, edits and validates', () => {
+    const { draft: start, plans } = startFromToday(today, { squat: 2.5 }, NOW_LOCAL, 'KG');
+    const key = start.exercises[0]!.key;
+    let d = commitSet(start, key, { weight: 157.5, reps: 5, rpe: 8 });
+    expect(nextSetDefaults(plans[key], d.exercises[0]!.sets, 'KG')).toEqual({ weight: 157.5, reps: 5, rpe: 8 });
+    d = commitSet(d, key, { weight: 160, reps: 4, rpe: 9 });
+    const second = d.exercises[0]!.sets[1]!;
+    d = editSetValues(d, key, second.key, { weight: 155, reps: 5, rpe: 8.5 });
+    expect(d.exercises[0]!.sets.map((s) => [s.weight, s.reps, s.rpe])).toEqual([
+      ['157.5', '5', '8'],
+      ['155', '5', '8.5'],
+    ]);
+
+    const finished = dropEmptyExercises(d);
+    expect(finished.exercises).toHaveLength(1);
+    const r = validateDraft(finished, NOW);
+    expect(r.ok && r.request.exerciseLogs[0]).toMatchObject({
+      exerciseId: 'squat',
+      workoutExerciseId: 'we1',
+      sets: [
+        { reps: 5, weightKg: 157.5, rpe: 8 },
+        { reps: 5, weightKg: 155, rpe: 8.5 },
+      ],
+    });
+    expect(r.ok && r.request.assignmentId).toBe('a1');
+  });
+
+  it('converts lb sets to kg on submit', () => {
+    const { draft } = startFromToday(today, {}, NOW_LOCAL, 'LB');
+    const d = commitSet(draft, draft.exercises[0]!.key, { weight: 225, reps: 5, rpe: 8 });
+    const r = validateDraft(dropEmptyExercises(d), NOW);
+    expect(r.ok && r.request.exerciseLogs[0]?.sets[0]?.weightKg).toBe(102.05);
+  });
+
+  it('repeats the last session: previous numbers become defaults, links kept', () => {
+    const { draft, plans } = startFromLastLog(lastLog, { bench: 2.5 }, NOW_LOCAL, 'KG');
+    const ex = draft.exercises[0]!;
+    expect(ex.sets).toEqual([]);
+    expect(ex.workoutExerciseId).toBe('we1');
+    expect(draft.assignmentId).toBe('a1');
+    // The warm-up set is not repeated as a working set.
+    expect(plans[ex.key]).toMatchObject({ name: 'Bench', plannedSets: 1, previous: [{ weight: 100, reps: 8, rpe: 8.5 }] });
+    expect(nextSetDefaults(plans[ex.key], [], 'KG')).toEqual({ weight: 100, reps: 8, rpe: 8.5 });
+  });
+
+  it('freeform starts with one empty exercise and neutral defaults', () => {
+    const { draft, plans } = startFreeform(NOW_LOCAL, 'KG');
+    expect(draft.exercises).toHaveLength(1);
+    expect(draft.exercises[0]!.sets).toEqual([]);
+    expect(nextSetDefaults(plans[draft.exercises[0]!.key], [], 'KG')).toEqual({ weight: 0, reps: 5, rpe: 8 });
+    expect(nextSetDefaults(undefined, [], 'LB', { weightKg: 102.05, reps: 3 })).toEqual({ weight: 225, reps: 3, rpe: 8 });
+  });
+});
+
+describe('rest timer', () => {
+  it('formats mm:ss', () => {
+    expect(formatClock(165)).toBe('02:45');
+    expect(formatClock(0)).toBe('00:00');
+    expect(formatClock(-5)).toBe('00:00');
+    expect(formatClock(3725)).toBe('1:02:05');
+  });
+
+  it('counts down to the prescribed rest, then reports done', () => {
+    expect(restClock(1000, 1000 + 15_000, 180)).toEqual({ seconds: 165, mode: 'down', done: false });
+    expect(restClock(1000, 1000 + 180_000, 180)).toEqual({ seconds: 0, mode: 'down', done: true });
+    expect(restClock(1000, 1000 + 400_000, 180)).toEqual({ seconds: 0, mode: 'down', done: true });
+  });
+
+  it('counts up without a prescription and idles before the first set', () => {
+    expect(restClock(1000, 1000 + 61_000, null)).toEqual({ seconds: 61, mode: 'up', done: false });
+    expect(restClock(null, 5000, 120)).toEqual({ seconds: 120, mode: 'down', done: false });
+    expect(restClock(null, 5000, null)).toEqual({ seconds: 0, mode: 'up', done: false });
+  });
+});
+
+describe('rpeGuideRows', () => {
+  it('lists the anchors, descending', () => {
+    expect(rpeGuideRows(null).map((r) => r.rpe)).toEqual([10, 9, 8, 7, 6]);
+    expect(rpeGuideRows(8).map((r) => r.rpe)).toEqual([10, 9, 8, 7, 6]);
+  });
+  it('adds a half-point target so it can be marked', () => {
+    expect(rpeGuideRows(8.5).map((r) => r.rpe)).toEqual([10, 9, 8.5, 8, 7, 6]);
+  });
+});
