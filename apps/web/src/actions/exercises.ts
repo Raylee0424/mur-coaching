@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import type { CreateExerciseRequest, UpdateExerciseRequest } from '@coaching/shared';
+import type { CreateExerciseRequest, ExerciseDto, UpdateExerciseRequest } from '@coaching/shared';
 import { exercisesApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
 import { formString, isMuscleGroup } from '@/lib/form';
@@ -81,4 +81,46 @@ export async function updateExercise(
     return toActionError(err);
   }
   redirect(returnTo.startsWith('/coach/exercises') ? returnTo : '/coach/exercises');
+}
+
+function refreshExercises(): void {
+  revalidatePath('/coach/exercises');
+  revalidatePath('/welcome/coach');
+  revalidatePath('/coach/programs', 'layout');
+}
+
+/** Creates (id null) or updates one exercise from the drawer. `null` clears an exercise rule. */
+export async function saveExercise(id: string | null, body: CreateExerciseRequest): Promise<ActionResult<ExerciseDto>> {
+  try {
+    const data = id ? await exercisesApi.update(id, body) : await exercisesApi.create(body);
+    refreshExercises();
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+/** Copy of a global or own exercise, named "X (copy)". */
+export async function duplicateExercise(id: string): Promise<ActionResult<ExerciseDto>> {
+  try {
+    const data = await exercisesApi.duplicate(id);
+    refreshExercises();
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+/** Soft delete: programs, logs and recommendations keep working. */
+export async function archiveExercise(id: string): Promise<ActionResult> {
+  try {
+    await exercisesApi.archive(id);
+    refreshExercises();
+    return { ok: true, data: undefined };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
 }

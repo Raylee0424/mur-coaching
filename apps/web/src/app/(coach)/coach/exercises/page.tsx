@@ -1,7 +1,6 @@
 import { Role } from '@coaching/shared';
 import { ExerciseFilters } from '@/components/exercises/ExerciseFilters';
-import { ExerciseForm } from '@/components/exercises/ExerciseForm';
-import { ExerciseTable } from '@/components/exercises/ExerciseTable';
+import { ExerciseLibrary } from '@/components/exercises/ExerciseLibrary';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { exercisesApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
@@ -22,28 +21,11 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Se
     ...(muscleGroup ? { muscleGroup } : {}),
   });
 
-  const filters = new URLSearchParams();
-  if (q) filters.set('q', q);
-  if (muscleGroup) filters.set('muscleGroup', muscleGroup);
-  const query = filters.toString();
-  const baseHref = query ? `/coach/exercises?${query}` : '/coach/exercises';
-
   return (
     <>
       <PageHeader title="Exercise library" subtitle={`${exercises.length} ${exercises.length === 1 ? 'exercise' : 'exercises'}`} />
-      <details className="mb-4 rounded-lg border border-line bg-card p-4">
-        <summary className="cursor-pointer text-sm font-semibold">Add custom exercise</summary>
-        <div className="mt-4">
-          <ExerciseForm mode="create" />
-        </div>
-      </details>
       <ExerciseFilters q={q} muscleGroup={muscleGroup ?? ''} />
-      <ExerciseTable
-        exercises={exercises}
-        coachId={user.id}
-        editId={firstParam(params.edit)}
-        baseHref={baseHref}
-      />
+      <ExerciseLibrary exercises={exercises} coachId={user.id} filtered={Boolean(q || muscleGroup)} />
     </>
   );
 }

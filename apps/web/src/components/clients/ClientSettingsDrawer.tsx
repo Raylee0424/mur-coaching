@@ -12,17 +12,20 @@ import { FieldError, FormError, Input, Label } from '@/components/ui/Field';
 import { OverrideField } from '@/components/ui/OverrideField';
 import { Sheet } from '@/components/ui/Sheet';
 import { unitLabel } from '@/lib/units';
-import { buildRequest, toDraft, type OverrideKey, type SettingsDraft } from './client-settings-model';
+import { OVERRIDE_KEYS, buildRequest, toDraft, type OverrideKey, type SettingsDraft } from './client-settings-model';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const fromLabel = (s: ResolvedSetting<number>): string =>
   `${s.value} (${s.source === 'COACH' ? 'your rule' : 'engine default'})`;
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="space-y-4 border-t border-line pt-5 first:border-0 first:pt-0">
-      <h3 className="font-display text-base font-bold">{title}</h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-display text-base font-bold">{title}</h3>
+        {action}
+      </div>
       {children}
     </section>
   );
@@ -105,7 +108,7 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
         description="Changes apply to this client only."
       >
         <div className="space-y-6">
-          <Section title="Profile">
+          <Section title="Profile & limitations">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor={`${id}-name`}>Name</Label>
@@ -200,7 +203,19 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
             </div>
           </Section>
 
-          <Section title="Engine overrides">
+          <Section
+            title="Engine overrides"
+            action={
+              <button
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, overrides: { ...d.overrides, ...Object.fromEntries(OVERRIDE_KEYS.map((k) => [k, ''])) } }))}
+                disabled={OVERRIDE_KEYS.every((k) => draft.overrides[k] === '')}
+                className="text-xs font-semibold text-primary-soft underline-offset-2 hover:underline disabled:text-muted disabled:no-underline"
+              >
+                Reset all to default
+              </button>
+            }
+          >
             <p className="text-sm text-muted">Empty fields inherit your rules. Overrides beat both your rules and the prescription.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <OverrideField
@@ -289,6 +304,7 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
           </Section>
 
           <Section title="Danger zone">
+            <p className="text-sm text-muted">Pausing keeps the client on your roster but removes them from the progression queue. Archiving removes them from your roster.</p>
             {confirm ? (
               <div role="alertdialog" aria-label="Confirm" className="space-y-3 rounded-md border border-danger/40 bg-danger-bg p-4">
                 <p className="text-sm">

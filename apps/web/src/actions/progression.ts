@@ -2,7 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { unstable_rethrow } from 'next/navigation';
-import type { OverrideRecommendationRequest, RecommendationDto } from '@coaching/shared';
+import type {
+  BulkResolveResponse,
+  ExplainDto,
+  OverrideRecommendationRequest,
+  RecommendationDto,
+  ResolvableStatus,
+} from '@coaching/shared';
 import { ApiError } from '@/lib/api/client';
 import { progressionApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
@@ -80,6 +86,39 @@ export async function overrideRecommendation(
     if (err instanceof ApiError && err.status === 409) {
       refresh(clientId);
       return { ok: false, error: 'This recommendation was dismissed or replaced. Re-evaluate to get a fresh one.' };
+    }
+    return toActionError(err);
+  }
+}
+
+/** Read-only: loads the "why this call" trace for the coach drawer. */
+export async function explainRecommendation(recommendationId: string): Promise<ActionResult<ExplainDto>> {
+  try {
+    return { ok: true, data: await progressionApi.explain(recommendationId) };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+/** Accept or dismiss many queue rows at once. Rows no longer pending come back as skipped. */
+export async function bulkResolveRecommendations(
+  ids: string[],
+  status: ResolvableStatus,
+): Promise<ActionResult<BulkResolveResponse>> {
+  if (ids.length === 0) return { ok: false, error: 'Select at least one recommendation.' };
+  try {
+    const data = await progressionApi.bulkResolve({ ids, status });
+    revalidatePath('/coach/progression');
+    revalidatePath('/coach/clients');
+    revalidatePath('/coach/clients/[clientId]', 'page');
+    revalidatePath('/client');
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    if (err instanceof ApiError && err.status === 404) {
+      revalidatePath('/coach/progression');
+      return { ok: false, error: 'Some of these recommendations no longer exist. The list has been refreshed.' };
     }
     return toActionError(err);
   }

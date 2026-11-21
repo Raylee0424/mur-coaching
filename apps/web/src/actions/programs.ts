@@ -64,3 +64,27 @@ export async function assignProgram(
   refresh(programId);
   return { ok: true, data: outcomes };
 }
+
+/** "Save as template": a deep copy of the saved program flagged as a template (no assignments). */
+export async function saveAsTemplate(programId: string, name?: string): Promise<ActionResult<ProgramDto>> {
+  try {
+    const data = await programsApi.duplicate(programId, { asTemplate: true, ...(name?.trim() ? { name: name.trim() } : {}) });
+    refresh(data.id);
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+/** Copy as a regular, editable program. */
+export async function duplicateProgram(programId: string): Promise<ActionResult<ProgramDto>> {
+  try {
+    const data = await programsApi.duplicate(programId, {});
+    refresh(data.id);
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
