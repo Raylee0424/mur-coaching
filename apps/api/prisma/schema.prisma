@@ -68,17 +68,22 @@ enum RecommendationStatus {
 // ─────────────── Identity & Tenancy ───────────────
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String
-  name         String
-  role         Role
-  isDemo       Boolean    @default(false)
-  weightUnit   WeightUnit @default(KG)
-  displayName  String?
-  onboardedAt  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id               String     @id @default(cuid())
+  email            String     @unique
+  passwordHash     String
+  name             String
+  role             Role
+  isDemo           Boolean    @default(false)
+  weightUnit       WeightUnit @default(KG)
+  displayName      String?
+  onboardedAt      DateTime?
+  /// Null until the user confirms the 6-digit code (invite acceptance verifies implicitly).
+  emailVerifiedAt  DateTime?
+  /// Consecutive failed logins; 5 in a row sets lockedUntil.
+  failedLoginCount Int        @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   // COACH side
   coachedClients CoachClient[]     @relation("CoachSide")
@@ -94,7 +99,54 @@ model User {
   clientProfile   ClientProfile?
   baselines       ClientBaseline[]
 
+  authTokens AuthToken[]
+  invites    Invite[]
+
   @@index([role])
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+/// Single-use verification codes and reset tokens. Only the sha256 hash is stored, never the raw value.
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  type      AuthTokenType
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  /// Wrong guesses against a 6-digit code; the code dies after a few.
+  attempts  Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash])
+  @@index([userId, type])
+}
+
+/// Coach-issued invitation. The raw token only exists in the one-time invite URL; the hash is stored.
+model Invite {
+  id         String     @id @default(cuid())
+  coachId    String
+  name       String
+  email      String
+  phone      String?
+  programId  String?
+  startDate  DateTime?  @db.Date
+  weightUnit WeightUnit @default(KG)
+  tokenHash  String     @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  coach   User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  program Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
+
+  @@index([coachId, acceptedAt])
 }
 
 /// Tenancy boundary. One active coach per client (MVP).
@@ -133,6 +185,12 @@ model Exercise {
   equipment       String?
   /// Smallest load jump used by the engine (e.g. 2.5 upper, 5.0 lower).
   loadIncrementKg Decimal     @default(2.5) @db.Decimal(5, 2)
+  /// Exercise-level engine rules (null = inherit). Layer between client override and prescription.
+  rpeCap          Decimal?    @db.Decimal(3, 1)
+  repsMin         Int?
+  repsMax         Int?
+  /// Soft delete: hidden from lists and pickers, history stays intact.
+  archivedAt      DateTime?
   coachId         String?
   createdAt       DateTime    @default(now())
 
@@ -155,12 +213,14 @@ model Program {
   name          String
   description   String?
   durationWeeks Int
+  isTemplate    Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   coach       User                @relation(fields: [coachId], references: [id], onDelete: Cascade)
   workouts    Workout[]
   assignments ProgramAssignment[]
+  invites     Invite[]
 
   @@index([coachId])
 }
