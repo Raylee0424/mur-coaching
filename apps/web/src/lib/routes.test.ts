@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { homeFor, onboardingFor, safeNext } from './routes';
+import { CLIENT_NAV, homeFor, onboardingFor, safeNext } from './routes';
 
 describe('routes', () => {
   it('maps roles to home', () => {
@@ -17,5 +17,16 @@ describe('routes', () => {
     expect(safeNext('//evil.com', 'CLIENT')).toBeNull();
     expect(safeNext('/coachevil', 'COACH')).toBeNull();
     expect(safeNext(undefined, 'COACH')).toBeNull();
+  });
+});
+
+describe('CLIENT_NAV', () => {
+  it('is Today / History / Profile, with Today matched exactly', () => {
+    expect(CLIENT_NAV.map((i) => [i.label, i.href])).toEqual([
+      ['Today', '/client'],
+      ['History', '/client/history'],
+      ['Profile', '/client/profile'],
+    ]);
+    expect(CLIENT_NAV[0]?.exact).toBe(true);
   });
 });

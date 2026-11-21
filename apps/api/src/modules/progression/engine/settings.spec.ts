@@ -110,3 +110,38 @@ describe('shouldAutoApprove', () => {
     expect(shouldAutoApprove(draft(A.INCREASE_LOAD, 105.5), link)).toBe(false);
   });
 });
+
+describe('exercise-level rules', () => {
+  const rx = { targetSets: 3, repsMin: 8, repsMax: 10, targetRpe: 8, loadIncrementKg: 2.5 };
+
+  it('exercise rpeCap and reps beat the prescription and coach, with source EXERCISE', () => {
+    const { resolved, rx: effective } = resolveEngineSettings({
+      coach: { rpeCap: 9 },
+      client: null,
+      exercise: { rpeCap: 8.5, repsMin: 4, repsMax: 6 },
+      prescription: rx,
+    });
+    expect(resolved.rpeCap).toEqual({ value: 8.5, source: 'EXERCISE' });
+    expect(resolved.repsMin).toEqual({ value: 4, source: 'EXERCISE' });
+    expect(resolved.repsMax).toEqual({ value: 6, source: 'EXERCISE' });
+    expect(effective).toMatchObject({ repsMin: 4, repsMax: 6, targetRpe: 8.5 });
+  });
+
+  it('client override still beats the exercise rule', () => {
+    const { resolved } = resolveEngineSettings({
+      coach: null,
+      client: { rpeCap: 7.5, repsMin: 10, repsMax: 12 },
+      exercise: { rpeCap: 8.5, repsMin: 4, repsMax: 6 },
+      prescription: rx,
+    });
+    expect(resolved.rpeCap).toEqual({ value: 7.5, source: 'CLIENT' });
+    expect(resolved.repsMin.source).toBe('CLIENT');
+  });
+
+  it('a half-set exercise rep range is ignored; absent exercise rules change nothing', () => {
+    const half = resolveEngineSettings({ coach: null, client: null, exercise: { repsMin: 4 }, prescription: rx });
+    expect(half.resolved.repsMin).toEqual({ value: 8, source: 'PRESCRIPTION' });
+    const none = resolveEngineSettings({ coach: null, client: null, prescription: rx });
+    expect(none.resolved.rpeCap).toEqual({ value: 8, source: 'PRESCRIPTION' });
+  });
+});

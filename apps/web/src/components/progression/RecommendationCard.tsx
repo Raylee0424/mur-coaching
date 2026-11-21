@@ -100,6 +100,7 @@ export function RecommendationCard({ recommendation: rec, exerciseName, canDismi
             recommendationId={rec.id}
             exerciseId={rec.exerciseId}
             canDismiss={canDismiss}
+            exerciseName={exerciseName}
           />
         ) : null}
         {editable ? <EditTargetButton recommendation={rec} exerciseName={exerciseName} unit={unit} /> : null}

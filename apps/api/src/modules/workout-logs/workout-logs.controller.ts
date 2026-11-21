@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { Role } from '@coaching/shared';
+import type { NextTargetsDto } from '@coaching/shared';
+import { ExplainService } from '../progression/explain.service';
 import { CurrentUser, RequestUser, Roles } from '../../common';
 import { ClientAccessService } from '../clients/client-access.service';
 import { CreateWorkoutLogDto, ListWorkoutLogsQuery, UpdateWorkoutLogDto } from './dto/workout-log.dto';
@@ -10,6 +12,7 @@ export class WorkoutLogsController {
   constructor(
     private readonly logs: WorkoutLogsService,
     private readonly access: ClientAccessService,
+    private readonly explain: ExplainService,
   ) {}
 
   @Roles(Role.CLIENT)
@@ -33,6 +36,14 @@ export class WorkoutLogsController {
     const log = await this.logs.getById(id);
     await this.access.assertCanAccessClient(user, log.clientId);
     return log;
+  }
+
+  /** Session-complete screen: next targets per exercise after the engine re-evaluated this session. */
+  @Get('workout-logs/:id/next-targets')
+  async nextTargets(@CurrentUser() user: RequestUser, @Param('id') id: string): Promise<NextTargetsDto> {
+    const { clientId, dto } = await this.explain.nextTargets(id);
+    await this.access.assertCanAccessClient(user, clientId);
+    return dto;
   }
 
   @Roles(Role.CLIENT)

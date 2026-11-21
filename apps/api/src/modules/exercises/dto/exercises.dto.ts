@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ENGINE_LIMITS } from '@coaching/shared';
 import { MuscleGroup } from '@prisma/client';
 
 const trim = ({ value }: { value: unknown }): unknown => (typeof value === 'string' ? value.trim() : value);
@@ -26,6 +27,26 @@ export class CreateExerciseDto {
   @Min(0.25)
   @Max(25)
   loadIncrementKg?: number;
+
+  /** Exercise-level RPE cap for the engine; null clears it. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(ENGINE_LIMITS.rpeCap.min)
+  @Max(ENGINE_LIMITS.rpeCap.max)
+  rpeCap?: number | null;
+
+  /** Rep range for the engine; both bounds together or both null. */
+  @IsOptional()
+  @IsInt()
+  @Min(ENGINE_LIMITS.reps.min)
+  @Max(ENGINE_LIMITS.reps.max)
+  repsMin?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(ENGINE_LIMITS.reps.min)
+  @Max(ENGINE_LIMITS.reps.max)
+  repsMax?: number | null;
 }
 
 export class UpdateExerciseDto {
@@ -51,6 +72,26 @@ export class UpdateExerciseDto {
   @Min(0.25)
   @Max(25)
   loadIncrementKg?: number;
+
+  /** Exercise-level RPE cap for the engine; null clears it. */
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(ENGINE_LIMITS.rpeCap.min)
+  @Max(ENGINE_LIMITS.rpeCap.max)
+  rpeCap?: number | null;
+
+  /** Rep range for the engine; both bounds together or both null. */
+  @IsOptional()
+  @IsInt()
+  @Min(ENGINE_LIMITS.reps.min)
+  @Max(ENGINE_LIMITS.reps.max)
+  repsMin?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(ENGINE_LIMITS.reps.min)
+  @Max(ENGINE_LIMITS.reps.max)
+  repsMax?: number | null;
 }
 
 export class ListExercisesQuery {

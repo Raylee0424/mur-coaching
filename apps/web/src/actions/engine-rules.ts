@@ -34,3 +34,8 @@ export async function resetEngineRules(): Promise<ActionResult<CoachEngineRulesD
 export async function previewEngineRules(request: EnginePreviewRequest): Promise<ActionResult<EnginePreviewResponse>> {
   return run(() => engineRulesApi.preview(request), false);
 }
+
+/** Read-only: the coach's stored rules, for the what-if simulator in the call drawer. */
+export async function loadEngineRules(): Promise<ActionResult<CoachEngineRulesDto>> {
+  return run(() => engineRulesApi.get(), false);
+}

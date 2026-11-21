@@ -27,6 +27,7 @@ export interface ProgramDto {
   name: string;
   description: string | null;
   durationWeeks: number;
+  isTemplate: boolean;
   createdAt: IsoDateString;
   updatedAt: IsoDateString;
   workouts: WorkoutDto[];
@@ -39,6 +40,7 @@ export interface ProgramSummaryDto {
   name: string;
   description: string | null;
   durationWeeks: number;
+  isTemplate: boolean;
   /** Distinct training days in week 1. */
   daysPerWeek: number;
   activeAssignments: number;
@@ -70,7 +72,21 @@ export interface ProgramTreeInput {
   name: string;
   description?: string | null;
   durationWeeks: number;
+  /** Omit to keep the current value (false on create). */
+  isTemplate?: boolean;
   workouts: WorkoutInput[];
+}
+
+export interface ListProgramsQuery {
+  /** true = templates only, false = non-templates only, omitted = all. */
+  template?: boolean;
+}
+
+export interface DuplicateProgramRequest {
+  /** Defaults to "<name> (copy)". */
+  name?: string;
+  /** true = save the copy as a template; otherwise the copy is a regular (assignable) program. */
+  asTemplate?: boolean;
 }
 
 export const PROGRAM_LIMITS = {

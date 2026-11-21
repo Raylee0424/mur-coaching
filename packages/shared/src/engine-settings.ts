@@ -2,7 +2,7 @@ import type { RecommendationAction } from './enums';
 
 /**
  * Progression engine thresholds. The defaults reproduce the original hard-coded engine exactly.
- * Resolution order (see the API's engine/settings.ts): client override → coach rule → default,
+ * Resolution order (see the API engine/settings.ts): client override → exercise rule → prescription → coach rule → default,
  * with the prescription and exercise supplying RPE target, rep range and increment where set.
  */
 export interface EngineRuleValues {

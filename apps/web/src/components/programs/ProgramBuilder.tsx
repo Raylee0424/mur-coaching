@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { PROGRAM_LIMITS } from '@coaching/shared';
 import type { ExerciseDto, ProgramDto } from '@coaching/shared';
-import { deleteProgram, saveProgram } from '@/actions/programs';
+import { deleteProgram, saveAsTemplate, saveProgram } from '@/actions/programs';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FieldError, FormError, Input, Label } from '@/components/ui/Field';
@@ -51,6 +53,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
   const [formError, setFormError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copied, setCopied] = useState<{ id: string; name: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const dirty = fingerprint(draft) !== baseline;
@@ -75,7 +78,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
     setActiveDay(daysOfWeek(draft, w)[0]?.key ?? null);
   }
 
-  function save(): void {
+  function save(asTemplate = false): void {
     const r = toInput(draft);
     if (!r.ok) {
       setErrors(r.errors);
@@ -85,7 +88,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
     setErrors({});
     setFormError(undefined);
     startTransition(async () => {
-      const result = await saveProgram(saved?.id ?? null, r.input);
+      const result = await saveProgram(saved?.id ?? null, asTemplate ? { ...r.input, isTemplate: true } : r.input);
       if (!result.ok) {
         setFormError(result.error);
         return;
@@ -96,8 +99,21 @@ export function ProgramBuilder({ program, library, clients }: Props) {
       setDraft(next);
       setBaseline(fingerprint(next));
       setActiveDay(daysOfWeek(next, week)[0]?.key ?? null);
-      setNotice('Saved.');
+      setNotice(asTemplate ? 'Saved as a template.' : 'Saved.');
       if (!saved) router.replace(`/coach/programs/${result.data.id}`);
+    });
+  }
+
+  function copyAsTemplate(): void {
+    if (!saved) return;
+    setFormError(undefined);
+    startTransition(async () => {
+      const result = await saveAsTemplate(saved.id);
+      if (!result.ok) {
+        setFormError(result.error);
+        return;
+      }
+      setCopied({ id: result.data.id, name: result.data.name });
     });
   }
 
@@ -161,9 +177,19 @@ export function ProgramBuilder({ program, library, clients }: Props) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={save} disabled={pending || (!dirty && saved !== null)}>
-            {pending ? 'Saving…' : saved ? 'Save template' : 'Save as template'}
+          <Button onClick={() => save()} disabled={pending || (!dirty && saved !== null)}>
+            {pending ? 'Saving…' : saved ? 'Save changes' : 'Save program'}
           </Button>
+          {!saved ? (
+            <Button variant="secondary" onClick={() => save(true)} disabled={pending}>
+              Save as template
+            </Button>
+          ) : !saved.isTemplate ? (
+            <Button variant="secondary" onClick={copyAsTemplate} disabled={pending || dirty} title={dirty ? 'Save your changes first' : undefined}>
+              Save as template
+            </Button>
+          ) : null}
+          {saved?.isTemplate ? <Badge tone="indigo">Template</Badge> : null}
           {saved ? (
             <AssignProgramButton
               programId={saved.id}
@@ -182,6 +208,14 @@ export function ProgramBuilder({ program, library, clients }: Props) {
           </span>
         </div>
         <FormError>{formError}</FormError>
+        {copied ? (
+          <p role="status" className="rounded-md border border-emerald/40 bg-emerald-bg px-3 py-2 text-sm text-emerald">
+            Saved a template copy: “{copied.name}”.{' '}
+            <Link href={`/coach/programs/${copied.id}`} className="font-semibold underline">
+              Open it
+            </Link>
+          </p>
+        ) : null}
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">

@@ -55,3 +55,150 @@ export type ResolvableStatus = 'ACCEPTED' | 'DISMISSED';
 export interface UpdateRecommendationRequest {
   status: ResolvableStatus;
 }
+
+// ─────────────── Coach progression queue ───────────────
+
+export interface QueueTarget {
+  weightKg: DecimalString | null;
+  repsMin: number | null;
+  repsMax: number | null;
+}
+
+export interface RecommendationQueueItem {
+  id: string;
+  clientId: string;
+  clientName: string;
+  exerciseId: string;
+  exerciseName: string;
+  action: RecommendationAction;
+  status: RecommendationStatus;
+  reason: string;
+  createdAt: IsoDateString;
+  /** Last top set the call is based on. */
+  current: { weightKg: number; reps: number; avgRpe: number | null } | null;
+  /** The engine's proposal (never the coach override). */
+  proposed: QueueTarget;
+}
+
+export interface RecommendationQueueQuery {
+  /** Defaults to PENDING. */
+  status?: RecommendationStatus;
+  action?: RecommendationAction;
+  /** Matches client or exercise name. */
+  q?: string;
+}
+
+export interface RecommendationQueueResponse {
+  items: RecommendationQueueItem[];
+  /** Per-action counts for the status + q filter, ignoring `action`, so tabs keep their numbers. */
+  counts: { total: number; byAction: Record<RecommendationAction, number> };
+}
+
+export interface BulkResolveRequest {
+  ids: string[];
+  status: ResolvableStatus;
+}
+
+export interface BulkResolveResult {
+  id: string;
+  /** SKIPPED = no longer PENDING (resolved or replaced since the list loaded). */
+  outcome: 'UPDATED' | 'SKIPPED';
+  status: RecommendationStatus;
+}
+
+export interface BulkResolveResponse {
+  results: BulkResolveResult[];
+  updated: number;
+  skipped: number;
+}
+
+// ─────────────── "Why this call" ───────────────
+
+/** One rule in evaluation order: DELOAD, HOLD, INCREASE_REPS, INCREASE_LOAD. */
+export interface RuleTraceStep {
+  action: RecommendationAction;
+  condition: string;
+  observed: string;
+  /** The rule's own condition held for this history (independent of rule precedence). */
+  matched: boolean;
+  /** This rule produced the verdict (the engine's first match). */
+  decided: boolean;
+}
+
+export interface ExplainSession {
+  exerciseLogId: string;
+  performedAt: IsoDateString;
+  topWeightKg: number;
+  topSetReps: number;
+  /** Reps of each set done at the top weight; empty if the source log was later edited away. */
+  repsPerSet: number[];
+  workingSets: number;
+  avgRpe: number | null;
+}
+
+export type CallHistoryEvent =
+  | {
+      type: 'CALL';
+      at: IsoDateString;
+      recommendationId: string;
+      action: RecommendationAction;
+      status: RecommendationStatus;
+      autoApproved: boolean;
+      weightKg: DecimalString | null;
+      repsMin: number | null;
+      repsMax: number | null;
+    }
+  | {
+      type: 'OVERRIDE';
+      at: IsoDateString;
+      recommendationId: string;
+      byName: string | null;
+      weightKg: DecimalString | null;
+      repsMin: number | null;
+      repsMax: number | null;
+      rpe: DecimalString | null;
+      note: string | null;
+    };
+
+export interface ExplainDto {
+  recommendationId: string;
+  client: { id: string; name: string };
+  exercise: { id: string; name: string };
+  /** The engine's verdict. */
+  action: RecommendationAction;
+  status: RecommendationStatus;
+  reason: string;
+  autoApproved: boolean;
+  proposed: QueueTarget;
+  override: (QueueTarget & { rpe: DecimalString | null; note: string | null; byName: string | null; at: IsoDateString | null }) | null;
+  /** Prescription the engine compared against (after overrides). */
+  prescription: { sets: number | null; repsMin: number | null; repsMax: number | null; rpeCap: number | null } | null;
+  /** Oldest to newest. */
+  sessions: ExplainSession[];
+  /** Null for old recommendations whose source sessions were deleted. */
+  rules: RuleTraceStep[] | null;
+  /** Null for recommendations created before settings were stored. */
+  settings: ResolvedEngineSettings | null;
+  /** Newest first: previous calls for this client + exercise and coach overrides. */
+  history: CallHistoryEvent[];
+}
+
+// ─────────────── Session complete ───────────────
+
+export interface NextTarget {
+  exerciseId: string;
+  exerciseName: string;
+  /** Null when there is not enough history to make a call yet. */
+  action: RecommendationAction | null;
+  recommendationId: string | null;
+  /** PENDING = waiting for the coach; ACCEPTED includes auto-approved and overridden. */
+  status: RecommendationStatus | null;
+  /** Coach override if present, else the engine's proposal. */
+  target: QueueTarget | null;
+  reason: string | null;
+}
+
+export interface NextTargetsDto {
+  workoutLogId: string;
+  targets: NextTarget[];
+}

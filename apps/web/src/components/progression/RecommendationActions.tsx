@@ -1,10 +1,10 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useState, useTransition } from 'react';
 import { recommendationAction } from '@/actions/progression';
-import type { ActionResult } from '@/lib/action-result';
+import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Field';
-import { SubmitButton } from '@/components/ui/SubmitButton';
+import { Sheet } from '@/components/ui/Sheet';
 
 interface Props {
   clientId: string;
@@ -12,31 +12,64 @@ interface Props {
   exerciseId: string;
   /** Coach view: may dismiss and re-evaluate. Clients may only accept. */
   canDismiss: boolean;
+  /** Shown in the dismiss dialog. */
+  exerciseName?: string;
 }
 
-export function RecommendationActions({ clientId, recommendationId, exerciseId, canDismiss }: Props) {
-  const [state, action] = useActionState<ActionResult<string> | null, FormData>(recommendationAction, null);
+export function RecommendationActions({ clientId, recommendationId, exerciseId, canDismiss, exerciseName }: Props) {
+  const [error, setError] = useState<string>();
+  const [confirming, setConfirming] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function run(intent: 'ACCEPTED' | 'DISMISSED' | 'REEVALUATE'): void {
+    setError(undefined);
+    const fd = new FormData();
+    fd.set('clientId', clientId);
+    fd.set('recommendationId', recommendationId);
+    fd.set('exerciseId', exerciseId);
+    fd.set('intent', intent);
+    startTransition(async () => {
+      const result = await recommendationAction(null, fd);
+      setConfirming(false);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   return (
-    <form action={action} className="space-y-2">
-      <input type="hidden" name="clientId" value={clientId} />
-      <input type="hidden" name="recommendationId" value={recommendationId} />
-      <input type="hidden" name="exerciseId" value={exerciseId} />
+    <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        <SubmitButton name="intent" value="ACCEPTED" pendingLabel="Saving…">
+        <Button onClick={() => run('ACCEPTED')} disabled={pending}>
           Accept
-        </SubmitButton>
+        </Button>
         {canDismiss ? (
           <>
-            <SubmitButton name="intent" value="DISMISSED" variant="secondary" pendingLabel="Saving…">
+            <Button variant="secondary" onClick={() => setConfirming(true)} disabled={pending}>
               Dismiss
-            </SubmitButton>
-            <SubmitButton name="intent" value="REEVALUATE" variant="secondary" pendingLabel="Re-evaluating…">
+            </Button>
+            <Button variant="secondary" onClick={() => run('REEVALUATE')} disabled={pending}>
               Re-evaluate
-            </SubmitButton>
+            </Button>
           </>
         ) : null}
       </div>
-      <FormError>{state?.ok === false ? state.error : undefined}</FormError>
-    </form>
+      <FormError>{error}</FormError>
+      {confirming ? (
+        <Sheet
+          open
+          onClose={() => setConfirming(false)}
+          title="Dismiss recommendation"
+          description={`The engine's call${exerciseName ? ` for ${exerciseName}` : ''} will be dismissed. The client keeps the current prescription. Re-evaluate later to get a fresh call.`}
+        >
+          <footer className="flex justify-between gap-2">
+            <Button variant="secondary" onClick={() => setConfirming(false)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button onClick={() => run('DISMISSED')} disabled={pending}>
+              {pending ? 'Dismissing…' : 'Confirm'}
+            </Button>
+          </footer>
+        </Sheet>
+      ) : null}
+    </div>
   );
 }

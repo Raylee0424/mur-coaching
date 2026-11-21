@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsInt,
   IsNumber,
@@ -14,7 +15,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PROGRAM_LIMITS as L } from '@coaching/shared';
-import type { CreateAssignmentRequest, ProgramTreeInput, WorkoutExerciseInput, WorkoutInput } from '@coaching/shared';
+import type { CreateAssignmentRequest, DuplicateProgramRequest, ListProgramsQuery as ListProgramsQueryShape, ProgramTreeInput, WorkoutExerciseInput, WorkoutInput } from '@coaching/shared';
 
 const trim = ({ value }: { value: unknown }): unknown => (typeof value === 'string' ? value.trim() : value);
 
@@ -71,6 +72,9 @@ export class ProgramTreeDto implements ProgramTreeInput {
   @IsInt() @Min(1) @Max(L.maxWeeks)
   durationWeeks!: number;
 
+  @IsOptional() @IsBoolean()
+  isTemplate?: boolean;
+
   @IsArray() @ArrayMaxSize(L.maxWorkouts) @ValidateNested({ each: true }) @Type(() => WorkoutInputDto)
   workouts!: WorkoutInputDto[];
 }
@@ -81,4 +85,19 @@ export class CreateAssignmentDto implements CreateAssignmentRequest {
 
   @IsDateString({ strict: true })
   startDate!: string;
+}
+
+const toBool = ({ value }: { value: unknown }): unknown => (value === 'true' ? true : value === 'false' ? false : value);
+
+export class ListProgramsQuery implements ListProgramsQueryShape {
+  @IsOptional() @Transform(toBool) @IsBoolean()
+  template?: boolean;
+}
+
+export class DuplicateProgramDto implements DuplicateProgramRequest {
+  @IsOptional() @Transform(trim) @IsString() @MinLength(1) @MaxLength(100)
+  name?: string;
+
+  @IsOptional() @IsBoolean()
+  asTemplate?: boolean;
 }

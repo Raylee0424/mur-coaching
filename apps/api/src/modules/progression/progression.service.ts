@@ -248,6 +248,11 @@ export class ProgressionService {
       settings: resolveEngineSettings({
         coach: layers.coach,
         client: layers.client,
+        exercise: {
+          rpeCap: num(latest.exercise.rpeCap),
+          repsMin: latest.exercise.repsMin,
+          repsMax: latest.exercise.repsMax,
+        },
         prescription: {
           targetSets: target.targetSets,
           repsMin: target.targetRepsMin,
