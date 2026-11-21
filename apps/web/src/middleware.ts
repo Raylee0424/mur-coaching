@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { Role } from '@coaching/shared';
 import { SESSION_COOKIE, decodeClaims } from '@/lib/claims';
-import { homeFor } from '@/lib/routes';
+import { homeFor, onboardingFor } from '@/lib/routes';
 
 /** Optimistic gate on unverified claims (UX only). Layouts re-check via /auth/me. */
 export function middleware(request: NextRequest): NextResponse {
@@ -13,6 +13,13 @@ export function middleware(request: NextRequest): NextResponse {
 
   const inCoach = pathname === '/coach' || pathname.startsWith('/coach/');
   const inClient = pathname === '/client' || pathname.startsWith('/client/');
+  const inWelcome = pathname === '/welcome' || pathname.startsWith('/welcome/');
+
+  if (inWelcome) {
+    if (!claims) return redirectTo('/login');
+    const own = onboardingFor(claims.role);
+    return pathname === own || pathname.startsWith(`${own}/`) ? NextResponse.next() : redirectTo(own);
+  }
 
   if (inCoach || inClient) {
     if (!claims) {

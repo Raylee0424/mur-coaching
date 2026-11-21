@@ -1,4 +1,5 @@
 import type { DecimalString, IsoDateString } from './common';
+import type { SwapReason } from './enums';
 
 export interface SetLogDto {
   id: string;
@@ -18,6 +19,9 @@ export interface ExerciseLogDto {
   order: number;
   exercise: { id: string; name: string };
   sets: SetLogDto[];
+  swappedFromExerciseId: string | null;
+  swapReason: string | null;
+  swappedFrom: { id: string; name: string } | null;
 }
 
 export interface WorkoutLogDto {
@@ -41,6 +45,10 @@ export interface SetLogInput {
 export interface ExerciseLogInput {
   exerciseId: string;
   workoutExerciseId?: string;
+  /** Exercise the client swapped away from; requires swapReason. */
+  swappedFromExerciseId?: string;
+  swapReason?: SwapReason;
+  swapNote?: string;
   sets: SetLogInput[];
 }
 

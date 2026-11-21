@@ -1,7 +1,9 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { AssignmentStatus, CoachClientStatus, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProgressionService } from '../progression/progression.service';
+import { formatSwapReason } from '@coaching/shared';
+import { isAccessibleLink } from '../clients/link-status';
 import {
   CreateWorkoutLogDto,
   ExerciseLogDto,
@@ -12,7 +14,11 @@ import {
 const logInclude = {
   exerciseLogs: {
     orderBy: { order: 'asc' },
-    include: { exercise: { select: { id: true, name: true } }, sets: { orderBy: { setNumber: 'asc' } } },
+    include: {
+      exercise: { select: { id: true, name: true } },
+      swappedFrom: { select: { id: true, name: true } },
+      sets: { orderBy: { setNumber: 'asc' } },
+    },
   },
 } satisfies Prisma.WorkoutLogInclude;
 
@@ -143,6 +149,12 @@ export class WorkoutLogsService {
       order: i + 1,
       exercise: { connect: { id: l.exerciseId } },
       ...(l.workoutExerciseId ? { workoutExercise: { connect: { id: l.workoutExerciseId } } } : {}),
+      ...(l.swappedFromExerciseId && l.swapReason
+        ? {
+            swappedFrom: { connect: { id: l.swappedFromExerciseId } },
+            swapReason: formatSwapReason(l.swapReason, l.swapNote),
+          }
+        : {}),
       sets: {
         create: l.sets.map((s, j) => ({
           setNumber: j + 1,
@@ -175,7 +187,8 @@ export class WorkoutLogsService {
     if (workoutId && !assignmentId) throw new BadRequestException('assignmentId is required with workoutId');
     if (assignmentId) {
       const assignment = await this.prisma.programAssignment.findFirst({
-        where: { id: assignmentId, clientId, status: { in: [AssignmentStatus.ACTIVE, AssignmentStatus.COMPLETED] } },
+        // Ownership only: a session may follow a program that was later replaced (CANCELLED) and still be logged again.
+        where: { id: assignmentId, clientId },
         select: { programId: true },
       });
       if (!assignment) throw new BadRequestException('Unknown assignment');
@@ -187,8 +200,18 @@ export class WorkoutLogsService {
     }
 
     const link = await this.prisma.coachClient.findUnique({ where: { clientId } });
-    const coachId = link?.status === CoachClientStatus.ACTIVE ? link.coachId : null;
-    const exerciseIds = [...new Set(this.exerciseIds(exerciseLogs))];
+    const coachId = link && isAccessibleLink(link.status) ? link.coachId : null;
+    for (const l of exerciseLogs) {
+      if (l.swappedFromExerciseId && !l.swapReason) throw new BadRequestException('A swap needs a reason');
+      if (l.swapReason && !l.swappedFromExerciseId) throw new BadRequestException('swapReason requires swappedFromExerciseId');
+      if (l.swappedFromExerciseId === l.exerciseId) throw new BadRequestException('Swap to a different exercise');
+    }
+    const exerciseIds = [
+      ...new Set([
+        ...this.exerciseIds(exerciseLogs),
+        ...exerciseLogs.flatMap((l) => (l.swappedFromExerciseId ? [l.swappedFromExerciseId] : [])),
+      ]),
+    ];
     const exercises = await this.prisma.exercise.findMany({
       where: { id: { in: exerciseIds }, OR: [{ coachId: null }, ...(coachId ? [{ coachId }] : [])] },
       select: { id: true },

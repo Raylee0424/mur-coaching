@@ -4,6 +4,11 @@ export function homeFor(role: Role): string {
   return role === Role.COACH ? '/coach/clients' : '/client';
 }
 
+/** Onboarding stepper for a role. */
+export function onboardingFor(role: Role): string {
+  return role === Role.COACH ? '/welcome/coach' : '/welcome/client';
+}
+
 export function areaFor(role: Role): '/coach' | '/client' {
   return role === Role.COACH ? '/coach' : '/client';
 }
@@ -28,7 +33,8 @@ export const COACH_NAV: readonly NavItem[] = [
   { href: '/coach/clients', label: 'Clients' },
   { href: '/coach/progression', label: 'Progression' },
   { href: '/coach/exercises', label: 'Exercises' },
-  { href: '/coach/programs', label: 'Programs', soon: true },
+  { href: '/coach/programs', label: 'Programs' },
+  { href: '/coach/settings', label: 'Settings' },
 ];
 
 export const CLIENT_NAV: readonly NavItem[] = [

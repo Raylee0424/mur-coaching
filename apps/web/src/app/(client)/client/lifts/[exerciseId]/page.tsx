@@ -10,7 +10,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ApiError } from '@/lib/api/client';
 import { progressionApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
-import { formatDate, formatKg } from '@/lib/format';
+import { formatDate } from '@/lib/format';
+import { formatWeight, kgToDisplay, unitLabel } from '@/lib/units';
 
 export default async function LiftDetailPage({ params }: { params: Promise<{ exerciseId: string }> }) {
   const { exerciseId } = await params;
@@ -38,8 +39,8 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
         <>
           <ul className="grid grid-cols-3 gap-3">
             {[
-              ['Best e1RM', formatKg(best)],
-              ['Top weight', formatKg(top)],
+              ['Best e1RM', formatWeight(best, user.weightUnit)],
+              ['Top weight', formatWeight(top, user.weightUnit)],
               ['Sessions', String(series.length)],
             ].map(([label, value]) => (
               <li key={label} className="rounded-lg border border-line bg-card p-4">
@@ -50,17 +51,17 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
           </ul>
 
           <Card className="space-y-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Estimated 1RM (kg)</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Estimated 1RM ({unitLabel(user.weightUnit)})</h2>
             <LineChart
               title={`Estimated 1RM over time for ${exercise.name}`}
-              unit="kg"
-              points={series.map((s) => ({ label: formatDate(s.performedAt), value: s.e1rmKg }))}
+              unit={unitLabel(user.weightUnit)}
+              points={series.map((s) => ({ label: formatDate(s.performedAt), value: kgToDisplay(s.e1rmKg, user.weightUnit) }))}
             />
           </Card>
 
           <Card className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">Sessions</h2>
-            <MetricsTable metrics={series} />
+            <MetricsTable metrics={series} unit={user.weightUnit} />
           </Card>
         </>
       )}
@@ -68,7 +69,7 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
       {pending ? (
         <section className="space-y-3">
           <h2 className="font-display text-lg font-bold">Next target</h2>
-          <RecommendationCard recommendation={pending} exerciseName={exercise.name} canDismiss={false} />
+          <RecommendationCard recommendation={pending} exerciseName={exercise.name} canDismiss={false} unit={user.weightUnit} />
         </section>
       ) : null}
     </div>

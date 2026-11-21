@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { Role } from '@coaching/shared';
+import type { ClientSettingsDto } from '@coaching/shared';
 import { CurrentUser, RequestUser, Roles } from '../../common';
 import { ClientAccessService } from './client-access.service';
 import { ClientView, ClientsService } from './clients.service';
+import { ClientSettingsService } from './client-settings.service';
+import { UpdateClientSettingsDto } from './dto/client-settings.dto';
 import { CreateClientDto, ListClientsQuery, UpdateClientDto } from './dto/clients.dto';
 
 @Controller('clients')
@@ -10,7 +13,26 @@ export class ClientsController {
   constructor(
     private readonly clients: ClientsService,
     private readonly access: ClientAccessService,
+    private readonly settings: ClientSettingsService,
   ) {}
+
+  @Roles(Role.COACH)
+  @Get(':clientId/settings')
+  async getSettings(@CurrentUser() user: RequestUser, @Param('clientId') clientId: string): Promise<ClientSettingsDto> {
+    await this.access.assertCanAccessClient(user, clientId);
+    return this.settings.get(clientId);
+  }
+
+  @Roles(Role.COACH)
+  @Put(':clientId/settings')
+  async updateSettings(
+    @CurrentUser() user: RequestUser,
+    @Param('clientId') clientId: string,
+    @Body() dto: UpdateClientSettingsDto,
+  ): Promise<ClientSettingsDto> {
+    await this.access.assertCanAccessClient(user, clientId);
+    return this.settings.update(clientId, dto);
+  }
 
   @Roles(Role.COACH)
   @Get()
