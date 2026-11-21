@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────── Enums ───────────────
+
+enum Role {
+  COACH
+  CLIENT
+}
+
+enum CoachClientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  QUADS
+  HAMSTRINGS
+  GLUTES
+  CALVES
+  CORE
+  FULL_BODY
+}
+
+enum RecommendationAction {
+  INCREASE_LOAD   // hit top of rep range at/under target RPE
+  INCREASE_REPS   // double progression: add reps at same load
+  HOLD            // insufficient data or missed targets
+  DELOAD          // plateau + RPE >= 9 across consecutive sessions, or e1RM declining
+}
+
+enum RecommendationStatus {
+  PENDING
+  ACCEPTED
+  DISMISSED
+  SUPERSEDED      // replaced by a newer evaluation
+}
+
+// ─────────────── Identity & Tenancy ───────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  isDemo       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // COACH side
+  coachedClients CoachClient[] @relation("CoachSide")
+  programs       Program[]
+  exercises      Exercise[]    // coach-owned custom exercises
+
+  // CLIENT side
+  coachLink      CoachClient?  @relation("ClientSide")
+  assignments    ProgramAssignment[]
+  workoutLogs    WorkoutLog[]
+  recommendations ProgressionRecommendation[]
+
+  @@index([role])
+}
+
+/// Tenancy boundary. One active coach per client (MVP).
+model CoachClient {
+  id        String            @id @default(cuid())
+  coachId   String
+  clientId  String            @unique
+  status    CoachClientStatus @default(ACTIVE)
+  notes     String?
+  createdAt DateTime          @default(now())
+
+  coach  User @relation("CoachSide", fields: [coachId], references: [id], onDelete: Cascade)
+  client User @relation("ClientSide", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([coachId, status])
+}
+
+// ─────────────── Exercise Catalog ───────────────
+
+/// coachId null = global library; set = coach's custom exercise.
+model Exercise {
+  id              String      @id @default(cuid())
+  name            String
+  muscleGroup     MuscleGroup
+  equipment       String?
+  /// Smallest load jump used by the engine (e.g. 2.5 upper, 5.0 lower).
+  loadIncrementKg Decimal     @default(2.5) @db.Decimal(5, 2)
+  coachId         String?
+  createdAt       DateTime    @default(now())
+
+  coach            User?             @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  workoutExercises WorkoutExercise[]
+  exerciseLogs     ExerciseLog[]
+  recommendations  ProgressionRecommendation[]
+
+  @@unique([coachId, name])
+  @@index([muscleGroup])
+}
+
+// ─────────────── Program Templates ───────────────
+
+model Program {
+  id            String   @id @default(cuid())
+  coachId       String
+  name          String
+  description   String?
+  durationWeeks Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  coach       User                @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  workouts    Workout[]
+  assignments ProgramAssignment[]
+
+  @@index([coachId])
+}
+
+/// One training day inside a program (e.g. Week 2 / Day 1 "Upper A").
+model Workout {
+  id         String   @id @default(cuid())
+  programId  String
+  weekNumber Int      // 1..durationWeeks
+  dayNumber  Int      // 1..7
+  name       String
+
+  program     Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
+  exercises   WorkoutExercise[]
+  workoutLogs WorkoutLog[]
+
+  @@unique([programId, weekNumber, dayNumber])
+}
+
+/// Prescription for one exercise in a workout.
+model WorkoutExercise {
+  id             String   @id @default(cuid())
+  workoutId      String
+  exerciseId     String
+  order          Int
+  targetSets     Int
+  targetRepsMin  Int
+  targetRepsMax  Int
+  targetRpe      Decimal? @db.Decimal(3, 1)
+  targetWeightKg Decimal? @db.Decimal(6, 2)
+  restSeconds    Int?
+  notes          String?
+
+  workout      Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise     Exercise      @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  exerciseLogs ExerciseLog[]
+
+  @@unique([workoutId, order])
+  @@index([exerciseId])
+}
+
+/// Program instance for a specific client.
+model ProgramAssignment {
+  id        String           @id @default(cuid())
+  programId String
+  clientId  String
+  startDate DateTime         @db.Date
+  status    AssignmentStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+
+  program     Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
+  client      User         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workoutLogs WorkoutLog[]
+
+  @@index([clientId, status])
+  // Partial unique "one ACTIVE per client" added in raw migration SQL.
+}
+
+// ─────────────── Logging (actuals) ───────────────
+
+/// One performed session.
+model WorkoutLog {
+  id           String    @id @default(cuid())
+  clientId     String
+  assignmentId String?
+  workoutId    String?   // template day this session followed; null = ad-hoc
+  performedAt  DateTime
+  notes        String?
+  createdAt    DateTime  @default(now())
+
+  client       User               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignment   ProgramAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  workout      Workout?           @relation(fields: [workoutId], references: [id], onDelete: SetNull)
+  exerciseLogs ExerciseLog[]
+
+  @@index([clientId, performedAt(sort: Desc)])
+}
+
+/// One exercise performed within a session. Engine's unit of history.
+model ExerciseLog {
+  id                String   @id @default(cuid())
+  workoutLogId      String
+  exerciseId        String
+  workoutExerciseId String?  // prescription it fulfilled (targets snapshot source)
+  order             Int
+
+  workoutLog      WorkoutLog       @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+  exercise        Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  workoutExercise WorkoutExercise? @relation(fields: [workoutExerciseId], references: [id], onDelete: SetNull)
+  sets            SetLog[]
+
+  @@unique([workoutLogId, order])
+  @@index([exerciseId, workoutLogId])
+}
+
+model SetLog {
+  id            String  @id @default(cuid())
+  exerciseLogId String
+  setNumber     Int
+  reps          Int
+  weightKg      Decimal @db.Decimal(6, 2)
+  rpe           Decimal? @db.Decimal(3, 1)  // CHECK (rpe BETWEEN 1 AND 10) in migration
+  isWarmup      Boolean @default(false)
+
+  exerciseLog ExerciseLog @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
+
+  @@unique([exerciseLogId, setNumber])
+}
+
+// ─────────────── Progression Engine Output ───────────────
+
+model ProgressionRecommendation {
+  id                  String               @id @default(cuid())
+  clientId            String
+  exerciseId          String
+  action              RecommendationAction
+  status              RecommendationStatus @default(PENDING)
+  recommendedWeightKg Decimal?             @db.Decimal(6, 2)
+  recommendedRepsMin  Int?
+  recommendedRepsMax  Int?
+  recommendedSets     Int?
+  reason              String               // human-readable rule explanation
+  /// Metrics snapshot the decision used: per-session volume, top-set e1RM, avg RPE.
+  metrics             Json
+  /// ExerciseLog ids analysed (2–3), for auditability.
+  sourceExerciseLogIds String[]
+  createdAt           DateTime             @default(now())
+  resolvedAt          DateTime?
+
+  client   User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, exerciseId, createdAt(sort: Desc)])
+  @@index([clientId, status])
+}
