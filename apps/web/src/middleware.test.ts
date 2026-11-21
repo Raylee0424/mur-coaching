@@ -29,4 +29,26 @@ describe('middleware', () => {
       'http://localhost:3000/login?next=%2Fcoach%2Fclients',
     );
   });
+
+  it('keeps sign-in, sign-up, forgot, reset and invite pages public', () => {
+    for (const path of ['/login', '/signup', '/forgot', '/reset?token=abc', '/invite/abc123']) {
+      expect(middleware(request(path)).headers.get('location')).toBeNull();
+    }
+  });
+
+  it('sends signed-in users away from login, signup and forgot', () => {
+    for (const path of ['/login', '/signup', '/forgot']) {
+      expect(middleware(request(path, 'CLIENT')).headers.get('location')).toBe('http://localhost:3000/client');
+    }
+  });
+
+  it('lets signed-in users open reset and invite links', () => {
+    expect(middleware(request('/reset?token=abc', 'COACH')).headers.get('location')).toBeNull();
+    expect(middleware(request('/invite/abc', 'CLIENT')).headers.get('location')).toBeNull();
+  });
+
+  it('requires a session for /verify', () => {
+    expect(middleware(request('/verify')).headers.get('location')).toBe('http://localhost:3000/login');
+    expect(middleware(request('/verify', 'CLIENT')).headers.get('location')).toBeNull();
+  });
 });

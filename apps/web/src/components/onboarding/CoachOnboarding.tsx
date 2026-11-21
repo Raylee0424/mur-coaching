@@ -6,7 +6,6 @@ import { ENGINE_DEFAULTS, ENGINE_LIMITS, MUSCLE_GROUP_LABELS, MuscleGroup, Weigh
 import type { AuthUser, CoachEngineRulesDto, ExerciseDto, UpdateCoachEngineRulesRequest } from '@coaching/shared';
 import { saveEngineRules } from '@/actions/engine-rules';
 import { finishOnboarding, saveAccount } from '@/actions/onboarding';
-import { AddClientForm } from '@/components/clients/AddClientForm';
 import { PreviewLine, type PreviewTarget } from '@/components/engine/PreviewLine';
 import { RULE_FIELD_META } from '@/components/engine/rule-meta';
 import { ExerciseForm } from '@/components/exercises/ExerciseForm';
@@ -15,9 +14,10 @@ import { Card } from '@/components/ui/Card';
 import { FieldError, FormError, Input, Label } from '@/components/ui/Field';
 import { OverrideField, parseOverride } from '@/components/ui/OverrideField';
 import type { ActionResult } from '@/lib/action-result';
+import { InviteStep } from './InviteStep';
 import { StepHeader, StepTitle } from './Stepper';
 
-const STEPS = ['Profile', 'Engine defaults', 'Starter library', 'First client'] as const;
+const STEPS = ['Profile & brand', 'Engine defaults', 'Starter library', 'Invite first client'] as const;
 const ENGINE_KEYS = ['rpeCap', 'deloadPercent', 'sessionsAnalyzed'] as const;
 type EngineKey = (typeof ENGINE_KEYS)[number];
 
@@ -72,13 +72,13 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <Card className="space-y-6 md:p-8">
-        <StepHeader steps={STEPS} current={step} />
+    <div className="mx-auto max-w-3xl">
+      <Card className="space-y-8 p-5 md:p-8">
+        <StepHeader steps={STEPS} current={step} variant="tabs" onSelect={pending ? undefined : setStep} />
 
         {step === 0 ? (
           <section className="space-y-5">
-            <StepTitle title={replay ? 'Your coaching profile' : 'Welcome, coach'} subtitle="How clients see you, and the units you think in." />
+            <StepTitle title={replay ? 'Your coaching profile' : 'Profile & brand'} subtitle="This appears on client invites and inside their app." />
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor={`${id}-name`}>Full name</Label>
@@ -86,7 +86,7 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
                 <FieldError>{errors.name}</FieldError>
               </div>
               <div>
-                <Label htmlFor={`${id}-display`}>Display name (optional)</Label>
+                <Label htmlFor={`${id}-display`}>Coaching display name</Label>
                 <Input id={`${id}-display`} value={displayName} maxLength={60} placeholder="Coach Alex" onChange={(e) => setDisplayName(e.target.value)} />
               </div>
             </div>
@@ -174,8 +174,8 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
 
         {step === 3 ? (
           <section className="space-y-5">
-            <StepTitle title="Invite your first client" subtitle="They get a one-time password to sign in. You can also do this later from the roster." />
-            <AddClientForm />
+            <StepTitle title="Invite your first client" subtitle="Send an onboarding link now, or skip and invite from your Roster." />
+            <InviteStep />
           </section>
         ) : null}
 
@@ -186,13 +186,13 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
             Back
           </Button>
           <div className="flex items-center gap-2">
-            {step === 1 || step === 2 ? (
-              <button type="button" className="min-h-11 px-3 text-sm font-semibold text-muted underline hover:text-ink" disabled={pending} onClick={() => setStep(step + 1)}>
-                {step === 2 ? "Skip, I'll build my own" : 'Skip'}
+            {step >= 1 ? (
+              <button type="button" className="min-h-11 px-3 text-sm font-semibold text-muted underline hover:text-ink" disabled={pending} onClick={() => (step === last ? next() : setStep(step + 1))}>
+                {step === 2 ? "Skip, I'll build my own" : step === last ? 'Skip for now' : 'Skip'}
               </button>
             ) : null}
             <Button className="min-h-12" onClick={next} disabled={pending || (step === 1 && !engineValid)}>
-              {pending ? 'Saving…' : step === last ? 'Go to Roster' : 'Next'}
+              {pending ? 'Saving…' : step === last ? 'Go to Roster' : 'Continue'}
             </Button>
           </div>
         </footer>

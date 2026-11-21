@@ -22,7 +22,7 @@ import {
   type ClientAnswers,
   type StepErrors,
 } from './client-onboarding-model';
-import { StepHeader, StepTitle } from './Stepper';
+import { StepBars, StepTitle } from './Stepper';
 
 interface Props {
   me: MeProfileDto;
@@ -78,7 +78,37 @@ export function ClientOnboarding({ me, unit, lifts, hasCoach, replay }: Props) {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <StepHeader steps={CLIENT_STEPS} current={step} />
+      <header className="space-y-3">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={back}
+            disabled={step === 0 || pending}
+            className="inline-flex min-h-11 items-center gap-1 rounded-md pr-3 text-sm font-semibold text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:invisible"
+          >
+            <span aria-hidden="true">←</span> Back
+          </button>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+            Step {step + 1} of {CLIENT_STEPS.length}
+          </span>
+          {step > 0 && step < last ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                setErrors({});
+                setStep(step + 1);
+              }}
+              className="min-h-11 rounded-md pl-3 text-sm font-semibold text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              Skip
+            </button>
+          ) : (
+            <span className="w-12" aria-hidden="true" />
+          )}
+        </div>
+        <StepBars count={CLIENT_STEPS.length} current={step} />
+      </header>
 
       {step === 0 ? (
         <section className="space-y-5">
@@ -216,7 +246,15 @@ export function ClientOnboarding({ me, unit, lifts, hasCoach, replay }: Props) {
 
       {step === 4 ? (
         <section className="space-y-5">
-          <StepTitle title="You're all set" subtitle={hasCoach ? 'Your coach can see these answers and will tune your plan.' : 'You can change these later.'} />
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-bg text-emerald">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-7" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="m8 12 3 3 5-6" />
+              </svg>
+            </span>
+            <StepTitle title="You're all set" subtitle={hasCoach ? 'Your baseline targets are loaded. Your coach can see these answers and will tune your plan.' : 'Your baseline targets are loaded and ready for Day 1.'} />
+          </div>
           <Card className="space-y-3 text-sm">
             <Summary label="Goals" value={a.goals.join(', ') || 'Not set'} />
             <Summary label="Experience" value={`${EXPERIENCE_OPTIONS.find((o) => o.value === a.experience)?.label ?? 'Not set'} · ${a.daysPerWeek} days / week`} />
@@ -232,20 +270,10 @@ export function ClientOnboarding({ me, unit, lifts, hasCoach, replay }: Props) {
 
       <FormError>{formError}</FormError>
 
-      <footer className="flex items-center justify-between gap-2 border-t border-line pt-4">
-        <Button variant="secondary" onClick={back} disabled={step === 0 || pending}>
-          Back
+      <footer className="border-t border-line pt-4">
+        <Button className="min-h-12 w-full" onClick={next} disabled={pending}>
+          {pending ? 'Saving…' : step === last ? 'Go to Today' : 'Continue'}
         </Button>
-        <div className="flex items-center gap-2">
-          {step > 0 && step < last ? (
-            <button type="button" className="min-h-11 px-3 text-sm font-semibold text-muted underline hover:text-ink" disabled={pending} onClick={() => { setErrors({}); setStep(step + 1); }}>
-              Skip
-            </button>
-          ) : null}
-          <Button className="min-h-12" onClick={next} disabled={pending}>
-            {pending ? 'Saving…' : step === last ? 'Go to Today' : 'Next'}
-          </Button>
-        </div>
       </footer>
     </div>
   );
