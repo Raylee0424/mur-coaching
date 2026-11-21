@@ -37,8 +37,9 @@ export const COACH_NAV: readonly NavItem[] = [
   { href: '/coach/settings', label: 'Settings' },
 ];
 
+/** Phone bottom tab bar (and desktop sidebar). Lift detail pages count as History. */
 export const CLIENT_NAV: readonly NavItem[] = [
   { href: '/client', label: 'Today', exact: true },
-  { href: '/client/log', label: 'Log session' },
   { href: '/client/history', label: 'History' },
+  { href: '/client/profile', label: 'Profile' },
 ];

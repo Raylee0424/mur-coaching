@@ -1,22 +1,36 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect, unstable_rethrow } from 'next/navigation';
-import type { CreateWorkoutLogRequest, UpdateWorkoutLogRequest } from '@coaching/shared';
+import { unstable_rethrow } from 'next/navigation';
+import type { CreateWorkoutLogRequest, NextTarget, UpdateWorkoutLogRequest } from '@coaching/shared';
 import { workoutLogsApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
 
-/** The API re-validates everything (whitelisted DTO); this only forwards the typed request. */
-export async function createWorkoutLog(request: CreateWorkoutLogRequest): Promise<ActionResult> {
+export interface SubmittedWorkout {
+  logId: string;
+  /** Engine calls after this session; empty when they could not be read yet. */
+  targets: NextTarget[];
+}
+
+/**
+ * Saves a finished session and reads back the next targets for the "session complete" screen.
+ * The API re-validates everything (whitelisted DTO); this only forwards the typed request.
+ */
+export async function submitWorkoutLog(request: CreateWorkoutLogRequest): Promise<ActionResult<SubmittedWorkout>> {
   try {
-    await workoutLogsApi.create(request);
+    const log = await workoutLogsApi.create(request);
     revalidatePath('/client');
     revalidatePath('/client/history');
+    revalidatePath('/client/lifts/[exerciseId]', 'page');
+    const targets = await workoutLogsApi
+      .nextTargets(log.id)
+      .then((r) => r.targets)
+      .catch(() => []);
+    return { ok: true, data: { logId: log.id, targets } };
   } catch (err) {
     unstable_rethrow(err);
     return toActionError(err);
   }
-  redirect('/client/history?logged=1');
 }
 
 function refreshLogs(): void {

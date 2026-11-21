@@ -1,33 +1,85 @@
-import { SheetButton } from '@/components/ui/Sheet';
+'use client';
 
-const SCALE = [
-  { rpe: '10', reps: '0', note: 'Maximum effort. No reps left in the tank.' },
-  { rpe: '9.5', reps: '0–1', note: 'No more reps, but could add a little load.' },
-  { rpe: '9', reps: '1', note: 'One clean rep left.' },
-  { rpe: '8.5', reps: '1–2', note: 'One definite rep left, maybe two.' },
-  { rpe: '8', reps: '2', note: 'Two reps left. Bar speed starts to slow.' },
-  { rpe: '7', reps: '3', note: 'Three reps left. Fast, controlled bar speed.' },
-  { rpe: '5–6', reps: '4+', note: 'Light effort. Warm-up weight territory.' },
-] as const;
+import clsx from 'clsx';
+import { useState } from 'react';
+import { Sheet } from '@/components/ui/Sheet';
+import { formatStepValue, rpeGuideRows, type RpeRow } from './logger-model';
 
-export function RpeGuide() {
+const TONE: Record<RpeRow['tone'], string> = {
+  rose: 'text-rose',
+  amber: 'text-amber',
+  primary: 'text-primary',
+  emerald: 'text-emerald',
+  ink: 'text-ink',
+};
+
+/** "RPE guide" link + bottom sheet. Tapping a row selects that RPE; the prescribed target is marked. */
+export function RpeGuide({
+  target,
+  current,
+  onSelect,
+}: {
+  target: number | null;
+  current?: number | null;
+  onSelect: (rpe: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rows = rpeGuideRows(target);
   return (
-    <SheetButton
-      label="RPE guide"
-      title="RPE guide"
-      description="Rate of perceived exertion: how many clean reps you had left after the set."
-      variant="bottom"
-      buttonClassName="min-h-9 py-1"
-    >
-      <ul className="divide-y divide-line">
-        {SCALE.map((row) => (
-          <li key={row.rpe} className="grid grid-cols-[3.5rem_4.5rem_1fr] items-center gap-3 py-2.5 text-sm">
-            <span className="font-display text-lg font-extrabold text-primary tabular">{row.rpe}</span>
-            <span className="font-mono text-xs uppercase text-muted tabular">{row.reps} left</span>
-            <span>{row.note}</span>
-          </li>
-        ))}
-      </ul>
-    </SheetButton>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-h-6 text-xs font-semibold text-primary-soft underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        RPE guide
+      </button>
+      {open ? (
+        <Sheet open={open} onClose={() => setOpen(false)} variant="bottom" title="Tap to select RPE" description="How many clean reps you had left after the set.">
+          <ul className="space-y-2.5">
+            {rows.map((row) => {
+              const isTarget = target !== null && row.rpe === target;
+              const selected = current === row.rpe;
+              return (
+                <li key={row.rpe}>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => {
+                      onSelect(row.rpe);
+                      setOpen(false);
+                    }}
+                    className={clsx(
+                      'flex min-h-14 w-full items-center justify-between gap-3 rounded-md border p-3.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                      isTarget ? 'border-primary bg-primary-container' : 'border-line bg-canvas-low hover:bg-raised',
+                      selected && !isTarget && 'border-line-strong',
+                    )}
+                  >
+                    <span>
+                      <span className={clsx('block font-display text-lg font-bold tabular', isTarget ? 'text-primary' : TONE[row.tone])}>
+                        RPE {formatStepValue('rpe', row.rpe)}
+                      </span>
+                      <span className={clsx('block text-sm', isTarget ? 'text-primary-soft' : 'text-muted')}>
+                        {row.note}
+                        {isTarget ? ' (Target)' : ''}
+                      </span>
+                    </span>
+                    {selected ? (
+                      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6 shrink-0 text-primary" fill="currentColor">
+                        <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1.2 14.4-4-4 1.4-1.4 2.6 2.6 5-5 1.4 1.4-6.4 6.4z" />
+                      </svg>
+                    ) : (
+                      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="m9 6 6 6-6 6" />
+                      </svg>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Sheet>
+      ) : null}
+    </>
   );
 }
