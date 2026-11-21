@@ -1,0 +1,213 @@
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { AssignmentStatus, CoachClientStatus, Prisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { ProgressionService } from '../progression/progression.service';
+import {
+  CreateWorkoutLogDto,
+  ExerciseLogDto,
+  ListWorkoutLogsQuery,
+  UpdateWorkoutLogDto,
+} from './dto/workout-log.dto';
+
+const logInclude = {
+  exerciseLogs: {
+    orderBy: { order: 'asc' },
+    include: { exercise: { select: { id: true, name: true } }, sets: { orderBy: { setNumber: 'asc' } } },
+  },
+} satisfies Prisma.WorkoutLogInclude;
+
+export type WorkoutLogView = Prisma.WorkoutLogGetPayload<{ include: typeof logInclude }>;
+
+const DEFAULT_PAGE = 20;
+const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
+
+/** Authorization (who may touch which log) is the controller's job; this service trusts its clientId. */
+@Injectable()
+export class WorkoutLogsService {
+  private readonly logger = new Logger(WorkoutLogsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly progression: ProgressionService,
+  ) {}
+
+  async create(clientId: string, dto: CreateWorkoutLogDto): Promise<WorkoutLogView> {
+    const performedAt = this.parseDate(dto.performedAt);
+    await this.validateReferences(clientId, dto);
+
+    const log = await this.prisma.workoutLog.create({
+      data: {
+        clientId,
+        assignmentId: dto.assignmentId ?? null,
+        workoutId: dto.workoutId ?? null,
+        performedAt,
+        notes: dto.notes ?? null,
+        exerciseLogs: { create: this.exerciseLogsData(dto.exerciseLogs) },
+      },
+      include: logInclude,
+    });
+
+    await this.refreshProgression(clientId, this.exerciseIds(dto.exerciseLogs));
+    return log;
+  }
+
+  async list(clientId: string, q: ListWorkoutLogsQuery): Promise<{ items: WorkoutLogView[]; nextCursor: string | null }> {
+    const limit = q.limit ?? DEFAULT_PAGE;
+    const rows = await this.prisma.workoutLog.findMany({
+      where: {
+        clientId,
+        performedAt: {
+          ...(q.from ? { gte: this.parseDate(q.from, false) } : {}),
+          ...(q.to ? { lte: this.parseDate(q.to, false) } : {}),
+        },
+      },
+      orderBy: [{ performedAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+      include: logInclude,
+    });
+    const items = rows.slice(0, limit);
+    return { items, nextCursor: rows.length > limit ? (items[items.length - 1]?.id ?? null) : null };
+  }
+
+  async getById(id: string): Promise<WorkoutLogView> {
+    const log = await this.prisma.workoutLog.findUnique({ where: { id }, include: logInclude });
+    if (!log) throw new NotFoundException('Workout log not found');
+    return log;
+  }
+
+  /** Owner-only. Returns 404 for logs belonging to someone else. */
+  async update(clientId: string, id: string, dto: UpdateWorkoutLogDto): Promise<WorkoutLogView> {
+    const existing = await this.findOwned(clientId, id);
+    if (dto.exerciseLogs) {
+      await this.validateReferences(clientId, {
+        assignmentId: existing.assignmentId ?? undefined,
+        workoutId: existing.workoutId ?? undefined,
+        exerciseLogs: dto.exerciseLogs,
+      });
+    }
+
+    const log = await this.prisma.$transaction(async (tx) => {
+      if (dto.exerciseLogs) {
+        await tx.exerciseLog.deleteMany({ where: { workoutLogId: id } });
+      }
+      return tx.workoutLog.update({
+        where: { id },
+        data: {
+          ...(dto.performedAt ? { performedAt: this.parseDate(dto.performedAt) } : {}),
+          ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+          ...(dto.exerciseLogs ? { exerciseLogs: { create: this.exerciseLogsData(dto.exerciseLogs) } } : {}),
+        },
+        include: logInclude,
+      });
+    });
+
+    // Date or sets may have changed what counts as the latest sessions.
+    const affected = new Set([...existing.exerciseLogs.map((e) => e.exerciseId), ...log.exerciseLogs.map((e) => e.exerciseId)]);
+    await this.refreshProgression(clientId, [...affected]);
+    return log;
+  }
+
+  async remove(clientId: string, id: string): Promise<void> {
+    const existing = await this.findOwned(clientId, id);
+    await this.prisma.workoutLog.delete({ where: { id } });
+    await this.refreshProgression(clientId, existing.exerciseLogs.map((e) => e.exerciseId));
+  }
+
+  private async findOwned(clientId: string, id: string) {
+    const log = await this.prisma.workoutLog.findFirst({
+      where: { id, clientId },
+      include: { exerciseLogs: { select: { exerciseId: true } } },
+    });
+    if (!log) throw new NotFoundException('Workout log not found');
+    return log;
+  }
+
+  /** Runs after the write has committed; a failing engine must never undo or fail the log. */
+  private async refreshProgression(clientId: string, exerciseIds: readonly string[]): Promise<void> {
+    for (const exerciseId of new Set(exerciseIds)) {
+      try {
+        await this.progression.refreshExercise(clientId, exerciseId);
+      } catch (err) {
+        this.logger.error(`Progression refresh failed for client ${clientId}, exercise ${exerciseId}`, err);
+      }
+    }
+  }
+
+  private exerciseIds(logs: readonly ExerciseLogDto[]): string[] {
+    return logs.map((l) => l.exerciseId);
+  }
+
+  private exerciseLogsData(logs: readonly ExerciseLogDto[]): Prisma.ExerciseLogCreateWithoutWorkoutLogInput[] {
+    return logs.map((l, i) => ({
+      order: i + 1,
+      exercise: { connect: { id: l.exerciseId } },
+      ...(l.workoutExerciseId ? { workoutExercise: { connect: { id: l.workoutExerciseId } } } : {}),
+      sets: {
+        create: l.sets.map((s, j) => ({
+          setNumber: j + 1,
+          reps: s.reps,
+          weightKg: s.weightKg,
+          rpe: s.rpe ?? null,
+          isWarmup: s.isWarmup ?? false,
+        })),
+      },
+    }));
+  }
+
+  private parseDate(value: string, rejectFuture = true): Date {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) throw new BadRequestException('Invalid date');
+    if (rejectFuture && d.getTime() > Date.now() + MAX_FUTURE_MS) {
+      throw new BadRequestException('performedAt cannot be in the future');
+    }
+    return d;
+  }
+
+  /** Every referenced id must belong to this client's world; otherwise 400 (never leak other tenants' rows). */
+  private async validateReferences(
+    clientId: string,
+    input: { assignmentId?: string | undefined; workoutId?: string | undefined; exerciseLogs: readonly ExerciseLogDto[] },
+  ): Promise<void> {
+    const { assignmentId, workoutId, exerciseLogs } = input;
+
+    let programId: string | null = null;
+    if (workoutId && !assignmentId) throw new BadRequestException('assignmentId is required with workoutId');
+    if (assignmentId) {
+      const assignment = await this.prisma.programAssignment.findFirst({
+        where: { id: assignmentId, clientId, status: { in: [AssignmentStatus.ACTIVE, AssignmentStatus.COMPLETED] } },
+        select: { programId: true },
+      });
+      if (!assignment) throw new BadRequestException('Unknown assignment');
+      programId = assignment.programId;
+    }
+    if (workoutId) {
+      const workout = await this.prisma.workout.findFirst({ where: { id: workoutId, programId: programId ?? '' }, select: { id: true } });
+      if (!workout) throw new BadRequestException('Workout is not part of the assignment program');
+    }
+
+    const link = await this.prisma.coachClient.findUnique({ where: { clientId } });
+    const coachId = link?.status === CoachClientStatus.ACTIVE ? link.coachId : null;
+    const exerciseIds = [...new Set(this.exerciseIds(exerciseLogs))];
+    const exercises = await this.prisma.exercise.findMany({
+      where: { id: { in: exerciseIds }, OR: [{ coachId: null }, ...(coachId ? [{ coachId }] : [])] },
+      select: { id: true },
+    });
+    if (exercises.length !== exerciseIds.length) throw new BadRequestException('Unknown exercise');
+
+    const prescriptionIds = exerciseLogs.flatMap((l) => (l.workoutExerciseId ? [l.workoutExerciseId] : []));
+    if (prescriptionIds.length > 0) {
+      if (!workoutId) throw new BadRequestException('workoutId is required with workoutExerciseId');
+      const found = await this.prisma.workoutExercise.findMany({
+        where: { id: { in: prescriptionIds }, workoutId },
+        select: { id: true, exerciseId: true },
+      });
+      const byId = new Map(found.map((w) => [w.id, w.exerciseId]));
+      for (const l of exerciseLogs) {
+        if (l.workoutExerciseId && byId.get(l.workoutExerciseId) !== l.exerciseId) {
+          throw new BadRequestException('workoutExerciseId does not match exerciseId in this workout');
+        }
+      }
+    }
+  }
+}

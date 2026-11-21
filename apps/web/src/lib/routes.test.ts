@@ -1,0 +1,19 @@
+import { describe, expect, it } from 'vitest';
+import { homeFor, safeNext } from './routes';
+
+describe('routes', () => {
+  it('maps roles to home', () => {
+    expect(homeFor('COACH')).toBe('/coach/clients');
+    expect(homeFor('CLIENT')).toBe('/client');
+  });
+
+  it('safeNext keeps only same-role in-app paths', () => {
+    expect(safeNext('/coach/clients/abc', 'COACH')).toBe('/coach/clients/abc');
+    expect(safeNext('/client', 'CLIENT')).toBe('/client');
+    expect(safeNext('/client/log', 'COACH')).toBeNull();
+    expect(safeNext('https://evil.com', 'COACH')).toBeNull();
+    expect(safeNext('//evil.com', 'CLIENT')).toBeNull();
+    expect(safeNext('/coachevil', 'COACH')).toBeNull();
+    expect(safeNext(undefined, 'COACH')).toBeNull();
+  });
+});
