@@ -4,7 +4,8 @@ import { MUSCLE_GROUP_LABELS } from '@coaching/shared';
 import type { ExerciseDto } from '@coaching/shared';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { formatKg } from '@/lib/format';
+import { WeightUnit } from '@coaching/shared';
+import { formatWeight } from '@/lib/units';
 import { ExerciseForm } from './ExerciseForm';
 
 interface Props {
@@ -45,7 +46,7 @@ export function ExerciseTable({ exercises, coachId, editId, baseHref }: Props) {
                   <td className="px-4 py-3 font-semibold">{exercise.name}</td>
                   <td className="px-4 py-3">{MUSCLE_GROUP_LABELS[exercise.muscleGroup]}</td>
                   <td className="px-4 py-3">{exercise.equipment || '—'}</td>
-                  <td className="px-4 py-3">{formatKg(exercise.loadIncrementKg)}</td>
+                  <td className="px-4 py-3">{formatWeight(exercise.loadIncrementKg, WeightUnit.KG)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <Badge tone={custom ? 'indigo' : 'slate'}>{custom ? 'Custom' : 'Global'}</Badge>

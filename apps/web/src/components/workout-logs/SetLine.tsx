@@ -1,14 +1,24 @@
 import clsx from 'clsx';
-import type { SetLogDto } from '@coaching/shared';
-import { formatKg, formatRpe } from '@/lib/format';
+import type { SetLogDto, WeightUnit } from '@coaching/shared';
+import { formatRpe } from '@/lib/format';
+import { formatWeight } from '@/lib/units';
 
-export function SetLine({ set }: { set: SetLogDto }) {
+/** "100 kg × 8 @ RPE 8", warm-ups muted. */
+export function SetText({ set, unit }: { set: SetLogDto; unit: WeightUnit }) {
   const rpe = set.rpe === null ? '' : ` @ ${formatRpe(set.rpe)}`;
   return (
-    <li className={clsx('text-sm', set.isWarmup && 'text-muted')}>
-      {formatKg(set.weightKg)} × {set.reps}
+    <span className={clsx('text-sm', set.isWarmup && 'text-muted')}>
+      {formatWeight(set.weightKg, unit)} × {set.reps}
       {rpe}
       {set.isWarmup ? <span className="ml-2 text-xs font-semibold uppercase">warm-up</span> : null}
+    </span>
+  );
+}
+
+export function SetLine({ set, unit }: { set: SetLogDto; unit: WeightUnit }) {
+  return (
+    <li>
+      <SetText set={set} unit={unit} />
     </li>
   );
 }

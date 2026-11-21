@@ -1,4 +1,4 @@
-import type { RecommendationAction } from '@coaching/shared';
+import type { RecommendationAction, SessionMetrics } from '@coaching/shared';
 
 export interface SetInput {
   reps: number;
@@ -23,18 +23,7 @@ export interface Prescription {
   loadIncrementKg: number;
 }
 
-export interface SessionMetrics {
-  exerciseLogId: string;
-  performedAt: string;
-  workingSets: number;
-  volumeKg: number;
-  topWeightKg: number;
-  /** Reps of the best set at topWeightKg. */
-  topSetReps: number;
-  /** Epley estimate from the top set. */
-  e1rmKg: number;
-  avgRpe: number | null;
-}
+export type { SessionMetrics } from '@coaching/shared';
 
 export interface RecommendationDraft {
   action: RecommendationAction;

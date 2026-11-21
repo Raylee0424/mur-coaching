@@ -1,9 +1,9 @@
-import { Body, Controller, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import type { ProgressionRecommendation } from '@prisma/client';
 import { RecommendationStatus, Role } from '@coaching/shared';
 import { CurrentUser, RequestUser, Roles } from '../../common';
 import { ClientAccessService } from '../clients/client-access.service';
-import { HistoryQuery, UpdateRecommendationDto } from './dto/update-recommendation.dto';
+import { HistoryQuery, OverrideRecommendationDto, UpdateRecommendationDto } from './dto/update-recommendation.dto';
 import { ProgressionService } from './progression.service';
 
 @Controller('clients/:clientId/progression')
@@ -76,5 +76,19 @@ export class RecommendationsController {
       throw new ForbiddenException('Clients can only accept recommendations');
     }
     return this.progression.resolve(id, dto.status);
+  }
+
+  /** Coach replaces the engine's target with their own; the engine's call stays on record. */
+  @Roles(Role.COACH)
+  @Patch(':id/override')
+  async override(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() dto: OverrideRecommendationDto,
+  ): Promise<ProgressionRecommendation> {
+    if (dto.repsMin > dto.repsMax) throw new BadRequestException('repsMin cannot exceed repsMax');
+    const rec = await this.progression.getById(id);
+    await this.access.assertCanAccessClient(user, rec.clientId);
+    return this.progression.override(id, user.id, dto);
   }
 }

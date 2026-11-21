@@ -1,13 +1,21 @@
-import type { WorkoutLogDto } from '@coaching/shared';
+import type { WeightUnit, WorkoutLogDto } from '@coaching/shared';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { WorkoutLogCard } from './WorkoutLogCard';
 
-export function WorkoutLogList({ logs }: { logs: WorkoutLogDto[] }) {
+export function WorkoutLogList({
+  logs,
+  unit,
+  editable = false,
+}: {
+  logs: WorkoutLogDto[];
+  unit: WeightUnit;
+  editable?: boolean;
+}) {
   if (logs.length === 0) return <EmptyState title="No sessions yet" />;
   return (
     <div className="space-y-3">
       {logs.map((log) => (
-        <WorkoutLogCard key={log.id} log={log} />
+        <WorkoutLogCard key={log.id} log={log} unit={unit} editable={editable} />
       ))}
     </div>
   );

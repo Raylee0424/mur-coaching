@@ -1,7 +1,8 @@
-import type { SessionMetrics } from '@coaching/shared';
-import { formatDate, formatKg, formatRpe } from '@/lib/format';
+import type { SessionMetrics, WeightUnit } from '@coaching/shared';
+import { formatDate, formatRpe } from '@/lib/format';
+import { formatWeight } from '@/lib/units';
 
-export function MetricsTable({ metrics }: { metrics: SessionMetrics[] }) {
+export function MetricsTable({ metrics, unit }: { metrics: SessionMetrics[]; unit: WeightUnit }) {
   if (metrics.length === 0) return null;
   return (
     <div className="overflow-x-auto">
@@ -21,11 +22,11 @@ export function MetricsTable({ metrics }: { metrics: SessionMetrics[] }) {
             <tr key={m.exerciseLogId} className="border-b border-line last:border-0">
               <td className="py-1.5 pr-3">{formatDate(m.performedAt)}</td>
               <td className="py-1.5 pr-3">
-                {formatKg(m.topWeightKg)} × {m.topSetReps}
+                {formatWeight(m.topWeightKg, unit)} × {m.topSetReps}
               </td>
-              <td className="py-1.5 pr-3">{formatKg(m.e1rmKg)}</td>
+              <td className="py-1.5 pr-3">{formatWeight(m.e1rmKg, unit)}</td>
               <td className="py-1.5 pr-3">{m.avgRpe === null ? '—' : formatRpe(m.avgRpe).replace('RPE ', '')}</td>
-              <td className="py-1.5">{formatKg(m.volumeKg)}</td>
+              <td className="py-1.5">{formatWeight(m.volumeKg, unit)}</td>
             </tr>
           ))}
         </tbody>

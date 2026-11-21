@@ -66,7 +66,15 @@ async function main(): Promise<void> {
   };
 
   const coach = await prisma.user.create({
-    data: { email: COACH_EMAIL, name: 'Morgan Reyes (Demo Coach)', role: Role.COACH, isDemo: true, passwordHash },
+    data: {
+      email: COACH_EMAIL,
+      name: 'Morgan Reyes (Demo Coach)',
+      displayName: 'Coach Morgan',
+      role: Role.COACH,
+      isDemo: true,
+      onboardedAt: new Date(),
+      passwordHash,
+    },
   });
 
   const program = await prisma.program.create({
@@ -107,7 +115,15 @@ async function main(): Promise<void> {
 
   for (const plan of CLIENT_PLANS) {
     const client = await prisma.user.create({
-      data: { email: plan.email, name: plan.name, role: Role.CLIENT, isDemo: true, passwordHash },
+      data: {
+        email: plan.email,
+        name: plan.name,
+        role: Role.CLIENT,
+        isDemo: true,
+        onboardedAt: new Date(),
+        passwordHash,
+        clientProfile: { create: plan.profile },
+      },
     });
     await prisma.coachClient.create({ data: { coachId: coach.id, clientId: client.id } });
     const assignment = await prisma.programAssignment.create({

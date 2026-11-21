@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { RecommendationAction, RecommendationStatus, Role } from '@coaching/shared';
+import { CoachClientStatus, RecommendationAction, RecommendationStatus, Role } from '@coaching/shared';
 import type { RecommendationDto } from '@coaching/shared';
 import { ActionBadge } from '@/components/progression/ActionBadge';
 import { RecommendationCard } from '@/components/progression/RecommendationCard';
@@ -17,8 +17,10 @@ const ORDER: RecommendationAction[] = [
 
 /** Every pending recommendation across the roster, deloads first. */
 export default async function ProgressionQueuePage() {
-  await requireUser(Role.COACH);
-  const [clients, exercises] = await Promise.all([clientsApi.list(), exercisesApi.list()]);
+  const user = await requireUser(Role.COACH);
+  const [roster, exercises] = await Promise.all([clientsApi.list(), exercisesApi.list()]);
+  // Paused clients are on a break and archived ones are out of reach: neither belongs in the review queue.
+  const clients = roster.filter((c) => c.status === CoachClientStatus.ACTIVE);
   const exerciseNames = new Map(exercises.map((e) => [e.id, e.name]));
   const perClient = await Promise.all(clients.map((c) => progressionApi.latest(c.id)));
 
@@ -67,6 +69,7 @@ export default async function ProgressionQueuePage() {
                   recommendation={rec}
                   exerciseName={exerciseNames.get(rec.exerciseId) ?? 'Unknown exercise'}
                   canDismiss
+                  unit={user.weightUnit}
                 />
               </div>
             ))}

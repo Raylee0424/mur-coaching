@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { unstable_rethrow } from 'next/navigation';
+import type { OverrideRecommendationRequest, RecommendationDto } from '@coaching/shared';
 import { ApiError } from '@/lib/api/client';
 import { progressionApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
@@ -60,6 +61,26 @@ export async function evaluateAll(
     return { ok: true, data: { count: results.length } };
   } catch (err) {
     unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+/** Coach replaces the engine's target. The engine's own call stays on the record. */
+export async function overrideRecommendation(
+  clientId: string,
+  recommendationId: string,
+  body: OverrideRecommendationRequest,
+): Promise<ActionResult<RecommendationDto>> {
+  try {
+    const data = await progressionApi.override(recommendationId, body);
+    refresh(clientId);
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    if (err instanceof ApiError && err.status === 409) {
+      refresh(clientId);
+      return { ok: false, error: 'This recommendation was dismissed or replaced. Re-evaluate to get a fresh one.' };
+    }
     return toActionError(err);
   }
 }

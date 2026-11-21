@@ -26,6 +26,7 @@ export default async function ClientHome() {
           Your next targets
         </h2>
         <RecommendationList recommendations={recommendations} exerciseNames={exerciseNames} canDismiss={false}
+          unit={user.weightUnit}
           liftHref={(id) => `/client/lifts/${id}`}
         />
       </section>
@@ -39,7 +40,7 @@ export default async function ClientHome() {
             All history
           </Link>
         </div>
-        <WorkoutLogList logs={logs.items} />
+        <WorkoutLogList logs={logs.items} unit={user.weightUnit} />
       </section>
     </div>
   );

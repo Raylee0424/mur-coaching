@@ -5,6 +5,8 @@ import type { ClientView } from '@coaching/shared';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/lib/format';
+import { RestoreClientButton } from './RestoreClientButton';
+import { CLIENT_STATUS_META } from './status';
 
 export function RosterTable({ clients }: { clients: ClientView[] }) {
   if (clients.length === 0) {
@@ -28,16 +30,23 @@ export function RosterTable({ clients }: { clients: ClientView[] }) {
             return (
               <tr key={client.id} className={clsx('border-b border-line last:border-0', archived && 'text-muted')}>
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/coach/clients/${client.id}`}
-                    className="font-semibold text-primary-soft underline-offset-2 hover:underline"
-                  >
-                    {client.name}
-                  </Link>
+                  {archived ? (
+                    <span className="font-semibold">{client.name}</span>
+                  ) : (
+                    <Link
+                      href={`/coach/clients/${client.id}`}
+                      className="font-semibold text-primary-soft underline-offset-2 hover:underline"
+                    >
+                      {client.name}
+                    </Link>
+                  )}
                   <div className="text-xs text-muted">{client.email}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge tone={archived ? 'slate' : 'emerald'}>{archived ? 'Archived' : 'Active'}</Badge>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Badge tone={CLIENT_STATUS_META[client.status].tone}>{CLIENT_STATUS_META[client.status].label}</Badge>
+                    {archived ? <RestoreClientButton clientId={client.id} name={client.name} /> : null}
+                  </span>
                 </td>
                 <td className="px-4 py-3">{client.activeAssignment?.program.name ?? 'No program'}</td>
                 <td className="px-4 py-3">{formatDate(client.createdAt)}</td>

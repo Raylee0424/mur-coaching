@@ -1,5 +1,8 @@
 import { MUSCLE_GROUP_LABELS, MuscleGroup } from '@coaching/shared';
-import type { ExerciseDto } from '@coaching/shared';
+import { SWAP_REASON_LABELS } from '@coaching/shared';
+import type { ExerciseDto, SwapReason, WeightUnit } from '@coaching/shared';
+import { SwapExerciseButton } from './SwapExerciseButton';
+import { unitLabel } from '@/lib/units';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FieldError, Label, Select } from '@/components/ui/Field';
@@ -17,6 +20,9 @@ interface Props {
   onAddSet: () => void;
   onRemoveSet: (setKey: string) => void;
   onPatchSet: (setKey: string, patch: Partial<Omit<DraftSet, 'key'>>) => void;
+  onSwap: (toExerciseId: string, reason: SwapReason, note: string) => void;
+  onUndoSwap: () => void;
+  unit: WeightUnit;
 }
 
 export function ExerciseBlock({
@@ -30,10 +36,14 @@ export function ExerciseBlock({
   onAddSet,
   onRemoveSet,
   onPatchSet,
+  onSwap,
+  onUndoSwap,
+  unit,
 }: Props) {
   const base = `exercises.${index}`;
   const selectId = `exercise-${exercise.key}`;
   const exerciseError = errors[`${base}.exerciseId`];
+  const current = library.find((e) => e.id === exercise.exerciseId) ?? null;
 
   return (
     <Card className="space-y-4">
@@ -64,12 +74,32 @@ export function ExerciseBlock({
             })}
           </Select>
         </div>
+        {current ? (
+          <SwapExerciseButton
+            current={current}
+            originalId={exercise.swap?.fromExerciseId ?? current.id}
+            library={library}
+            onSwap={onSwap}
+          />
+        ) : null}
         {canRemove ? (
           <Button variant="secondary" onClick={onRemove} aria-label={`Remove exercise ${index + 1}`}>
             Remove
           </Button>
         ) : null}
       </div>
+      {exercise.swap ? (
+        <p className="flex flex-wrap items-center gap-2 rounded-md bg-amber-bg px-3 py-2 text-sm text-amber">
+          <span>
+            Swapped from {library.find((e) => e.id === exercise.swap?.fromExerciseId)?.name ?? 'the prescribed lift'} ·{' '}
+            {SWAP_REASON_LABELS[exercise.swap.reason]}
+            {exercise.swap.note ? `: ${exercise.swap.note}` : ''}
+          </span>
+          <button type="button" onClick={onUndoSwap} className="ml-auto font-semibold underline">
+            Undo
+          </button>
+        </p>
+      ) : null}
       <FieldError id={`${selectId}-error`}>{exerciseError}</FieldError>
 
       <div
@@ -77,7 +107,7 @@ export function ExerciseBlock({
         className="grid grid-cols-[1.5rem_1fr_1fr_1fr_2.75rem] gap-2 text-xs font-semibold uppercase tracking-wide text-muted sm:grid-cols-[2rem_1fr_1fr_1fr_7rem_2.75rem]"
       >
         <span>Set</span>
-        <span>kg</span>
+        <span>{unitLabel(unit)}</span>
         <span>Reps</span>
         <span>RPE</span>
       </div>
@@ -91,6 +121,7 @@ export function ExerciseBlock({
             errors={errors}
             onChange={(patch) => onPatchSet(set.key, patch)}
             onRemove={exercise.sets.length > 1 ? () => onRemoveSet(set.key) : null}
+            unit={unit}
           />
         ))}
       </ul>
