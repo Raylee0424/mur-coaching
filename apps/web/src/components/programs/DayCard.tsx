@@ -68,8 +68,8 @@ export function DayCard(p: Props) {
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" className="min-h-11 py-1" onClick={p.onDuplicate} disabled={!p.canDuplicate}>
-            Duplicate
+          <Button variant="secondary" className="min-h-11 py-1" onClick={p.onDuplicate} disabled={!p.canDuplicate} title={p.canDuplicate ? undefined : 'No free day left this week'}>
+            Duplicate day
           </Button>
           <Button variant="secondary" className="min-h-11 py-1" aria-label={`Remove day ${day.dayNumber}`} onClick={p.onRemove}>
             Remove

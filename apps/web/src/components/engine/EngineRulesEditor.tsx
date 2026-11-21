@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { ENGINE_DEFAULTS, ENGINE_LIMITS } from '@coaching/shared';
 import type { CoachEngineRulesDto, EngineRuleKey, UpdateCoachEngineRulesRequest, WeightUnit } from '@coaching/shared';
 import { resetEngineRules, saveEngineRules } from '@/actions/engine-rules';
-import { ActionBadge } from '@/components/progression/ActionBadge';
+import { ACTION_META, ActionBadge } from '@/components/progression/ActionBadge';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { FormError, Label, Select } from '@/components/ui/Field';
@@ -54,11 +54,11 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
 
   return (
     <div className="space-y-6">
-      <Card className="space-y-3">
+      <Card className="space-y-3 border-primary/30 bg-primary-container/30">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-bold">Live preview</h2>
-            <p className="text-sm text-muted">Pick a client lift to see what your current rules decide.</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Live rule simulation</p>
+            <p className="text-sm text-muted">Pick a client lift to see what your current rules decide. Edits preview here before you save.</p>
           </div>
           {previewTargets.length > 0 ? (
             <div className="w-full sm:w-80">
@@ -80,8 +80,8 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
         )}
       </Card>
 
-      <Card className="space-y-4 p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5">
+      <Card className="space-y-0 p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div>
             <h2 className="font-display text-lg font-bold">Rules</h2>
             <p className="text-sm text-muted">Checked top to bottom; the first match wins. Client overrides beat these.</p>
@@ -90,23 +90,41 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
             Reset to defaults
           </Button>
         </div>
-        <ul className="divide-y divide-line border-t border-line">
-          {RULE_GROUPS.map((group) => {
-            const overridden = group.keys.some((k) => saved.rules[k] !== null);
-            return (
-              <li key={group.action} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-                <div className="flex w-40 shrink-0 items-center gap-2">
-                  <ActionBadge action={group.action} />
-                  {overridden ? <OverriddenTag /> : null}
-                </div>
-                <p className="flex-1 text-sm">{group.condition(saved.effective)}</p>
-                <Button variant="secondary" className="min-h-9 self-start py-1 sm:self-center" onClick={() => setEditing(group)}>
-                  Edit
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[40rem] text-left text-sm">
+            <caption className="sr-only">Progression rules, in the order the engine checks them</caption>
+            <thead className="bg-raised text-xs uppercase tracking-wide text-muted">
+              <tr>
+                <th scope="col" className="px-5 py-3 font-semibold">Recommendation</th>
+                <th scope="col" className="px-3 py-3 font-semibold">Trigger condition</th>
+                <th scope="col" className="px-3 py-3 font-semibold">Current threshold</th>
+                <th scope="col" className="px-5 py-3 text-right font-semibold">Edit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {RULE_GROUPS.map((group) => {
+                const overridden = group.keys.some((k) => saved.rules[k] !== null);
+                return (
+                  <tr key={group.action} className="border-t border-line align-top">
+                    <td className="whitespace-nowrap px-5 py-4">
+                      <div className="flex flex-col items-start gap-1.5">
+                        <ActionBadge action={group.action} />
+                        {overridden ? <OverriddenTag /> : null}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4">{group.condition(saved.effective)}</td>
+                    <td className="whitespace-nowrap px-3 py-4 font-semibold tabular-nums">{group.threshold(saved.effective)}</td>
+                    <td className="px-5 py-4 text-right">
+                      <Button variant="secondary" className="min-h-9 py-1" aria-label={`Edit ${ACTION_META[group.action].label} rule`} onClick={() => setEditing(group)}>
+                        Edit rule
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <div className="px-5 pb-5">
           <FormError>{error}</FormError>
         </div>
@@ -127,8 +145,8 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
       <Sheet
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
-        title="Reset all rules?"
-        description="Every threshold returns to the engine default. Client overrides are not touched."
+        title="Reset engine rules?"
+        description="All global thresholds return to Ray Coaching defaults. Per-client overrides stay intact."
       >
         <footer className="flex justify-between gap-2">
           <Button variant="secondary" onClick={() => setConfirmReset(false)} disabled={pending}>

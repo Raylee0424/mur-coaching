@@ -1,81 +1,28 @@
-import Link from 'next/link';
-import { CoachClientStatus, RecommendationAction, RecommendationStatus, Role } from '@coaching/shared';
-import type { RecommendationDto } from '@coaching/shared';
-import { ActionBadge } from '@/components/progression/ActionBadge';
-import { RecommendationCard } from '@/components/progression/RecommendationCard';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { Role } from '@coaching/shared';
+import { ProgressionQueue } from '@/components/progression/ProgressionQueue';
+import { parseActionFilter } from '@/components/progression/queue-model';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { clientsApi, exercisesApi, progressionApi } from '@/lib/api/endpoints';
+import { progressionApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
+import { firstParam } from '@/lib/form';
 
-const ORDER: RecommendationAction[] = [
-  RecommendationAction.DELOAD,
-  RecommendationAction.INCREASE_LOAD,
-  RecommendationAction.INCREASE_REPS,
-  RecommendationAction.HOLD,
-];
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-/** Every pending recommendation across the roster, deloads first. */
-export default async function ProgressionQueuePage() {
+/** Every pending recommendation across the coach's active clients. */
+export default async function ProgressionQueuePage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser(Role.COACH);
-  const [roster, exercises] = await Promise.all([clientsApi.list(), exercisesApi.list()]);
-  // Paused clients are on a break and archived ones are out of reach: neither belongs in the review queue.
-  const clients = roster.filter((c) => c.status === CoachClientStatus.ACTIVE);
-  const exerciseNames = new Map(exercises.map((e) => [e.id, e.name]));
-  const perClient = await Promise.all(clients.map((c) => progressionApi.latest(c.id)));
-
-  const items = clients.flatMap((client, i) =>
-    (perClient[i] ?? [])
-      .filter((r) => r.status === RecommendationStatus.PENDING)
-      .map((rec) => ({ client, rec })),
-  );
-  items.sort(
-    (a, b) =>
-      ORDER.indexOf(a.rec.action) - ORDER.indexOf(b.rec.action) || b.rec.createdAt.localeCompare(a.rec.createdAt),
-  );
-  const count = (action: RecommendationAction) => items.filter((x) => x.rec.action === action).length;
+  const params = await searchParams;
+  const action = parseActionFilter(firstParam(params.action));
+  const q = firstParam(params.q)?.trim() ?? '';
+  const queue = await progressionApi.queue({ ...(action !== 'ALL' ? { action } : {}), ...(q ? { q } : {}) });
 
   return (
     <>
       <PageHeader
         title="Progression queue"
-        subtitle={`${items.length} pending ${items.length === 1 ? 'recommendation' : 'recommendations'} across ${clients.length} ${clients.length === 1 ? 'client' : 'clients'}`}
+        subtitle={`${queue.counts.total} pending ${queue.counts.total === 1 ? 'recommendation' : 'recommendations'}. Accept in bulk, or open a call to see why the engine made it.`}
       />
-      <div className="space-y-6">
-        <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {ORDER.map((action: RecommendationAction) => (
-            <li key={action} className="space-y-2 rounded-lg border border-line bg-card p-4">
-              <ActionBadge action={action} />
-              <p className="font-display text-3xl font-extrabold tabular">{count(action)}</p>
-            </li>
-          ))}
-        </ul>
-
-        {items.length === 0 ? (
-          <EmptyState title="Queue is clear">
-            Open a client and re-run the engine to generate new recommendations.
-          </EmptyState>
-        ) : (
-          <div className="space-y-4">
-            {items.map(({ client, rec }: { client: { id: string; name: string }; rec: RecommendationDto }) => (
-              <div key={rec.id} className="space-y-2">
-                <Link
-                  href={`/coach/clients/${client.id}`}
-                  className="text-xs font-semibold uppercase tracking-wider text-muted hover:text-primary"
-                >
-                  {client.name} →
-                </Link>
-                <RecommendationCard
-                  recommendation={rec}
-                  exerciseName={exerciseNames.get(rec.exerciseId) ?? 'Unknown exercise'}
-                  canDismiss
-                  unit={user.weightUnit}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <ProgressionQueue queue={queue} action={action} q={q} unit={user.weightUnit} />
     </>
   );
 }
