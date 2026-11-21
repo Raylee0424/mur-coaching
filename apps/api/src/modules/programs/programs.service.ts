@@ -1,6 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AssignmentStatus, Prisma, Role } from '@prisma/client';
-import type { AssignmentDto, ProgramDto, ProgramSummaryDto, ProgramTreeInput } from '@coaching/shared';
+import type {
+  AssignmentDto,
+  DuplicateProgramRequest,
+  ProgramDto,
+  ProgramSummaryDto,
+  ProgramTreeInput,
+} from '@coaching/shared';
 import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { planTreeSync, referencedExerciseIds, type TreePlan } from './tree-diff';
@@ -25,9 +31,10 @@ type ProgramRow = Prisma.ProgramGetPayload<{ include: typeof treeInclude }>;
 export class ProgramsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(coachId: string): Promise<ProgramSummaryDto[]> {
+  /** `template`: true = templates only, false = regular programs only, undefined = all. */
+  async list(coachId: string, template?: boolean): Promise<ProgramSummaryDto[]> {
     const rows = await this.prisma.program.findMany({
-      where: { coachId },
+      where: { coachId, ...(template === undefined ? {} : { isTemplate: template }) },
       orderBy: { updatedAt: 'desc' },
       include: {
         workouts: { where: { weekNumber: 1 }, select: { dayNumber: true } },
@@ -39,6 +46,7 @@ export class ProgramsService {
       name: p.name,
       description: p.description,
       durationWeeks: p.durationWeeks,
+      isTemplate: p.isTemplate,
       daysPerWeek: new Set(p.workouts.map((w) => w.dayNumber)).size,
       activeAssignments: p._count.assignments,
       updatedAt: p.updatedAt.toISOString(),
@@ -60,7 +68,13 @@ export class ProgramsService {
     await this.assertExercisesVisible(coachId, input);
     const id = await this.prisma.$transaction(async (tx) => {
       const program = await tx.program.create({
-        data: { coachId, name: input.name, description: input.description || null, durationWeeks: input.durationWeeks },
+        data: {
+          coachId,
+          name: input.name,
+          description: input.description || null,
+          durationWeeks: input.durationWeeks,
+          isTemplate: input.isTemplate ?? false,
+        },
       });
       await this.apply(tx, program.id, plan);
       return program.id;
@@ -79,11 +93,61 @@ export class ProgramsService {
     await this.prisma.$transaction(async (tx) => {
       await tx.program.update({
         where: { id },
-        data: { name: input.name, description: input.description || null, durationWeeks: input.durationWeeks },
+        data: {
+          name: input.name,
+          description: input.description || null,
+          durationWeeks: input.durationWeeks,
+          ...(input.isTemplate !== undefined ? { isTemplate: input.isTemplate } : {}),
+        },
       });
       await this.apply(tx, id, plan);
     });
     return this.get({ id: coachId, role: Role.COACH }, id);
+  }
+
+  /**
+   * Deep copy owned by the same coach: workouts and prescriptions, no assignments or history.
+   * `asTemplate` saves it as a template; otherwise the copy is a regular, assignable program.
+   */
+  async duplicate(coachId: string, id: string, req: DuplicateProgramRequest): Promise<ProgramDto> {
+    const src = await this.prisma.program.findFirst({
+      where: { id, coachId },
+      include: { workouts: { include: { exercises: { orderBy: { order: 'asc' } } } } },
+    });
+    if (!src) throw new NotFoundException('Program not found');
+    const copyId = await this.prisma.$transaction(async (tx) => {
+      const copy = await tx.program.create({
+        data: {
+          coachId,
+          name: req.name?.trim() || `${src.name} (copy)`,
+          description: src.description,
+          durationWeeks: src.durationWeeks,
+          isTemplate: req.asTemplate ?? false,
+          workouts: {
+            create: src.workouts.map((w) => ({
+              weekNumber: w.weekNumber,
+              dayNumber: w.dayNumber,
+              name: w.name,
+              exercises: {
+                create: w.exercises.map((e) => ({
+                  exerciseId: e.exerciseId,
+                  order: e.order,
+                  targetSets: e.targetSets,
+                  targetRepsMin: e.targetRepsMin,
+                  targetRepsMax: e.targetRepsMax,
+                  targetRpe: e.targetRpe,
+                  targetWeightKg: e.targetWeightKg,
+                  restSeconds: e.restSeconds,
+                  notes: e.notes,
+                })),
+              },
+            })),
+          },
+        },
+      });
+      return copy.id;
+    });
+    return this.get({ id: coachId, role: Role.COACH }, copyId);
   }
 
   async remove(coachId: string, id: string): Promise<void> {
@@ -175,6 +239,7 @@ export class ProgramsService {
       name: p.name,
       description: p.description,
       durationWeeks: p.durationWeeks,
+      isTemplate: p.isTemplate,
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
       activeClientIds: p.assignments.map((a) => a.clientId),

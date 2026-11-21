@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import { Role } from '@coaching/shared';
 import type { AssignmentDto, ProgramDto, ProgramSummaryDto } from '@coaching/shared';
 import { CurrentUser, RequestUser, Roles } from '../../common';
 import { ClientAccessService } from '../clients/client-access.service';
-import { CreateAssignmentDto, ProgramTreeDto } from './dto/program.dto';
+import { CreateAssignmentDto, DuplicateProgramDto, ListProgramsQuery, ProgramTreeDto } from './dto/program.dto';
 import { ProgramsService } from './programs.service';
 
 @Controller('programs')
@@ -12,8 +12,8 @@ export class ProgramsController {
 
   @Roles(Role.COACH)
   @Get()
-  list(@CurrentUser() user: RequestUser): Promise<ProgramSummaryDto[]> {
-    return this.programs.list(user.id);
+  list(@CurrentUser() user: RequestUser, @Query() query: ListProgramsQuery): Promise<ProgramSummaryDto[]> {
+    return this.programs.list(user.id, query.template);
   }
 
   @Roles(Role.COACH)
@@ -32,6 +32,13 @@ export class ProgramsController {
   @Put(':id')
   replace(@CurrentUser() user: RequestUser, @Param('id') id: string, @Body() dto: ProgramTreeDto): Promise<ProgramDto> {
     return this.programs.replace(user.id, id, dto);
+  }
+
+  /** Copy a program; with `{ asTemplate: true }` this is "save as template". */
+  @Roles(Role.COACH)
+  @Post(':id/duplicate')
+  duplicate(@CurrentUser() user: RequestUser, @Param('id') id: string, @Body() dto: DuplicateProgramDto): Promise<ProgramDto> {
+    return this.programs.duplicate(user.id, id, dto);
   }
 
   @Roles(Role.COACH)
