@@ -18,6 +18,7 @@ const program: ProgramDto = {
   name: 'Block',
   description: null,
   durationWeeks: 2,
+  isTemplate: false,
   createdAt: '',
   updatedAt: '',
   activeClientIds: [],
