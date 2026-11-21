@@ -160,6 +160,104 @@ const JORDAN: ClientPlan = {
 
 export const CLIENT_PLANS: readonly ClientPlan[] = [ALEX, JORDAN];
 
+/** Extra demo clients that exercise roster states. They reuse Alex's lift history. */
+export interface ExtraClientSeed {
+  plan: ClientPlan;
+  status: 'ACTIVE' | 'PAUSED';
+  /** Last program week with logged sessions. */
+  lastLoggedWeek: number;
+  /** Deterministic skips to produce low adherence. */
+  skips?: (week: number, dayNumber: number) => boolean;
+  autoApprove?: { maxKg: number };
+  /** Per-client engine overrides on the coach-client link. */
+  overrides?: { loadIncrementKg?: number; rpeCap?: number };
+}
+
+const asExtra = (email: string, name: string, profile: ClientPlan['profile']): ClientPlan => ({
+  email,
+  name,
+  profile,
+  history: ALEX.history,
+});
+
+export const EXTRA_CLIENTS: readonly ExtraClientSeed[] = [
+  {
+    // Still training, but skips about half of the sessions: low adherence; INCREASE_LOAD calls auto-approve.
+    plan: asExtra('demo.riley@coaching.demo', 'Riley Brooks (Demo)', {
+      goals: ['Muscle'],
+      experience: 'BEGINNER',
+      daysPerWeek: 4,
+      trainingDays: [1, 2, 4, 5],
+      sessionLengthMin: 60,
+      limitations: ['None'],
+    }),
+    status: 'ACTIVE',
+    lastLoggedWeek: 5,
+    skips: (week, day) => week >= 2 && (week + day) % 2 === 0,
+    autoApprove: { maxKg: 5 },
+  },
+  {
+    // Went quiet after week 3: no session in over a week.
+    plan: asExtra('demo.taylor@coaching.demo', 'Taylor Kim (Demo)', {
+      goals: ['General fitness'],
+      experience: 'INTERMEDIATE',
+      daysPerWeek: 4,
+      trainingDays: [1, 2, 4, 5],
+      sessionLengthMin: 60,
+      limitations: ['Knees'],
+    }),
+    status: 'ACTIVE',
+    lastLoggedWeek: 3,
+  },
+  {
+    // On hold (travelling). Carries per-client engine overrides, so the exercise library shows an override count.
+    plan: asExtra('demo.casey@coaching.demo', 'Casey Nguyen (Demo)', {
+      goals: ['Strength'],
+      experience: 'INTERMEDIATE',
+      daysPerWeek: 4,
+      trainingDays: [1, 2, 4, 5],
+      sessionLengthMin: 75,
+      limitations: ['None'],
+    }),
+    status: 'PAUSED',
+    lastLoggedWeek: 2,
+    overrides: { loadIncrementKg: 1.25, rpeCap: 8.5 },
+  },
+];
+
+/** Templates the coach can start from (not assigned to anyone). */
+export const TEMPLATE_NAME = 'Full Body 3-Day Template';
+export const TEMPLATE_WEEKS = 4;
+export const TEMPLATE_DAYS: readonly WorkoutSeed[] = [
+  {
+    dayNumber: 1,
+    name: 'Full Body A',
+    exercises: [
+      { exercise: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8, rpe: 8, restSeconds: 150 },
+      { exercise: 'Barbell Bench Press', sets: 3, repsMin: 6, repsMax: 8, rpe: 8, restSeconds: 120 },
+      { exercise: 'Barbell Row', sets: 3, repsMin: 8, repsMax: 10, rpe: 8, restSeconds: 90 },
+    ],
+  },
+  {
+    dayNumber: 3,
+    name: 'Full Body B',
+    exercises: [
+      { exercise: 'Romanian Deadlift', sets: 3, repsMin: 8, repsMax: 10, rpe: 8, restSeconds: 120 },
+      { exercise: 'Overhead Press', sets: 3, repsMin: 6, repsMax: 8, rpe: 8, restSeconds: 120 },
+      { exercise: 'Lat Pulldown', sets: 3, repsMin: 10, repsMax: 12, rpe: 8, restSeconds: 90 },
+    ],
+  },
+  {
+    dayNumber: 5,
+    name: 'Full Body C',
+    exercises: [
+      { exercise: 'Leg Press', sets: 3, repsMin: 8, repsMax: 12, rpe: 8, restSeconds: 120 },
+      { exercise: 'Incline Dumbbell Press', sets: 3, repsMin: 8, repsMax: 10, rpe: 8, restSeconds: 90 },
+      { exercise: 'Hip Thrust', sets: 3, repsMin: 8, repsMax: 10, rpe: 8, restSeconds: 120 },
+    ],
+  },
+];
+
 export interface SetSeed {
   setNumber: number;
   reps: number;
