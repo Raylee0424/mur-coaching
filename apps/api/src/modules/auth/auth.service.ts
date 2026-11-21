@@ -4,6 +4,8 @@ import * as bcrypt from 'bcrypt';
 import { CoachClientStatus, Role as PrismaRole } from '@prisma/client';
 import type { AuthTokenResponse, AuthUser, JwtPayload, Role } from '@coaching/shared';
 import { PrismaService } from '../../prisma/prisma.service';
+import type { UpdateMeDto } from './dto/update-me.dto';
+import { isAccessibleLink } from '../clients/link-status';
 
 @Injectable()
 export class AuthService {
@@ -50,9 +52,29 @@ export class AuthService {
       name: user.name,
       role: user.role,
       isDemo: user.isDemo,
-      coachId: user.coachLink?.status === CoachClientStatus.ACTIVE ? user.coachLink.coachId : null,
+      coachId: isAccessibleLink(user.coachLink?.status) ? (user.coachLink?.coachId ?? null) : null,
       activeClientCount,
+      weightUnit: user.weightUnit,
+      displayName: user.displayName,
+      onboardedAt: user.onboardedAt?.toISOString() ?? null,
     };
+  }
+
+  async updateMe(userId: string, dto: UpdateMeDto): Promise<AuthUser> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.name ? { name: dto.name } : {}),
+        ...(dto.displayName !== undefined ? { displayName: dto.displayName || null } : {}),
+        ...(dto.weightUnit ? { weightUnit: dto.weightUnit } : {}),
+      },
+    });
+    return this.me(userId);
+  }
+
+  async completeOnboarding(userId: string): Promise<AuthUser> {
+    await this.prisma.user.updateMany({ where: { id: userId, onboardedAt: null }, data: { onboardedAt: new Date() } });
+    return this.me(userId);
   }
 
   private sign(payload: JwtPayload): AuthTokenResponse {

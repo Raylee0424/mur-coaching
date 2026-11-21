@@ -5,3 +5,6 @@ export * from './clients';
 export * from './exercises';
 export * from './workout-logs';
 export * from './progression';
+export * from './engine-settings';
+export * from './client-settings';
+export * from './programs';

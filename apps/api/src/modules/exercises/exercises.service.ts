@@ -1,9 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { CoachClientStatus, Exercise, Prisma } from '@prisma/client';
+import { Exercise, Prisma } from '@prisma/client';
 import { Role } from '@coaching/shared';
 import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExerciseDto, ListExercisesQuery, UpdateExerciseDto } from './dto/exercises.dto';
+import { isAccessibleLink } from '../clients/link-status';
 
 @Injectable()
 export class ExercisesService {
@@ -64,7 +65,7 @@ export class ExercisesService {
   private async coachIdOf(user: RequestUser): Promise<string | null> {
     if (user.role === Role.COACH) return user.id;
     const link = await this.prisma.coachClient.findUnique({ where: { clientId: user.id } });
-    return link?.status === CoachClientStatus.ACTIVE ? link.coachId : null;
+    return link && isAccessibleLink(link.status) ? link.coachId : null;
   }
 
   /** Names are unique case-insensitively across the global library and the coach's own exercises. */

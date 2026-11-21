@@ -7,10 +7,11 @@ import { ClientsModule } from './modules/clients/clients.module';
 import { ProgressionModule } from './modules/progression/progression.module';
 import { WorkoutLogsModule } from './modules/workout-logs/workout-logs.module';
 import { ExercisesModule } from './modules/exercises/exercises.module';
+import { ProgramsModule } from './modules/programs/programs.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule],
+  imports: [ConfigModule, PrismaModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule],
   providers: [
     // Order matters: authenticate first, then authorize by role.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

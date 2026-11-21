@@ -1,19 +1,19 @@
 import Link from 'next/link';
-import { CoachClientStatus } from '@coaching/shared';
+import type { ReactNode } from 'react';
 import type { ClientView } from '@coaching/shared';
+import { CLIENT_STATUS_META as STATUS } from './status';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { programWeek } from '@/lib/format';
 
-export function ClientHeader({ client }: { client: ClientView }) {
+export function ClientHeader({ client, actions }: { client: ClientView; actions?: ReactNode }) {
   const assignment = client.activeAssignment;
   return (
     <Card className="mb-6 space-y-2">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
-        <Badge tone={client.status === CoachClientStatus.ACTIVE ? 'emerald' : 'slate'}>
-          {client.status === CoachClientStatus.ACTIVE ? 'Active' : 'Archived'}
-        </Badge>
+        <Badge tone={STATUS[client.status].tone}>{STATUS[client.status].label}</Badge>
+        {actions ? <div className="ml-auto">{actions}</div> : null}
       </div>
       <p className="text-sm text-muted">{client.email}</p>
       <p className="text-sm">
@@ -26,7 +26,7 @@ export function ClientHeader({ client }: { client: ClientView }) {
           <>
             No program assigned ·{' '}
             <Link href="/coach/programs" className="font-semibold text-primary-soft underline">
-              Programs (coming soon)
+              Assign a program
             </Link>
           </>
         )}

@@ -30,6 +30,9 @@ const lastLog: WorkoutLogDto = {
       workoutExerciseId: 'we1',
       order: 1,
       exercise: { id: 'bench', name: 'Bench' },
+      swappedFromExerciseId: null,
+      swapReason: null,
+      swappedFrom: null,
       sets: [
         { id: 's1', exerciseLogId: 'e1', setNumber: 1, reps: 8, weightKg: '100.00', rpe: '8.5', isWarmup: false },
         { id: 's2', exerciseLogId: 'e1', setNumber: 2, reps: 5, weightKg: '60.00', rpe: null, isWarmup: true },
@@ -39,18 +42,18 @@ const lastLog: WorkoutLogDto = {
 };
 
 function valid(): DraftLog {
-  const d = fromLastLog(lastLog, NOW_LOCAL);
+  const d = fromLastLog(lastLog, NOW_LOCAL, 'KG');
   return d;
 }
 
 describe('fromLastLog', () => {
   it('copies prescription ids and normalises numbers, but not the old notes', () => {
-    const d = fromLastLog(lastLog, NOW_LOCAL);
+    const d = fromLastLog(lastLog, NOW_LOCAL, 'KG');
     expect(d.assignmentId).toBe('a1');
     expect(d.workoutId).toBe('w1');
     expect(d.notes).toBe('');
     expect(d.exercises[0]?.workoutExerciseId).toBe('we1');
-    expect(d.exercises[0]?.sets.map((s) => [s.weightKg, s.reps, s.rpe, s.isWarmup])).toEqual([
+    expect(d.exercises[0]?.sets.map((s) => [s.weight, s.reps, s.rpe, s.isWarmup])).toEqual([
       ['100', '8', '8.5', false],
       ['60', '5', '', true],
     ]);
@@ -87,10 +90,10 @@ describe('validateDraft', () => {
   });
 
   it('rejects bad reps, rpe, weight precision and missing exercise', () => {
-    let d = emptyDraft(NOW_LOCAL);
+    let d = emptyDraft(NOW_LOCAL, 'KG');
     const ex = d.exercises[0]!;
     const set = ex.sets[0]!;
-    d = patchSet(d, ex.key, set.key, { reps: '1.5', weightKg: '100.123', rpe: '11' });
+    d = patchSet(d, ex.key, set.key, { reps: '1.5', weight: '100.123', rpe: '11' });
     const r = validateDraft(d, NOW);
     expect(r.ok).toBe(false);
     if (!r.ok) {
@@ -98,7 +101,7 @@ describe('validateDraft', () => {
         'exercises.0.exerciseId',
         'exercises.0.sets.0.reps',
         'exercises.0.sets.0.rpe',
-        'exercises.0.sets.0.weightKg',
+        'exercises.0.sets.0.weight',
       ]);
     }
   });
@@ -125,6 +128,42 @@ describe('edits', () => {
     const key = d.exercises[0]!.key;
     const sets = addSet(d, key).exercises[0]!.sets;
     expect(sets).toHaveLength(3);
-    expect(sets[2]).toMatchObject({ reps: '5', weightKg: '60', isWarmup: false });
+    expect(sets[2]).toMatchObject({ reps: '5', weight: '60', isWarmup: false });
+  });
+});
+
+import { swapExercise, undoSwap } from './logger-model';
+
+describe('swapExercise', () => {
+  it('drops the prescription link, records the swap and can undo it', () => {
+    let d = fromLastLog(lastLog, NOW_LOCAL, 'KG');
+    const ex = d.exercises[0];
+    if (!ex) throw new Error('no exercise');
+    d = swapExercise(d, ex.key, 'db-press', 'EQUIPMENT_BUSY', '  rack taken ');
+    expect(d.exercises[0]).toMatchObject({ exerciseId: 'db-press', swap: { fromExerciseId: 'bench', fromWorkoutExerciseId: 'we1', reason: 'EQUIPMENT_BUSY', note: 'rack taken' } });
+    expect(d.exercises[0]?.workoutExerciseId).toBeUndefined();
+
+    d = swapExercise(d, ex.key, 'machine-press', 'PAIN', '');
+    expect(d.exercises[0]?.swap?.fromExerciseId).toBe('bench');
+
+    const r = validateDraft(d, NOW);
+    expect(r.ok && r.request.exerciseLogs[0]).toMatchObject({ exerciseId: 'machine-press', swappedFromExerciseId: 'bench', swapReason: 'PAIN' });
+    expect(r.ok && 'workoutExerciseId' in (r.request.exerciseLogs[0] ?? {})).toBe(false);
+
+    d = undoSwap(d, ex.key);
+    expect(d.exercises[0]).toMatchObject({ exerciseId: 'bench', workoutExerciseId: 'we1' });
+    expect(d.exercises[0]?.swap).toBeUndefined();
+  });
+});
+
+
+describe('baseline prefill', () => {
+  it('fills blank sets from the starting weight, in the draft unit', () => {
+    const d = emptyDraft(NOW_LOCAL, 'LB');
+    const key = d.exercises[0]?.key ?? '';
+    const filled = setExerciseId(d, key, 'squat', { weightKg: 102.05, reps: 5 });
+    expect(filled.exercises[0]?.sets[0]).toMatchObject({ weight: '225', reps: '5' });
+    const touched = patchSet(d, key, d.exercises[0]?.sets[0]?.key ?? '', { reps: '8' });
+    expect(setExerciseId(touched, key, 'squat', { weightKg: 100, reps: 5 }).exercises[0]?.sets[0]).toMatchObject({ weight: '', reps: '8' });
   });
 });

@@ -1,12 +1,14 @@
 import { WORKOUT_LOG_LIMITS } from '@coaching/shared';
-import type { CreateWorkoutLogRequest, ExerciseLogInput, WorkoutLogDto } from '@coaching/shared';
+import type { CreateWorkoutLogRequest, ExerciseLogInput, SwapReason, WeightUnit, WorkoutLogDto } from '@coaching/shared';
 import { toNumber } from '@/lib/format';
+import { displayToKg, kgToDisplay, unitLabel } from '@/lib/units';
 
 /** Draft values stay strings while editing so half-typed numbers are never mangled. */
 export interface DraftSet {
   key: string;
   reps: string;
-  weightKg: string;
+  /** In the draft's display unit (kg or lb); converted to kg on submit. */
+  weight: string;
   rpe: string;
   isWarmup: boolean;
 }
@@ -16,12 +18,16 @@ export interface DraftExercise {
   exerciseId: string;
   /** Prescription this exercise fulfils; lets the engine evaluate the new log. */
   workoutExerciseId?: string;
+  /** Set when the client swapped away from the prescribed exercise; `undo` restores it. */
+  swap?: { fromExerciseId: string; fromWorkoutExerciseId?: string; reason: SwapReason; note: string };
   sets: DraftSet[];
 }
 
 export interface DraftLog {
   /** `datetime-local` value, browser-local time. */
   performedAtLocal: string;
+  /** Unit the weights are typed in. */
+  unit: WeightUnit;
   notes: string;
   assignmentId?: string;
   workoutId?: string;
@@ -45,21 +51,22 @@ export function toLocalInput(date: Date): string {
 }
 
 export function blankSet(): DraftSet {
-  return { key: nextKey(), reps: '', weightKg: '', rpe: '', isWarmup: false };
+  return { key: nextKey(), reps: '', weight: '', rpe: '', isWarmup: false };
 }
 
 export function blankExercise(): DraftExercise {
   return { key: nextKey(), exerciseId: '', sets: [blankSet()] };
 }
 
-export function emptyDraft(performedAtLocal: string): DraftLog {
-  return { performedAtLocal, notes: '', exercises: [blankExercise()] };
+export function emptyDraft(performedAtLocal: string, unit: WeightUnit): DraftLog {
+  return { performedAtLocal, unit, notes: '', exercises: [blankExercise()] };
 }
 
 /** Copies exercises, set values and prescription links from a previous session. */
-export function fromLastLog(log: WorkoutLogDto, performedAtLocal: string): DraftLog {
+export function fromLastLog(log: WorkoutLogDto, performedAtLocal: string, unit: WeightUnit): DraftLog {
   return {
     performedAtLocal,
+    unit,
     notes: '',
     ...(log.assignmentId ? { assignmentId: log.assignmentId } : {}),
     ...(log.workoutId ? { workoutId: log.workoutId } : {}),
@@ -70,7 +77,7 @@ export function fromLastLog(log: WorkoutLogDto, performedAtLocal: string): Draft
       sets: exerciseLog.sets.map((set) => ({
         key: nextKey(),
         reps: String(set.reps),
-        weightKg: String(toNumber(set.weightKg)),
+        weight: String(kgToDisplay(toNumber(set.weightKg), unit)),
         rpe: set.rpe === null ? '' : String(toNumber(set.rpe)),
         isWarmup: set.isWarmup,
       })),
@@ -88,11 +95,66 @@ export function removeExercise(draft: DraftLog, exerciseKey: string): DraftLog {
   return { ...draft, exercises: draft.exercises.filter((e) => e.key !== exerciseKey) };
 }
 
-/** Picking a different exercise drops the prescription link: it no longer matches. */
-export function setExerciseId(draft: DraftLog, exerciseKey: string, exerciseId: string): DraftLog {
+/** Starting weight from onboarding (kg). */
+export interface Baseline {
+  weightKg: number;
+  reps: number | null;
+}
+
+/**
+ * Picking a different exercise drops the prescription link (it no longer matches). When the sets are
+ * still blank and the client has a starting weight for the lift, the sets are prefilled from it.
+ */
+export function setExerciseId(draft: DraftLog, exerciseKey: string, exerciseId: string, baseline?: Baseline): DraftLog {
   return mapExercise(draft, exerciseKey, (exercise) => {
     if (exercise.exerciseId === exerciseId) return exercise;
-    return { key: exercise.key, exerciseId, sets: exercise.sets };
+    const blank = exercise.sets.every((s) => s.weight.trim() === '' && s.reps.trim() === '');
+    const sets =
+      blank && baseline
+        ? exercise.sets.map((s) => ({
+            ...s,
+            weight: String(kgToDisplay(baseline.weightKg, draft.unit)),
+            reps: baseline.reps === null ? s.reps : String(baseline.reps),
+          }))
+        : exercise.sets;
+    return { key: exercise.key, exerciseId, sets };
+  });
+}
+
+/**
+ * Swap to an alternative mid-session. The prescription link is dropped (it no longer matches) but kept
+ * on the swap so `undoSwap` can restore it. Swapping twice still records the originally prescribed lift.
+ */
+export function swapExercise(
+  draft: DraftLog,
+  exerciseKey: string,
+  toExerciseId: string,
+  reason: SwapReason,
+  note: string,
+): DraftLog {
+  return mapExercise(draft, exerciseKey, (exercise) => {
+    const fromExerciseId = exercise.swap?.fromExerciseId ?? exercise.exerciseId;
+    const fromWorkoutExerciseId = exercise.swap?.fromWorkoutExerciseId ?? exercise.workoutExerciseId;
+    if (!fromExerciseId || toExerciseId === fromExerciseId) return exercise;
+    return {
+      key: exercise.key,
+      exerciseId: toExerciseId,
+      swap: { fromExerciseId, ...(fromWorkoutExerciseId ? { fromWorkoutExerciseId } : {}), reason, note: note.trim() },
+      sets: exercise.sets,
+    };
+  });
+}
+
+export function undoSwap(draft: DraftLog, exerciseKey: string): DraftLog {
+  return mapExercise(draft, exerciseKey, (exercise) => {
+    if (!exercise.swap) return exercise;
+    const { fromExerciseId, fromWorkoutExerciseId } = exercise.swap;
+    return {
+      key: exercise.key,
+      exerciseId: fromExerciseId,
+      ...(fromWorkoutExerciseId ? { workoutExerciseId: fromWorkoutExerciseId } : {}),
+      sets: exercise.sets,
+    };
   });
 }
 
@@ -159,12 +221,14 @@ export function validateDraft(draft: DraftLog, now: Date): ValidationResult {
     exercise.sets.forEach((set, j) => {
       const key = `${base}.sets.${j}`;
       const reps = set.reps.trim();
-      const weight = set.weightKg.trim();
+      const weight = set.weight.trim();
+      const weightKg = displayToKg(Number(weight), draft.unit);
       const rpe = set.rpe.trim();
 
       if (!WHOLE.test(reps) || Number(reps) > L.maxReps) errors[`${key}.reps`] = `Whole number, 0–${L.maxReps}.`;
-      if (!DECIMAL_2.test(weight) || Number(weight) > L.maxWeightKg) {
-        errors[`${key}.weightKg`] = `0–${L.maxWeightKg} kg, up to 2 decimals.`;
+      if (!DECIMAL_2.test(weight) || weightKg > L.maxWeightKg) {
+        const max = kgToDisplay(L.maxWeightKg, draft.unit);
+        errors[`${key}.weight`] = `0–${Math.floor(max)} ${unitLabel(draft.unit)}, up to 2 decimals.`;
       }
       if (rpe !== '' && (!DECIMAL_1.test(rpe) || Number(rpe) < L.rpeMin || Number(rpe) > L.rpeMax)) {
         errors[`${key}.rpe`] = `${L.rpeMin}–${L.rpeMax}, up to 1 decimal.`;
@@ -172,15 +236,23 @@ export function validateDraft(draft: DraftLog, now: Date): ValidationResult {
 
       sets.push({
         reps: Number(reps),
-        weightKg: Number(weight),
+        weightKg,
         ...(rpe !== '' ? { rpe: Number(rpe) } : {}),
         ...(set.isWarmup ? { isWarmup: true } : {}),
       });
     });
 
+    if (exercise.swap && exercise.swap.note.length > 200) errors[`${base}.swap`] = 'Swap note: at most 200 characters.';
     exerciseLogs.push({
       exerciseId: exercise.exerciseId,
       ...(exercise.workoutExerciseId ? { workoutExerciseId: exercise.workoutExerciseId } : {}),
+      ...(exercise.swap
+        ? {
+            swappedFromExerciseId: exercise.swap.fromExerciseId,
+            swapReason: exercise.swap.reason,
+            ...(exercise.swap.note ? { swapNote: exercise.swap.note } : {}),
+          }
+        : {}),
       sets,
     });
   });

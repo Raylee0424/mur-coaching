@@ -1,5 +1,6 @@
 import type { RecommendationAction, RecommendationStatus } from './enums';
 import type { DecimalString, IsoDateString } from './common';
+import type { ResolvedEngineSettings } from './engine-settings';
 
 export interface SessionMetrics {
   exerciseLogId: string;
@@ -30,6 +31,17 @@ export interface RecommendationDto {
   sourceExerciseLogIds: string[];
   createdAt: IsoDateString;
   resolvedAt: IsoDateString | null;
+  /** Coach override of the engine target; engine fields above are never changed. */
+  overrideWeightKg: DecimalString | null;
+  overrideRepsMin: number | null;
+  overrideRepsMax: number | null;
+  overrideRpe: DecimalString | null;
+  overrideNote: string | null;
+  overriddenById: string | null;
+  overriddenAt: IsoDateString | null;
+  autoApproved: boolean;
+  /** Null for recommendations created before engine settings existed. */
+  settings: ResolvedEngineSettings | null;
 }
 
 export interface ProgressionHistoryResponse {

@@ -42,6 +42,7 @@ export async function createExercise(
   try {
     const created = await exercisesApi.create(parsed.value);
     revalidatePath('/coach/exercises');
+    revalidatePath('/welcome/coach');
     return { ok: true, data: created.name };
   } catch (err) {
     unstable_rethrow(err);
@@ -74,6 +75,7 @@ export async function updateExercise(
   try {
     if (Object.keys(changes).length > 0) await exercisesApi.update(id, changes);
     revalidatePath('/coach/exercises');
+    revalidatePath('/welcome/coach');
   } catch (err) {
     unstable_rethrow(err);
     return toActionError(err);

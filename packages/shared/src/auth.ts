@@ -1,4 +1,5 @@
-import type { Role } from './enums';
+import type { Role, WeightUnit } from './enums';
+import type { IsoDateString } from './common';
 
 export interface LoginRequest {
   email: string;
@@ -28,4 +29,14 @@ export interface AuthUser {
   coachId: string | null;
   /** Set for COACH users: number of ACTIVE clients. */
   activeClientCount: number | null;
+  weightUnit: WeightUnit;
+  displayName: string | null;
+  /** Null until the user finishes onboarding. */
+  onboardedAt: IsoDateString | null;
+}
+
+export interface UpdateMeRequest {
+  name?: string;
+  displayName?: string;
+  weightUnit?: WeightUnit;
 }

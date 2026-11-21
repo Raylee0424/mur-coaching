@@ -76,6 +76,15 @@ export interface LiftHistory {
 export interface ClientPlan {
   email: string;
   name: string;
+  profile: {
+    goals: string[];
+    experience: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    daysPerWeek: number;
+    trainingDays: number[];
+    sessionLengthMin: number;
+    limitations: string[];
+    limitationsNote?: string;
+  };
   history: Readonly<Record<string, LiftHistory>>;
 }
 
@@ -87,6 +96,14 @@ export interface ClientPlan {
 const ALEX: ClientPlan = {
   email: 'demo.alex@coaching.demo',
   name: 'Alex Carter (Demo)',
+  profile: {
+    goals: ['Strength', 'Muscle'],
+    experience: 'INTERMEDIATE',
+    daysPerWeek: 4,
+    trainingDays: [1, 2, 4, 5],
+    sessionLengthMin: 75,
+    limitations: ['None'],
+  },
   history: {
     'Barbell Bench Press': { weightKg: [80, 80, 82.5, 82.5], reps: [7, 8, 6, 8], rpe: [8, 7.5, 8, 8] },
     'Barbell Row': { weightKg: [60, 60, 62.5, 62.5], reps: [9, 10, 8, 10], rpe: [8, 7.5, 8, 8] },
@@ -112,6 +129,15 @@ const ALEX: ClientPlan = {
 const JORDAN: ClientPlan = {
   email: 'demo.jordan@coaching.demo',
   name: 'Jordan Lee (Demo)',
+  profile: {
+    goals: ['Powerlifting'],
+    experience: 'ADVANCED',
+    daysPerWeek: 4,
+    trainingDays: [1, 2, 4, 5],
+    sessionLengthMin: 90,
+    limitations: ['Shoulders'],
+    limitationsNote: 'Left shoulder gets cranky on heavy bench.',
+  },
   history: {
     'Barbell Bench Press': { weightKg: [85, 85, 85, 85], reps: [7, 7, 7, 7], rpe: [8.5, 9, 9, 9.5] },
     'Incline Dumbbell Press': {

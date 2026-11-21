@@ -1,5 +1,5 @@
 import { RecommendationStatus } from '@coaching/shared';
-import type { RecommendationAction, RecommendationDto } from '@coaching/shared';
+import type { RecommendationAction, RecommendationDto, WeightUnit } from '@coaching/shared';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RecommendationCard } from './RecommendationCard';
 
@@ -9,6 +9,7 @@ interface Props {
   canDismiss: boolean;
   /** Builds a lift-detail link per exercise (client view). */
   liftHref?: (exerciseId: string) => string;
+  unit: WeightUnit;
 }
 
 const newestFirst = (a: RecommendationDto, b: RecommendationDto): number => b.createdAt.localeCompare(a.createdAt);
@@ -24,9 +25,12 @@ const byPriority = (a: RecommendationDto, b: RecommendationDto): number =>
   ACTION_PRIORITY[a.action] - ACTION_PRIORITY[b.action] || newestFirst(a, b);
 
 /** Pending cards first; resolved and superseded ones collapse underneath. */
-export function RecommendationList({ recommendations, exerciseNames, canDismiss, liftHref }: Props) {
-  const pending = recommendations.filter((r) => r.status === RecommendationStatus.PENDING).sort(byPriority);
-  const resolved = recommendations.filter((r) => r.status !== RecommendationStatus.PENDING).sort(newestFirst);
+export function RecommendationList({ recommendations, exerciseNames, canDismiss, liftHref, unit }: Props) {
+  // Clients train to accepted targets too (including coach overrides), so those stay up front for them.
+  const isCurrent = (r: RecommendationDto): boolean =>
+    r.status === RecommendationStatus.PENDING || (!canDismiss && r.status === RecommendationStatus.ACCEPTED);
+  const pending = recommendations.filter(isCurrent).sort(byPriority);
+  const resolved = recommendations.filter((r) => !isCurrent(r)).sort(newestFirst);
 
   const card = (rec: RecommendationDto) => (
     <RecommendationCard
@@ -34,6 +38,7 @@ export function RecommendationList({ recommendations, exerciseNames, canDismiss,
       recommendation={rec}
       exerciseName={exerciseNames.get(rec.exerciseId) ?? 'Unknown exercise'}
       canDismiss={canDismiss}
+      unit={unit}
       {...(liftHref ? { liftHref: liftHref(rec.exerciseId) } : {})}
     />
   );

@@ -1,16 +1,12 @@
-import type { DecimalString, IsoDateString } from '@coaching/shared';
+import type { DecimalString, IsoDateString, WeightUnit } from '@coaching/shared';
+import { formatWeight } from './units';
 
 /** The only place Decimal strings from the API become numbers. */
 export function toNumber(value: DecimalString | number): number {
   return typeof value === 'number' ? value : Number(value);
 }
 
-const weightFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 const rpeFmt = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
-
-export function formatKg(value: DecimalString | number): string {
-  return `${weightFmt.format(toNumber(value))} kg`;
-}
 
 export function formatRpe(value: DecimalString | number | null): string {
   return value === null ? '' : `RPE ${rpeFmt.format(toNumber(value))}`;
@@ -42,13 +38,13 @@ interface TargetFields {
 }
 
 /** "3 × 6–8 @ 102.5 kg"; omits parts the engine left null. */
-export function formatTarget(rec: TargetFields): string {
+export function formatTarget(rec: TargetFields, unit: WeightUnit): string {
   const { recommendedSets: sets, recommendedRepsMin: min, recommendedRepsMax: max, recommendedWeightKg: kg } = rec;
   const reps = min === null || max === null ? null : min === max ? String(min) : `${min}–${max}`;
   const parts: string[] = [];
   if (sets !== null && reps !== null) parts.push(`${sets} × ${reps}`);
   else if (reps !== null) parts.push(`${reps} reps`);
   else if (sets !== null) parts.push(`${sets} sets`);
-  if (kg !== null) parts.push(`@ ${formatKg(kg)}`);
+  if (kg !== null) parts.push(`@ ${formatWeight(kg, unit)}`);
   return parts.join(' ');
 }

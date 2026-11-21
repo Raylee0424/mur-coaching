@@ -28,7 +28,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
           Session logged. Your targets were updated.
         </p>
       ) : null}
-      <WorkoutLogList logs={page.items} />
+      <WorkoutLogList logs={page.items} unit={user.weightUnit} editable />
       <div className="mt-6 flex flex-wrap gap-3">
         {cursor ? (
           <Link href="/client/history" className={buttonClass('secondary')}>

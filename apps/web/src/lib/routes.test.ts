@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { homeFor, safeNext } from './routes';
+import { homeFor, onboardingFor, safeNext } from './routes';
 
 describe('routes', () => {
   it('maps roles to home', () => {
     expect(homeFor('COACH')).toBe('/coach/clients');
     expect(homeFor('CLIENT')).toBe('/client');
+    expect(onboardingFor('COACH')).toBe('/welcome/coach');
+    expect(onboardingFor('CLIENT')).toBe('/welcome/client');
   });
 
   it('safeNext keeps only same-role in-app paths', () => {
