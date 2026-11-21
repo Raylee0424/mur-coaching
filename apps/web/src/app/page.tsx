@@ -1,3 +1,4 @@
+import { CallToAction } from '@/components/marketing/CallToAction';
 import { Hero } from '@/components/marketing/Hero';
 import { HowItWorks } from '@/components/marketing/HowItWorks';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
@@ -15,6 +16,7 @@ export default function Home() {
         <HowItWorks />
         <ProgressionEngine />
         <RoleCards />
+        <CallToAction />
       </main>
       <MarketingFooter />
     </div>

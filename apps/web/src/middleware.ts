@@ -3,6 +3,8 @@ import { Role } from '@coaching/shared';
 import { SESSION_COOKIE, decodeClaims } from '@/lib/claims';
 import { homeFor, onboardingFor } from '@/lib/routes';
 
+const ENTRY_PATHS = new Set(['/', '/login', '/signup', '/forgot']);
+
 /** Optimistic gate on unverified claims (UX only). Layouts re-check via /auth/me. */
 export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
@@ -34,8 +36,14 @@ export function middleware(request: NextRequest): NextResponse {
     return NextResponse.next();
   }
 
-  // Signed-in users skip the landing page and login; anonymous users see them.
-  if ((pathname === '/' || pathname === '/login') && claims) return redirectTo(homeFor(claims.role));
+  // Verifying needs a session (the code belongs to the signed-in account).
+  if (pathname === '/verify') {
+    return claims ? NextResponse.next() : redirectTo('/login');
+  }
+
+  // Signed-in users skip the landing page and the sign-in / sign-up / forgot pages.
+  // /reset and /invite/* stay open to everyone: the link itself is the credential.
+  if (claims && ENTRY_PATHS.has(pathname)) return redirectTo(homeFor(claims.role));
 
   return NextResponse.next();
 }
