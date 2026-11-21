@@ -37,9 +37,18 @@ export interface ClientOverrides {
   sessionsAnalyzed?: number | null;
 }
 
+/** Exercise-level rules (null fields inherit). Reps apply only when both bounds are set. */
+export interface ExerciseRules {
+  rpeCap?: number | null;
+  repsMin?: number | null;
+  repsMax?: number | null;
+}
+
 export interface SettingLayers {
   coach: CoachRules | null;
   client: ClientOverrides | null;
+  /** Exercise-level rpeCap / rep range; the exercise's own load increment arrives via `prescription`. */
+  exercise?: ExerciseRules | null;
   /** The prescription as written, with the exercise's own load increment. */
   prescription: Prescription;
 }
@@ -59,20 +68,35 @@ function pick(...candidates: [number | null | undefined, SettingSource][]): Reso
   throw new Error('no candidate value'); // unreachable: callers always end with a default
 }
 
+/** Resolved values back into engine thresholds (used to replay a stored recommendation). */
+export const thresholdsFromResolved = (r: ResolvedEngineSettings): EngineThresholds =>
+  toThresholds({
+    rpeCap: r.rpeCap.value,
+    loadMarginRpe: r.loadMarginRpe.value,
+    highRpe: r.highRpe.value,
+    plateauTolerancePct: r.plateauTolerancePct.value,
+    declineThresholdPct: r.declineThresholdPct.value,
+    deloadPercent: r.deloadPercent.value,
+    sessionsAnalyzed: r.sessionsAnalyzed.value,
+  });
+
 /**
- * Precedence: client override → prescription / exercise → coach rule → default.
- * RPE cap: client, then the prescription's target, then coach, then default.
- * Rep range: client (both bounds) or the prescription. Increment: client or the exercise.
+ * Precedence: client override → exercise rule → prescription → coach rule → default.
+ * RPE cap: client, exercise, the prescription's target, coach, default.
+ * Rep range: client (both bounds), exercise (both bounds), then the prescription.
+ * Increment: client, then the exercise's own load increment (carried on the prescription layer).
  */
-export function resolveEngineSettings({ coach, client, prescription: rx }: SettingLayers): EffectiveSettings {
+export function resolveEngineSettings({ coach, client, exercise, prescription: rx }: SettingLayers): EffectiveSettings {
   const c = client ?? {};
+  const e = exercise ?? {};
   const k = coach ?? {};
   const fromCoach = (key: keyof EngineRuleValues): ResolvedSetting<number> =>
     pick([key === 'deloadPercent' || key === 'sessionsAnalyzed' ? c[key] : null, 'CLIENT'], [k[key], 'COACH'], [ENGINE_DEFAULTS[key], 'DEFAULT']);
 
   const clientReps = has(c.repsMin) && has(c.repsMax);
+  const exerciseReps = has(e.repsMin) && has(e.repsMax);
   const resolved: ResolvedEngineSettings = {
-    rpeCap: pick([c.rpeCap, 'CLIENT'], [rx.targetRpe, 'PRESCRIPTION'], [k.rpeCap, 'COACH'], [ENGINE_DEFAULTS.rpeCap, 'DEFAULT']),
+    rpeCap: pick([c.rpeCap, 'CLIENT'], [e.rpeCap, 'EXERCISE'], [rx.targetRpe, 'PRESCRIPTION'], [k.rpeCap, 'COACH'], [ENGINE_DEFAULTS.rpeCap, 'DEFAULT']),
     loadMarginRpe: fromCoach('loadMarginRpe'),
     highRpe: fromCoach('highRpe'),
     plateauTolerancePct: fromCoach('plateauTolerancePct'),
@@ -80,8 +104,16 @@ export function resolveEngineSettings({ coach, client, prescription: rx }: Setti
     deloadPercent: fromCoach('deloadPercent'),
     sessionsAnalyzed: fromCoach('sessionsAnalyzed'),
     loadIncrementKg: pick([c.loadIncrementKg, 'CLIENT'], [rx.loadIncrementKg, 'EXERCISE']),
-    repsMin: clientReps ? { value: c.repsMin as number, source: 'CLIENT' } : { value: rx.repsMin, source: 'PRESCRIPTION' },
-    repsMax: clientReps ? { value: c.repsMax as number, source: 'CLIENT' } : { value: rx.repsMax, source: 'PRESCRIPTION' },
+    repsMin: clientReps
+      ? { value: c.repsMin as number, source: 'CLIENT' }
+      : exerciseReps
+        ? { value: e.repsMin as number, source: 'EXERCISE' }
+        : { value: rx.repsMin, source: 'PRESCRIPTION' },
+    repsMax: clientReps
+      ? { value: c.repsMax as number, source: 'CLIENT' }
+      : exerciseReps
+        ? { value: e.repsMax as number, source: 'EXERCISE' }
+        : { value: rx.repsMax, source: 'PRESCRIPTION' },
   };
 
   const values: EngineRuleValues = {
