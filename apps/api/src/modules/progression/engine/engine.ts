@@ -1,24 +1,23 @@
 import { RecommendationAction } from '@coaching/shared';
 import { computeSessionMetrics, roundToIncrement } from './metrics';
-import {
-  DELOAD_FACTOR,
-  isDeclining,
-  isHighEffort,
-  isPlateau,
-  repsAtTopWeight,
-  targetRpeOf,
-} from './rules';
+import { isDeclining, isHighEffort, isPlateau, repsAtTopWeight, targetRpeOf } from './rules';
+import { DEFAULT_THRESHOLDS, type EngineThresholds } from './settings';
 import type { Prescription, RecommendationDraft, SessionInput, SessionMetrics } from './types';
 
-/** Sessions the rules look at. */
-const WINDOW = 3;
 const MIN_SESSIONS = 2;
+const pct = (fraction: number): number => Math.round(fraction * 1000) / 10;
 
 /**
- * Pure decision function: history + prescription → recommendation draft.
+ * Pure decision function: history + prescription (+ thresholds) → recommendation draft.
  * Rule order (first match wins): insufficient data → DELOAD → INCREASE_LOAD → INCREASE_REPS → HOLD.
+ * `rx` is the effective prescription (overrides already applied, see settings.ts).
  */
-export function evaluate(history: readonly SessionInput[], rx: Prescription): RecommendationDraft | null {
+export function evaluate(
+  history: readonly SessionInput[],
+  rx: Prescription,
+  t: EngineThresholds = DEFAULT_THRESHOLDS,
+): RecommendationDraft | null {
+  const WINDOW = t.window;
   const analysed = history
     .map((session) => ({ session, metrics: computeSessionMetrics(session) }))
     .filter((x): x is { session: SessionInput; metrics: SessionMetrics } => x.metrics !== null)
@@ -50,18 +49,19 @@ export function evaluate(history: readonly SessionInput[], rx: Prescription): Re
 
   // DELOAD: needs a full window.
   if (window.length === WINDOW) {
-    const grinding = isPlateau(window) && isHighEffort(window);
-    if (grinding || isDeclining(window)) {
+    const grinding = isPlateau(window, t.plateauTolerance) && isHighEffort(window, t.highRpe);
+    if (grinding || isDeclining(window, t.declineThreshold)) {
+      const keep = pct(t.deloadFactor);
       return {
         ...base,
         action: RecommendationAction.DELOAD,
-        recommendedWeightKg: roundToIncrement(lm.topWeightKg * DELOAD_FACTOR, rx.loadIncrementKg),
+        recommendedWeightKg: roundToIncrement(lm.topWeightKg * t.deloadFactor, rx.loadIncrementKg),
         recommendedRepsMin: rx.repsMin,
         recommendedRepsMax: rx.repsMax,
         recommendedSets: rx.targetSets,
         reason: grinding
-          ? `Plateau over the last ${WINDOW} sessions (volume and e1RM flat) with average RPE >= 9 each time. Deload to ~90% load.`
-          : `Estimated 1RM fell across the last ${WINDOW} sessions. Deload to ~90% load.`,
+          ? `Plateau over the last ${WINDOW} sessions (volume and e1RM flat) with average RPE >= ${t.highRpe} each time. Deload to ~${keep}% load.`
+          : `Estimated 1RM fell across the last ${WINDOW} sessions. Deload to ~${keep}% load.`,
       };
     }
   }
@@ -85,6 +85,12 @@ export function evaluate(history: readonly SessionInput[], rx: Prescription): Re
   }
 
   if (lowestReps >= rx.repsMax) {
+    const loadCap = targetRpe - t.loadMarginRpe;
+    if (lm.avgRpe > loadCap) {
+      return hold(
+        `All ${rx.targetSets} sets hit ${rx.repsMax} reps, but average RPE ${lm.avgRpe} is not at least ${t.loadMarginRpe} below the cap ${targetRpe}; repeat the load.`,
+      );
+    }
     return {
       ...base,
       action: RecommendationAction.INCREASE_LOAD,

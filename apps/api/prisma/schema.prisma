@@ -16,7 +16,19 @@ enum Role {
 
 enum CoachClientStatus {
   ACTIVE
+  PAUSED
   ARCHIVED
+}
+
+enum WeightUnit {
+  KG
+  LB
+}
+
+enum Experience {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
 }
 
 enum AssignmentStatus {
@@ -40,41 +52,47 @@ enum MuscleGroup {
 }
 
 enum RecommendationAction {
-  INCREASE_LOAD   // hit top of rep range at/under target RPE
-  INCREASE_REPS   // double progression: add reps at same load
-  HOLD            // insufficient data or missed targets
-  DELOAD          // plateau + RPE >= 9 across consecutive sessions, or e1RM declining
+  INCREASE_LOAD // hit top of rep range at/under target RPE
+  INCREASE_REPS // double progression: add reps at same load
+  HOLD // insufficient data or missed targets
+  DELOAD // plateau + RPE >= 9 across consecutive sessions, or e1RM declining
 }
 
 enum RecommendationStatus {
   PENDING
   ACCEPTED
   DISMISSED
-  SUPERSEDED      // replaced by a newer evaluation
+  SUPERSEDED // replaced by a newer evaluation
 }
 
 // ─────────────── Identity & Tenancy ───────────────
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   passwordHash String
   name         String
   role         Role
-  isDemo       Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isDemo       Boolean    @default(false)
+  weightUnit   WeightUnit @default(KG)
+  displayName  String?
+  onboardedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   // COACH side
-  coachedClients CoachClient[] @relation("CoachSide")
+  coachedClients CoachClient[]     @relation("CoachSide")
   programs       Program[]
-  exercises      Exercise[]    // coach-owned custom exercises
+  exercises      Exercise[] // coach-owned custom exercises
+  engineRules    CoachEngineRules?
 
   // CLIENT side
-  coachLink      CoachClient?  @relation("ClientSide")
-  assignments    ProgramAssignment[]
-  workoutLogs    WorkoutLog[]
+  coachLink       CoachClient?                @relation("ClientSide")
+  assignments     ProgramAssignment[]
+  workoutLogs     WorkoutLog[]
   recommendations ProgressionRecommendation[]
+  clientProfile   ClientProfile?
+  baselines       ClientBaseline[]
 
   @@index([role])
 }
@@ -87,6 +105,17 @@ model CoachClient {
   status    CoachClientStatus @default(ACTIVE)
   notes     String?
   createdAt DateTime          @default(now())
+
+  // Per-client engine overrides (null = inherit coach rules / defaults).
+  loadIncrementKg  Decimal? @db.Decimal(5, 2)
+  rpeCap           Decimal? @db.Decimal(3, 1)
+  repsMin          Int?
+  repsMax          Int?
+  deloadPercent    Int?
+  sessionsAnalyzed Int?
+  autoApprove      Boolean  @default(false)
+  /// Auto-approve only INCREASE_LOAD calls whose jump is at most this; null = any size.
+  autoApproveMaxKg Decimal? @db.Decimal(5, 2)
 
   coach  User @relation("CoachSide", fields: [coachId], references: [id], onDelete: Cascade)
   client User @relation("ClientSide", fields: [clientId], references: [id], onDelete: Cascade)
@@ -107,10 +136,12 @@ model Exercise {
   coachId         String?
   createdAt       DateTime    @default(now())
 
-  coach            User?             @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coach            User?                       @relation(fields: [coachId], references: [id], onDelete: Cascade)
   workoutExercises WorkoutExercise[]
   exerciseLogs     ExerciseLog[]
   recommendations  ProgressionRecommendation[]
+  swappedFromLogs  ExerciseLog[]               @relation("SwappedFrom")
+  baselines        ClientBaseline[]
 
   @@unique([coachId, name])
   @@index([muscleGroup])
@@ -136,10 +167,10 @@ model Program {
 
 /// One training day inside a program (e.g. Week 2 / Day 1 "Upper A").
 model Workout {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   programId  String
-  weekNumber Int      // 1..durationWeeks
-  dayNumber  Int      // 1..7
+  weekNumber Int // 1..durationWeeks
+  dayNumber  Int // 1..7
   name       String
 
   program     Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
@@ -183,22 +214,22 @@ model ProgramAssignment {
   program     Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
   client      User         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   workoutLogs WorkoutLog[]
+  // Partial unique "one ACTIVE per client" added in raw migration SQL.
 
   @@index([clientId, status])
-  // Partial unique "one ACTIVE per client" added in raw migration SQL.
 }
 
 // ─────────────── Logging (actuals) ───────────────
 
 /// One performed session.
 model WorkoutLog {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   clientId     String
   assignmentId String?
-  workoutId    String?   // template day this session followed; null = ad-hoc
+  workoutId    String? // template day this session followed; null = ad-hoc
   performedAt  DateTime
   notes        String?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime @default(now())
 
   client       User               @relation(fields: [clientId], references: [id], onDelete: Cascade)
   assignment   ProgramAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
@@ -210,14 +241,18 @@ model WorkoutLog {
 
 /// One exercise performed within a session. Engine's unit of history.
 model ExerciseLog {
-  id                String   @id @default(cuid())
-  workoutLogId      String
-  exerciseId        String
-  workoutExerciseId String?  // prescription it fulfilled (targets snapshot source)
-  order             Int
+  id                    String  @id @default(cuid())
+  workoutLogId          String
+  exerciseId            String
+  workoutExerciseId     String? // prescription it fulfilled (targets snapshot source)
+  order                 Int
+  /// Set when the client swapped away from the prescribed exercise.
+  swappedFromExerciseId String?
+  swapReason            String?
 
   workoutLog      WorkoutLog       @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
   exercise        Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  swappedFrom     Exercise?        @relation("SwappedFrom", fields: [swappedFromExerciseId], references: [id], onDelete: SetNull)
   workoutExercise WorkoutExercise? @relation(fields: [workoutExerciseId], references: [id], onDelete: SetNull)
   sets            SetLog[]
 
@@ -226,13 +261,13 @@ model ExerciseLog {
 }
 
 model SetLog {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
   exerciseLogId String
   setNumber     Int
   reps          Int
-  weightKg      Decimal @db.Decimal(6, 2)
-  rpe           Decimal? @db.Decimal(3, 1)  // CHECK (rpe BETWEEN 1 AND 10) in migration
-  isWarmup      Boolean @default(false)
+  weightKg      Decimal  @db.Decimal(6, 2)
+  rpe           Decimal? @db.Decimal(3, 1) // CHECK (rpe BETWEEN 1 AND 10) in migration
+  isWarmup      Boolean  @default(false)
 
   exerciseLog ExerciseLog @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
 
@@ -242,26 +277,85 @@ model SetLog {
 // ─────────────── Progression Engine Output ───────────────
 
 model ProgressionRecommendation {
-  id                  String               @id @default(cuid())
-  clientId            String
-  exerciseId          String
-  action              RecommendationAction
-  status              RecommendationStatus @default(PENDING)
-  recommendedWeightKg Decimal?             @db.Decimal(6, 2)
-  recommendedRepsMin  Int?
-  recommendedRepsMax  Int?
-  recommendedSets     Int?
-  reason              String               // human-readable rule explanation
+  id                   String               @id @default(cuid())
+  clientId             String
+  exerciseId           String
+  action               RecommendationAction
+  status               RecommendationStatus @default(PENDING)
+  recommendedWeightKg  Decimal?             @db.Decimal(6, 2)
+  recommendedRepsMin   Int?
+  recommendedRepsMax   Int?
+  recommendedSets      Int?
+  reason               String // human-readable rule explanation
   /// Metrics snapshot the decision used: per-session volume, top-set e1RM, avg RPE.
-  metrics             Json
+  metrics              Json
   /// ExerciseLog ids analysed (2–3), for auditability.
   sourceExerciseLogIds String[]
-  createdAt           DateTime             @default(now())
-  resolvedAt          DateTime?
+  createdAt            DateTime             @default(now())
+  resolvedAt           DateTime?
+  /// Coach override of the engine target (the engine fields above stay untouched).
+  overrideWeightKg     Decimal?             @db.Decimal(6, 2)
+  overrideRepsMin      Int?
+  overrideRepsMax      Int?
+  overrideRpe          Decimal?             @db.Decimal(3, 1)
+  overrideNote         String?
+  overriddenById       String?
+  overriddenAt         DateTime?
+  autoApproved         Boolean              @default(false)
+  /// Resolved engine settings with the source of each value.
+  settings             Json?
 
   client   User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@index([clientId, exerciseId, createdAt(sort: Desc)])
   @@index([clientId, status])
+}
+
+// ─────────────── Profiles, baselines, coach rules ───────────────
+
+model ClientProfile {
+  clientId         String      @id
+  goals            String[]
+  goalNote         String?
+  experience       Experience?
+  daysPerWeek      Int?
+  /// ISO weekdays, 1 = Monday … 7 = Sunday.
+  trainingDays     Int[]
+  sessionLengthMin Int?
+  limitations      String[]
+  limitationsNote  String?
+  updatedAt        DateTime    @updatedAt
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+/// Starting weight from onboarding; used to prefill the logger before history exists.
+model ClientBaseline {
+  id         String   @id @default(cuid())
+  clientId   String
+  exerciseId String
+  weightKg   Decimal? @db.Decimal(6, 2)
+  reps       Int?
+  unknown    Boolean  @default(false)
+
+  client   User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, exerciseId])
+}
+
+/// Coach-level engine thresholds. Null = engine default.
+model CoachEngineRules {
+  coachId             String   @id
+  rpeCap              Decimal? @db.Decimal(3, 1)
+  loadMarginRpe       Decimal? @db.Decimal(3, 1)
+  highRpe             Decimal? @db.Decimal(3, 1)
+  plateauTolerancePct Decimal? @db.Decimal(4, 2)
+  declineThresholdPct Decimal? @db.Decimal(4, 2)
+  deloadPercent       Int?
+  sessionsAnalyzed    Int?
+  updatedAt           DateTime @updatedAt
+
+  coach User @relation(fields: [coachId], references: [id], onDelete: Cascade)
 }

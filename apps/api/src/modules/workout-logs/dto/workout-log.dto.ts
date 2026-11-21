@@ -1,10 +1,12 @@
 import { Type } from 'class-transformer';
+import { SwapReason } from '@coaching/shared';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -45,6 +47,20 @@ export class ExerciseLogDto {
   @IsOptional()
   @IsString()
   workoutExerciseId?: string;
+
+  /** Exercise the client swapped away from. Requires swapReason. */
+  @IsOptional()
+  @IsString()
+  swappedFromExerciseId?: string;
+
+  @IsOptional()
+  @IsIn(Object.values(SwapReason))
+  swapReason?: SwapReason;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  swapNote?: string;
 
   @IsArray()
   @ArrayMinSize(1)

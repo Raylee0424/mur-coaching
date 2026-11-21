@@ -1,4 +1,4 @@
-import type { RecommendationDto } from '@coaching/shared';
+import type { RecommendationDto, WeightUnit } from '@coaching/shared';
 import { SheetButton } from '@/components/ui/Sheet';
 import { formatTarget } from '@/lib/format';
 import { ActionBadge } from './ActionBadge';
@@ -9,12 +9,14 @@ export function WhyThisCall({
   recommendation: rec,
   exerciseName,
   audience,
+  unit,
 }: {
   recommendation: RecommendationDto;
   exerciseName: string;
   audience: 'coach' | 'client';
+  unit: WeightUnit;
 }) {
-  const target = formatTarget(rec);
+  const target = formatTarget(rec, unit);
   return (
     <SheetButton
       label="Why this call?"
@@ -35,7 +37,7 @@ export function WhyThisCall({
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
             Based on {rec.metrics.length} {rec.metrics.length === 1 ? 'session' : 'sessions'}
           </h3>
-          <MetricsTable metrics={rec.metrics} />
+          <MetricsTable metrics={rec.metrics} unit={unit} />
         </section>
         <p className="rounded-md bg-raised p-3 text-sm text-muted">
           {audience === 'coach'

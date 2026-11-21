@@ -1,3 +1,5 @@
+import type { WeightUnit } from '@coaching/shared';
+import { unitLabel } from '@/lib/units';
 import type { DraftErrors, DraftSet } from './logger-model';
 import { Button } from '@/components/ui/Button';
 import { FieldError, Input } from '@/components/ui/Field';
@@ -9,11 +11,12 @@ interface Props {
   errors: DraftErrors;
   onChange: (patch: Partial<Omit<DraftSet, 'key'>>) => void;
   onRemove: (() => void) | null;
+  unit: WeightUnit;
 }
 
-export function SetRow({ set, number, errorPrefix, errors, onChange, onRemove }: Props) {
+export function SetRow({ set, number, errorPrefix, errors, onChange, onRemove, unit }: Props) {
   const fields = [
-    { name: 'weightKg', label: 'weight (kg)', mode: 'decimal', value: set.weightKg },
+    { name: 'weight', label: `weight (${unitLabel(unit)})`, mode: 'decimal', value: set.weight },
     { name: 'reps', label: 'reps', mode: 'numeric', value: set.reps },
     { name: 'rpe', label: 'RPE', mode: 'decimal', value: set.rpe },
   ] as const;
@@ -28,7 +31,7 @@ export function SetRow({ set, number, errorPrefix, errors, onChange, onRemove }:
             <Input
               key={f.name}
               aria-label={`Set ${number} ${f.label}`}
-              placeholder={f.name === 'weightKg' ? 'kg' : f.name === 'reps' ? 'reps' : 'RPE'}
+              placeholder={f.name === 'weight' ? unitLabel(unit) : f.name === 'reps' ? 'reps' : 'RPE'}
               inputMode={f.mode}
               value={f.value}
               aria-invalid={errors[errorId] ? true : undefined}

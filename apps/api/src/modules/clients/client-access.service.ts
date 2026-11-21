@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CoachClientStatus } from '@prisma/client';
 import { Role } from '@coaching/shared';
 import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACCESSIBLE_LINK_STATUSES } from './link-status';
 
 /**
  * Tenancy boundary. Every client-scoped read/write must pass through here.
@@ -17,7 +17,7 @@ export class ClientAccessService {
 
     if (user.role === Role.COACH) {
       const link = await this.prisma.coachClient.findFirst({
-        where: { coachId: user.id, clientId, status: CoachClientStatus.ACTIVE },
+        where: { coachId: user.id, clientId, status: { in: [...ACCESSIBLE_LINK_STATUSES] } },
         select: { id: true },
       });
       if (link) return;

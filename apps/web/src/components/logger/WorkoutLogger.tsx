@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import type { ExerciseDto, WorkoutLogDto } from '@coaching/shared';
+import type { ExerciseDto, WeightUnit, WorkoutLogDto } from '@coaching/shared';
 import { createWorkoutLog } from '@/actions/workout-logs';
 import { Button } from '@/components/ui/Button';
 import { RpeGuide } from './RpeGuide';
@@ -16,15 +16,29 @@ import {
   removeExercise,
   removeSet,
   setExerciseId,
+  swapExercise,
+  undoSwap,
   toLocalInput,
   validateDraft,
+  type Baseline,
   type DraftErrors,
   type DraftLog,
 } from './logger-model';
 
-export function WorkoutLogger({ exercises, lastLog }: { exercises: ExerciseDto[]; lastLog: WorkoutLogDto | null }) {
+export function WorkoutLogger({
+  exercises,
+  lastLog,
+  unit,
+  baselines,
+}: {
+  exercises: ExerciseDto[];
+  lastLog: WorkoutLogDto | null;
+  unit: WeightUnit;
+  /** Onboarding starting weights by exercise id (kg). */
+  baselines: Record<string, Baseline>;
+}) {
   // Date is filled after mount: server and browser timezones differ, which would break hydration.
-  const [draft, setDraft] = useState<DraftLog>(() => emptyDraft(''));
+  const [draft, setDraft] = useState<DraftLog>(() => emptyDraft('', unit));
   const [errors, setErrors] = useState<DraftErrors>({});
   const [formError, setFormError] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
@@ -84,7 +98,7 @@ export function WorkoutLogger({ exercises, lastLog }: { exercises: ExerciseDto[]
           <Button
             variant="secondary"
             onClick={() => {
-              setDraft(fromLastLog(lastLog, toLocalInput(new Date())));
+              setDraft(fromLastLog(lastLog, toLocalInput(new Date()), unit));
               setErrors({});
               setFormError(undefined);
             }}
@@ -104,9 +118,12 @@ export function WorkoutLogger({ exercises, lastLog }: { exercises: ExerciseDto[]
             exercise={exercise}
             index={i}
             library={exercises}
+            unit={unit}
             errors={errors}
             canRemove={draft.exercises.length > 1}
-            onExerciseChange={(id) => setDraft(setExerciseId(draft, exercise.key, id))}
+            onExerciseChange={(id) => setDraft(setExerciseId(draft, exercise.key, id, baselines[id]))}
+            onSwap={(to, reason, note) => setDraft(swapExercise(draft, exercise.key, to, reason, note))}
+            onUndoSwap={() => setDraft(undoSwap(draft, exercise.key))}
             onRemove={() => setDraft(removeExercise(draft, exercise.key))}
             onAddSet={() => setDraft(addSet(draft, exercise.key))}
             onRemoveSet={(setKey) => setDraft(removeSet(draft, exercise.key, setKey))}

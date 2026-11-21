@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Button, type ButtonVariant } from './Button';
 
 export type SheetVariant = 'modal' | 'drawer' | 'bottom';
@@ -26,6 +26,7 @@ interface SheetProps {
 /** Native <dialog>: focus trap, Esc and inert background come from the browser. */
 export function Sheet({ open, onClose, title, description, variant = 'modal', children }: SheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -37,7 +38,7 @@ export function Sheet({ open, onClose, title, description, variant = 'modal', ch
   return (
     <dialog
       ref={ref}
-      aria-labelledby="sheet-title"
+      aria-labelledby={titleId}
       onClose={onClose}
       onClick={(e) => {
         if (e.target === ref.current) onClose();
@@ -50,7 +51,7 @@ export function Sheet({ open, onClose, title, description, variant = 'modal', ch
       <div className="space-y-4 p-5 md:p-6">
         <header className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="sheet-title" className="font-display text-xl font-bold">
+            <h2 id={titleId} className="font-display text-xl font-bold">
               {title}
             </h2>
             {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}

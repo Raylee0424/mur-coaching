@@ -16,7 +16,7 @@ export class ApiError extends Error {
 type Query = Record<string, string | number | undefined>;
 
 interface ApiFetchOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   query?: Query;
   /** false for public endpoints (login, demo): no bearer token, and a 401 is a normal error. */
