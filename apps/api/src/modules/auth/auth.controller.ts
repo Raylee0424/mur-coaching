@@ -3,6 +3,7 @@ import type { AuthTokenResponse, AuthUser } from '@coaching/shared';
 import { CurrentUser, Public, RequestUser } from '../../common';
 import { AuthService } from './auth.service';
 import { DemoLoginDto } from './dto/demo-login.dto';
+import { ForgotPasswordDto, ResetPasswordDto, SignupDto, VerifyEmailDto } from './dto/account.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
@@ -21,6 +22,38 @@ export class AuthController {
   @HttpCode(200)
   demo(@Body() dto: DemoLoginDto): Promise<AuthTokenResponse> {
     return this.auth.demoLogin(dto.role);
+  }
+
+  @Public()
+  @Post('signup')
+  signup(@Body() dto: SignupDto): Promise<AuthTokenResponse> {
+    return this.auth.signup(dto);
+  }
+
+  @Post('verify-email')
+  @HttpCode(200)
+  verifyEmail(@CurrentUser() user: RequestUser, @Body() dto: VerifyEmailDto): Promise<AuthUser> {
+    return this.auth.verifyEmail(user.id, dto.code);
+  }
+
+  @Post('verify-email/resend')
+  @HttpCode(204)
+  resend(@CurrentUser() user: RequestUser): Promise<void> {
+    return this.auth.resendVerification(user.id);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(204)
+  forgot(@Body() dto: ForgotPasswordDto): Promise<void> {
+    return this.auth.forgotPassword(dto.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(204)
+  reset(@Body() dto: ResetPasswordDto): Promise<void> {
+    return this.auth.resetPassword(dto);
   }
 
   @Get('me')
