@@ -60,6 +60,14 @@ import type {
   UpdateExerciseRequest,
   UpdateMeRequest,
   WorkoutLogDto,
+  CreateExerciseNoteRequest,
+  CreateWorkoutTemplateRequest,
+  ExerciseNoteDto,
+  TemplateFolderDto,
+  TemplateFolderRequest,
+  UpdateExerciseNoteRequest,
+  UpdateWorkoutTemplateRequest,
+  WorkoutTemplateDto,
 } from '@coaching/shared';
 import { apiFetch } from './client';
 
@@ -228,4 +236,28 @@ export const limitationsApi = {
     apiFetch<LimitationDto>(`/clients/${encodeURIComponent(clientId)}/limitations/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
   remove: (clientId: string, id: string) =>
     apiFetch<void>(`/clients/${encodeURIComponent(clientId)}/limitations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
+
+const idPath = (base: `/${string}`, id: string): `/${string}` => `${base}/${encodeURIComponent(id)}`;
+
+export const templatesApi = {
+  listFolders: () => apiFetch<TemplateFolderDto[]>('/template-folders'),
+  createFolder: (body: TemplateFolderRequest) => apiFetch<TemplateFolderDto>('/template-folders', { method: 'POST', body }),
+  renameFolder: (id: string, body: TemplateFolderRequest) =>
+    apiFetch<TemplateFolderDto>(idPath('/template-folders', id), { method: 'PATCH', body }),
+  removeFolder: (id: string) => apiFetch<void>(idPath('/template-folders', id), { method: 'DELETE' }),
+  list: (folderId?: string) => apiFetch<WorkoutTemplateDto[]>('/workout-templates', { query: folderId ? { folderId } : {} }),
+  get: (id: string) => apiFetch<WorkoutTemplateDto>(idPath('/workout-templates', id)),
+  create: (body: CreateWorkoutTemplateRequest) => apiFetch<WorkoutTemplateDto>('/workout-templates', { method: 'POST', body }),
+  update: (id: string, body: UpdateWorkoutTemplateRequest) =>
+    apiFetch<WorkoutTemplateDto>(idPath('/workout-templates', id), { method: 'PATCH', body }),
+  remove: (id: string) => apiFetch<void>(idPath('/workout-templates', id), { method: 'DELETE' }),
+};
+
+export const exerciseNotesApi = {
+  list: (exerciseId?: string) => apiFetch<ExerciseNoteDto[]>('/exercise-notes', { query: exerciseId ? { exerciseId } : {} }),
+  create: (body: CreateExerciseNoteRequest) => apiFetch<ExerciseNoteDto>('/exercise-notes', { method: 'POST', body }),
+  update: (id: string, body: UpdateExerciseNoteRequest) =>
+    apiFetch<ExerciseNoteDto>(idPath('/exercise-notes', id), { method: 'PATCH', body }),
+  remove: (id: string) => apiFetch<void>(idPath('/exercise-notes', id), { method: 'DELETE' }),
 };
