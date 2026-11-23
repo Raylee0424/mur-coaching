@@ -3,36 +3,45 @@
 import clsx from 'clsx';
 import { Check } from 'lucide-react';
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { MUSCLE_GROUP_LABELS, MuscleGroup, WORKOUT_LOG_LIMITS } from '@coaching/shared';
+import { WORKOUT_LOG_LIMITS } from '@coaching/shared';
 import type {
   ExerciseAlternativeDto,
-  MuscleGroup as MuscleGroupT,
+  ExerciseDto,
   NextTarget,
   SwapReason,
+  TemplateFolderDto,
   WeightUnit,
   WorkoutLogDto,
+  WorkoutTemplateDto,
 } from '@coaching/shared';
 import { submitWorkoutLog } from '@/actions/workout-logs';
 import { Button } from '@/components/ui/Button';
-import { FormError, Input, Label, Select } from '@/components/ui/Field';
+import { FormError, Input, Label } from '@/components/ui/Field';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ExercisePicker } from '@/components/programs/ExercisePicker';
 import { SetEditorSheet } from '@/components/workout-logs/SetEditorSheet';
 import { TEMPO_PATTERN } from '@coaching/shared';
 import { toNumber } from '@/lib/format';
 import { kgToDisplay, unitLabel } from '@/lib/units';
+import { ExerciseNotes, type SavedNote } from './ExerciseNotes';
 import { LoggedSets } from './LoggedSets';
 import { RestPill, useRestTimer } from './RestTimer';
 import { RpeGuide } from './RpeGuide';
 import { SessionComplete } from './SessionComplete';
 import { Stepper } from './Stepper';
 import { SwapExerciseButton } from './SwapExerciseButton';
+import { SaveTemplateSheet, TemplatePickerSheet } from './TemplateSheets';
 import {
+  LOGGER_RIR,
   LOGGER_RPE,
   RPE_ERROR,
+  appendExercise,
+  appendTemplate,
   commitSet,
   countSets,
+  draftToTemplateExercises,
   dropEmptyExercises,
   editSetValues,
   eyebrow,
@@ -40,10 +49,13 @@ import {
   freeformPlan,
   nextSetDefaults,
   removeSet,
-  setExerciseId,
+  restTaken,
+  rirFromRpe,
+  rpeFromRir,
   setExerciseNote,
   startFreeform,
   startFromLastLog,
+  startFromTemplate,
   startFromToday,
   stepValue,
   swapExercise,
@@ -51,34 +63,31 @@ import {
   undoSwap,
   validateDraft,
   weightStepFor,
-  addExercise,
   rpeError,
   type Baseline,
+  type EffortMode,
   type FlowStart,
   type StepValues,
   type TodayWorkoutInput,
 } from './logger-model';
 
-export interface LibraryExercise {
-  id: string;
-  name: string;
-  muscleGroup: MuscleGroupT;
-  /** kg */
-  loadIncrementKg: number;
-}
-
 interface Props {
-  /** `today`: prescription from Today. `repeat`: copy of `lastLog`. `freeform`: pick exercises yourself. */
-  mode: 'today' | 'repeat' | 'freeform';
+  /** `today`: prescription from Today. `repeat`: copy of `lastLog`. `template`: a saved template. `freeform`: pick exercises yourself. */
+  mode: 'today' | 'repeat' | 'template' | 'freeform';
   today: TodayWorkoutInput | null;
   workoutName: string | null;
   lastLog: WorkoutLogDto | null;
-  library: LibraryExercise[];
+  /** Global, coach and the athlete's own exercises: the one list behind the picker. */
+  catalog: ExerciseDto[];
+  templates: WorkoutTemplateDto[];
+  folders: TemplateFolderDto[];
+  /** Set when the session was started from a template (`mode: 'template'`). */
+  template: WorkoutTemplateDto | null;
   unit: WeightUnit;
   /** Onboarding starting weights by exercise id (kg). */
   baselines: Record<string, Baseline>;
   /** Persistent notes by exercise id (`ExerciseNote`), shown while logging that lift. */
-  savedNotes: Record<string, string[]>;
+  savedNotes: Record<string, SavedNote[]>;
 }
 
 interface Done {
@@ -86,7 +95,11 @@ interface Done {
   sets: number;
 }
 
-export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit, baselines, savedNotes }: Props) {
+export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, templates, folders, template, unit, baselines, savedNotes }: Props) {
+  const library = useMemo(
+    () => catalog.map((e) => ({ id: e.id, name: e.name, loadIncrementKg: toNumber(e.loadIncrementKg) })),
+    [catalog],
+  );
   const increments = useMemo(() => Object.fromEntries(library.map((e) => [e.id, e.loadIncrementKg])), [library]);
   const byId = useMemo(() => new Map(library.map((e) => [e.id, e])), [library]);
 
@@ -94,6 +107,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
     const at = toLocalInput(new Date());
     if (mode === 'today' && today) return startFromToday(today, increments, at, unit);
     if (mode === 'repeat' && lastLog) return startFromLastLog(lastLog, increments, at, unit);
+    if (mode === 'template' && template) return startFromTemplate(template, increments, at, unit);
     return startFreeform(at, unit);
   });
   const { draft, plans } = flow;
@@ -103,6 +117,10 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
     return nextSetDefaults(first ? flow.plans[first.key] : undefined, [], unit, first ? baselines[first.exerciseId] : undefined);
   });
   const [tempo, setTempo] = useState('');
+  const [effort, setEffort] = useState<EffortMode>('RPE');
+  const [pickingExercise, setPickingExercise] = useState(false);
+  const [pickingTemplate, setPickingTemplate] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [error, setError] = useState<string>();
@@ -151,23 +169,30 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
     setError(undefined);
   }
 
-  function chooseExercise(id: string): void {
-    const source = byId.get(id);
-    if (!source) return;
-    const next: FlowStart = {
-      draft: setExerciseId(draft, key, id),
-      plans: {
-        ...plans,
-        [key]: freeformPlan({ id, name: source.name, loadIncrementKg: source.loadIncrementKg }, unit),
-      },
-    };
+  /** Adds a picked exercise (global, coach or the athlete's own) to the end of the session and jumps to it. */
+  function addPicked(picked: ExerciseDto): void {
+    setPickingExercise(false);
+    const next = appendExercise(flow, { id: picked.id, name: picked.name, loadIncrementKg: toNumber(picked.loadIncrementKg) }, unit);
     setFlow(next);
-    setValues(nextSetDefaults(next.plans[key], [], unit, baselines[id]));
+    goTo(next.draft.exercises.length - 1, next);
+  }
+
+  function addTemplate(picked: WorkoutTemplateDto): void {
+    setPickingTemplate(false);
+    const known = new Set(draft.exercises.map((e) => e.key));
+    const next = appendTemplate(flow, picked, increments, unit);
+    setFlow(next);
+    goTo(Math.max(0, next.draft.exercises.findIndex((e) => !known.has(e.key))), next);
   }
 
   function logSet(): void {
     if (rpeProblem || tempoProblem) return;
-    setFlow({ ...flow, draft: commitSet(draft, key, values, tempo.trim().toUpperCase()) });
+    const restSeconds = restTaken(rest.startedAt, Date.now());
+    const extras = {
+      ...(effort === 'RIR' ? { rir: rirFromRpe(values.rpe) } : {}),
+      ...(restSeconds !== undefined ? { restSeconds } : {}),
+    };
+    setFlow({ ...flow, draft: commitSet(draft, key, values, tempo.trim().toUpperCase(), extras) });
     setAnnounce(
       `Set ${logged.length + 1} logged: ${formatStepValue('weight', values.weight)} ${unitLabel(unit)} for ${values.reps} reps.`,
     );
@@ -177,9 +202,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
 
   function nextExercise(): void {
     if (index < lastIndex) return goTo(index + 1);
-    const next: FlowStart = { ...flow, draft: addExercise(draft) };
-    setFlow(next);
-    goTo(index + 1, next);
+    setPickingExercise(true);
   }
 
   function swap(alt: ExerciseAlternativeDto, reason: SwapReason, note: string): void {
@@ -270,6 +293,17 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
       <div className="max-w-xl space-y-5">
         {header}
 
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setPickingTemplate(true)}>
+            Templates
+          </Button>
+          {totalSets > 0 ? (
+            <Button variant="secondary" size="sm" onClick={() => setSavingTemplate(true)}>
+              Save as template
+            </Button>
+          ) : null}
+        </div>
+
         {draft.exercises.length > 1 ? (
           <nav aria-label="Exercises in this session">
             <ol className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
@@ -299,26 +333,9 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
 
         {!hasExercise ? (
           <section className="space-y-3">
-            <div>
-              <Label htmlFor="pick-exercise">Exercise</Label>
-              <Select id="pick-exercise" value="" onChange={(e) => chooseExercise(e.target.value)}>
-                <option value="" disabled>
-                  Choose an exercise…
-                </option>
-                {Object.values(MuscleGroup).map((group) => {
-                  const items = library.filter((e) => e.muscleGroup === group);
-                  return items.length === 0 ? null : (
-                    <optgroup key={group} label={MUSCLE_GROUP_LABELS[group]}>
-                      {items.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-              </Select>
-            </div>
+            <Button size="lg" className="w-full" onClick={() => setPickingExercise(true)}>
+              Choose an exercise
+            </Button>
           </section>
         ) : (
           <>
@@ -373,27 +390,59 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
                 />
               </div>
               <div className="border-t border-line pt-4">
-                <Stepper
-                  label={`RPE (${LOGGER_RPE.min.toFixed(1)}–${LOGGER_RPE.max.toFixed(1)})`}
-                  noun="RPE"
-                  display={formatStepValue('rpe', values.rpe)}
-                  stepLabel="0.5"
-                  canDecrease={values.rpe > WORKOUT_LOG_LIMITS.rpeMin}
-                  canIncrease={values.rpe < WORKOUT_LOG_LIMITS.rpeMax}
-                  onStep={(d) =>
-                    setValues((v) => ({
-                      ...v,
-                      rpe: stepValue(v.rpe, d * LOGGER_RPE.step, WORKOUT_LOG_LIMITS.rpeMin, WORKOUT_LOG_LIMITS.rpeMax),
-                    }))
-                  }
-                  action={
-                    <RpeGuide
-                      target={plan?.target?.rpe ?? null}
-                      current={values.rpe}
-                      onSelect={(rpe) => setValues((v) => ({ ...v, rpe }))}
-                    />
-                  }
-                />
+                <div role="group" aria-label="Effort scale" className="mb-3 inline-flex h-9 items-center gap-0.5 rounded border border-line bg-canvas-low p-0.5">
+                  {(['RPE', 'RIR'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      aria-pressed={effort === m}
+                      onClick={() => {
+                        setEffort(m);
+                        if (m === 'RIR') setValues((v) => ({ ...v, rpe: rpeFromRir(rirFromRpe(v.rpe)) }));
+                      }}
+                      className={clsx(
+                        'inline-flex h-7 items-center rounded-sm px-3 font-mono text-micro uppercase transition-colors',
+                        effort === m ? 'bg-raised text-ink' : 'text-muted hover:text-ink',
+                      )}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+                {effort === 'RPE' ? (
+                  <Stepper
+                    label={`RPE (${LOGGER_RPE.min.toFixed(1)}–${LOGGER_RPE.max.toFixed(1)})`}
+                    noun="RPE"
+                    display={formatStepValue('rpe', values.rpe)}
+                    stepLabel="0.5"
+                    canDecrease={values.rpe > WORKOUT_LOG_LIMITS.rpeMin}
+                    canIncrease={values.rpe < WORKOUT_LOG_LIMITS.rpeMax}
+                    onStep={(d) =>
+                      setValues((v) => ({
+                        ...v,
+                        rpe: stepValue(v.rpe, d * LOGGER_RPE.step, WORKOUT_LOG_LIMITS.rpeMin, WORKOUT_LOG_LIMITS.rpeMax),
+                      }))
+                    }
+                    action={
+                      <RpeGuide
+                        target={plan?.target?.rpe ?? null}
+                        current={values.rpe}
+                        onSelect={(rpe) => setValues((v) => ({ ...v, rpe }))}
+                      />
+                    }
+                  />
+                ) : (
+                  <Stepper
+                    label={`RIR (${LOGGER_RIR.min}–${LOGGER_RIR.max})`}
+                    noun="RIR"
+                    display={String(rirFromRpe(values.rpe))}
+                    stepLabel="1"
+                    canDecrease={rirFromRpe(values.rpe) > LOGGER_RIR.min}
+                    canIncrease={rirFromRpe(values.rpe) < LOGGER_RIR.max}
+                    onStep={(d) => setValues((v) => ({ ...v, rpe: rpeFromRir(stepValue(rirFromRpe(v.rpe), d, LOGGER_RIR.min, LOGGER_RIR.max)) }))}
+                  />
+                )}
+                {effort === 'RIR' ? <p className="mt-1 text-meta text-faint">Reps left in the tank. Stored with RPE {formatStepValue('rpe', values.rpe)} for the engine.</p> : null}
               </div>
               <div className="border-t border-line pt-4">
                 <Label htmlFor="set-tempo">Tempo (optional)</Label>
@@ -431,16 +480,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
 
         {hasExercise ? (
           <section aria-label="Exercise notes" className="space-y-3">
-            {(savedNotes[exercise.exerciseId] ?? []).length > 0 ? (
-              <div className="border-l-2 border-l-sky bg-card px-3 py-2">
-                <p className="font-mono text-micro uppercase text-muted">Your saved notes</p>
-                <ul className="mt-1 space-y-1 text-ui">
-                  {(savedNotes[exercise.exerciseId] ?? []).map((n) => (
-                    <li key={n}>{n}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            <ExerciseNotes exerciseId={exercise.exerciseId} notes={savedNotes[exercise.exerciseId] ?? []} />
             <div>
               <Label htmlFor="exercise-note">Note for this session</Label>
               <textarea
@@ -492,6 +532,17 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
           </div>
         )}
       </div>
+
+      <ExercisePicker
+        open={pickingExercise}
+        onClose={() => setPickingExercise(false)}
+        library={catalog}
+        targetLabel="this session"
+        addedNames={new Set(draft.exercises.map((e) => byId.get(e.exerciseId)?.name ?? ''))}
+        onPick={addPicked}
+      />
+      <TemplatePickerSheet open={pickingTemplate} onClose={() => setPickingTemplate(false)} folders={folders} templates={templates} onPick={addTemplate} />
+      <SaveTemplateSheet open={savingTemplate} onClose={() => setSavingTemplate(false)} folders={folders} exercises={draftToTemplateExercises(draft)} />
 
       {/* Outside the spaced column: `space-y-*` would push the dialog's margin off the bottom edge. */}
       {editingSet && editing ? (

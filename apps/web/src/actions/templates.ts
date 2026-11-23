@@ -16,6 +16,7 @@ async function run<T>(op: () => Promise<T>): Promise<ActionResult<T>> {
   try {
     const data = await op();
     revalidatePath('/client/log');
+    revalidatePath('/client/templates');
     return { ok: true, data };
   } catch (err) {
     unstable_rethrow(err);
@@ -23,18 +24,26 @@ async function run<T>(op: () => Promise<T>): Promise<ActionResult<T>> {
   }
 }
 
-export const createTemplateFolder = (name: string): Promise<ActionResult<TemplateFolderDto>> =>
-  run(() => templatesApi.createFolder({ name }));
+export async function createTemplateFolder(name: string): Promise<ActionResult<TemplateFolderDto>> {
+  return run(() => templatesApi.createFolder({ name }));
+}
 
-export const renameTemplateFolder = (id: string, name: string): Promise<ActionResult<TemplateFolderDto>> =>
-  run(() => templatesApi.renameFolder(id, { name }));
+export async function renameTemplateFolder(id: string, name: string): Promise<ActionResult<TemplateFolderDto>> {
+  return run(() => templatesApi.renameFolder(id, { name }));
+}
 
-export const deleteTemplateFolder = (id: string): Promise<ActionResult> => run(() => templatesApi.removeFolder(id));
+export async function deleteTemplateFolder(id: string): Promise<ActionResult> {
+  return run(() => templatesApi.removeFolder(id));
+}
 
-export const createWorkoutTemplate = (body: CreateWorkoutTemplateRequest): Promise<ActionResult<WorkoutTemplateDto>> =>
-  run(() => templatesApi.create(body));
+export async function createWorkoutTemplate(body: CreateWorkoutTemplateRequest): Promise<ActionResult<WorkoutTemplateDto>> {
+  return run(() => templatesApi.create(body));
+}
 
-export const updateWorkoutTemplate = (id: string, body: UpdateWorkoutTemplateRequest): Promise<ActionResult<WorkoutTemplateDto>> =>
-  run(() => templatesApi.update(id, body));
+export async function updateWorkoutTemplate(id: string, body: UpdateWorkoutTemplateRequest): Promise<ActionResult<WorkoutTemplateDto>> {
+  return run(() => templatesApi.update(id, body));
+}
 
-export const deleteWorkoutTemplate = (id: string): Promise<ActionResult> => run(() => templatesApi.remove(id));
+export async function deleteWorkoutTemplate(id: string): Promise<ActionResult> {
+  return run(() => templatesApi.remove(id));
+}

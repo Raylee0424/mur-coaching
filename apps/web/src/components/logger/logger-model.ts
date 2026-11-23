@@ -1,5 +1,14 @@
-import { TEMPO_PATTERN, WORKOUT_LOG_LIMITS } from '@coaching/shared';
-import type { CreateWorkoutLogRequest, ExerciseLogInput, LimitationFlag, SwapReason, WeightUnit, WorkoutLogDto } from '@coaching/shared';
+import { TEMPLATE_LIMITS, TEMPO_PATTERN, WORKOUT_LOG_LIMITS } from '@coaching/shared';
+import type {
+  CreateWorkoutLogRequest,
+  ExerciseLogInput,
+  LimitationFlag,
+  SwapReason,
+  TemplateExerciseInput,
+  WeightUnit,
+  WorkoutLogDto,
+  WorkoutTemplateDto,
+} from '@coaching/shared';
 import { toNumber } from '@/lib/format';
 import { displayToKg, kgToDisplay, unitLabel } from '@/lib/units';
 
@@ -13,6 +22,10 @@ export interface DraftSet {
   isWarmup: boolean;
   /** `3-1-1-0`; blank when not tracked. */
   tempo?: string;
+  /** Whole reps in reserve, set when the athlete logged in RIR mode. */
+  rir?: number;
+  /** Seconds rested before this set, captured from the rest timer. */
+  restSeconds?: number;
 }
 
 export interface DraftExercise {
@@ -242,12 +255,21 @@ export function validateDraft(draft: DraftLog, now: Date): ValidationResult {
 
       if (tempo !== '' && !TEMPO_PATTERN.test(tempo)) errors[`${key}.tempo`] = 'Tempo looks like 3-1-1-0.';
 
+      if (set.rir !== undefined && (!Number.isInteger(set.rir) || set.rir < 0 || set.rir > L.rirMax)) {
+        errors[`${key}.rir`] = `RIR: whole number, 0–${L.rirMax}.`;
+      }
+      if (set.restSeconds !== undefined && (!Number.isInteger(set.restSeconds) || set.restSeconds < 0 || set.restSeconds > L.maxRestSeconds)) {
+        errors[`${key}.restSeconds`] = `Rest: 0–${L.maxRestSeconds} seconds.`;
+      }
+
       sets.push({
         reps: Number(reps),
         weightKg,
         ...(rpe !== '' ? { rpe: Number(rpe) } : {}),
         ...(set.isWarmup ? { isWarmup: true } : {}),
+        ...(set.rir !== undefined ? { rir: set.rir } : {}),
         ...(tempo !== '' ? { tempo } : {}),
+        ...(set.restSeconds !== undefined ? { restSeconds: set.restSeconds } : {}),
       });
     });
 
@@ -523,17 +545,61 @@ export function startFreeform(performedAtLocal: string, unit: WeightUnit): FlowS
   return { draft: { ...draft, exercises: first ? [{ ...first, sets: [] }] : [] }, plans: {} };
 }
 
+/** Optional per-set extras next to the three steppers. */
+export interface SetExtras {
+  /** Set only in RIR mode. */
+  rir?: number;
+  restSeconds?: number;
+}
+
 /** Logs the steppers' numbers as the next set of an exercise. */
-export function commitSet(draft: DraftLog, exerciseKey: string, v: StepValues, tempo = ''): DraftLog {
+export function commitSet(draft: DraftLog, exerciseKey: string, v: StepValues, tempo = '', extras: SetExtras = {}): DraftLog {
   return mapExercise(draft, exerciseKey, (exercise) => ({
     ...exercise,
-    sets: [...exercise.sets, { key: nextKey(), weight: String(v.weight), reps: String(v.reps), rpe: String(v.rpe), isWarmup: false, ...(tempo.trim() ? { tempo: tempo.trim() } : {}) }],
+    sets: [
+      ...exercise.sets,
+      {
+        key: nextKey(),
+        weight: String(v.weight),
+        reps: String(v.reps),
+        rpe: String(v.rpe),
+        isWarmup: false,
+        ...(tempo.trim() ? { tempo: tempo.trim() } : {}),
+        ...(extras.rir !== undefined ? { rir: extras.rir } : {}),
+        ...(extras.restSeconds !== undefined ? { restSeconds: extras.restSeconds } : {}),
+      },
+    ],
   }));
 }
 
-/** Rewrites one logged set from edited numbers (keeps the warm-up flag). */
+/** Rewrites one logged set from edited numbers (keeps the warm-up flag). A set logged in RIR mode keeps its RIR in step. */
 export function editSetValues(draft: DraftLog, exerciseKey: string, setKey: string, v: StepValues): DraftLog {
-  return patchSet(draft, exerciseKey, setKey, { weight: String(v.weight), reps: String(v.reps), rpe: String(v.rpe) });
+  const edited = draft.exercises.find((e) => e.key === exerciseKey)?.sets.find((s) => s.key === setKey);
+  return patchSet(draft, exerciseKey, setKey, {
+    weight: String(v.weight),
+    reps: String(v.reps),
+    rpe: String(v.rpe),
+    ...(edited?.rir !== undefined ? { rir: rirFromRpe(v.rpe) } : {}),
+  });
+}
+
+// ── RIR mode ─────────────────────────────────────────────────────────────────
+// The engine reads RPE. RIR mode logs `rir` and stores the equivalent RPE (10 − RIR), so the
+// progression engine's inputs stay the same whichever scale the athlete thinks in.
+
+export type EffortMode = 'RPE' | 'RIR';
+
+/** The logger's RPE 6–10 maps to RIR 4–0. */
+export const LOGGER_RIR = { min: 0, max: 4 } as const;
+
+export const rirFromRpe = (rpe: number): number => Math.min(LOGGER_RIR.max, Math.max(LOGGER_RIR.min, Math.round(10 - rpe)));
+export const rpeFromRir = (rir: number): number => 10 - rir;
+
+/** Seconds since the rest timer started (the rest before the set being logged); undefined when no timer ran. */
+export function restTaken(startedAtMs: number | null, nowMs: number): number | undefined {
+  if (startedAtMs === null) return undefined;
+  const s = Math.floor((nowMs - startedAtMs) / 1000);
+  return s < 0 ? undefined : Math.min(s, WORKOUT_LOG_LIMITS.maxRestSeconds);
 }
 
 export function setExerciseNote(draft: DraftLog, exerciseKey: string, notes: string): DraftLog {
@@ -547,6 +613,75 @@ export function dropEmptyExercises(draft: DraftLog): DraftLog {
 
 export function countSets(draft: DraftLog): number {
   return draft.exercises.reduce((n, e) => n + e.sets.length, 0);
+}
+
+// ── Free exercises and templates ─────────────────────────────────────────────
+
+const isBlank = (e: DraftExercise): boolean => e.exerciseId === '' && e.sets.length === 0;
+
+/** Adds a freely picked exercise to the end of the session. */
+export function appendExercise(flow: FlowStart, source: ExerciseSource, unit: WeightUnit): FlowStart {
+  const added: DraftExercise = { key: nextKey(), exerciseId: source.id, sets: [] };
+  return {
+    draft: { ...flow.draft, exercises: [...flow.draft.exercises.filter((e) => !isBlank(e)), added] },
+    plans: { ...flow.plans, [added.key]: freeformPlan(source, unit) },
+  };
+}
+
+/** Adds a template's exercises to the end of the session, each with its set count, rep range and rest as the plan. */
+export function appendTemplate(
+  flow: FlowStart,
+  template: WorkoutTemplateDto,
+  incrementKg: Record<string, number>,
+  unit: WeightUnit,
+): FlowStart {
+  const plans: Plans = { ...flow.plans };
+  const added: DraftExercise[] = [...template.exercises]
+    .sort((a, b) => a.order - b.order)
+    .map((e) => {
+      const key = nextKey();
+      plans[key] = {
+        name: e.exerciseName,
+        plannedSets: e.targetSets,
+        restSeconds: e.restSeconds,
+        target: e.repsMin !== null || e.repsMax !== null ? { weightKg: null, repsMin: e.repsMin, repsMax: e.repsMax, rpe: null } : null,
+        previous: [],
+        weightStep: weightStepFor(incrementKg[e.exerciseId] ?? 2.5, unit),
+      };
+      return { key, exerciseId: e.exerciseId, sets: [] };
+    });
+  return { draft: { ...flow.draft, exercises: [...flow.draft.exercises.filter((e) => !isBlank(e)), ...added] }, plans };
+}
+
+export function startFromTemplate(
+  template: WorkoutTemplateDto,
+  incrementKg: Record<string, number>,
+  performedAtLocal: string,
+  unit: WeightUnit,
+): FlowStart {
+  const started = appendTemplate({ draft: { performedAtLocal, unit, notes: '', exercises: [] }, plans: {} }, template, incrementKg, unit);
+  return started.draft.exercises.length > 0 ? started : startFreeform(performedAtLocal, unit);
+}
+
+/** What "Save as template" stores: per exercise the working-set count, rep range, last measured rest and tempo. */
+export function draftToTemplateExercises(draft: DraftLog): TemplateExerciseInput[] {
+  const out: TemplateExerciseInput[] = [];
+  for (const e of draft.exercises) {
+    if (!e.exerciseId || e.sets.length === 0) continue;
+    const working = e.sets.filter((s) => !s.isWarmup);
+    const sets = working.length > 0 ? working : e.sets;
+    const reps = sets.map((s) => Number(s.reps)).filter((n) => Number.isInteger(n) && n >= 1 && n <= WORKOUT_LOG_LIMITS.maxReps);
+    const rest = [...sets].reverse().find((s) => s.restSeconds !== undefined)?.restSeconds;
+    const tempo = [...sets].reverse().map((s) => (s.tempo ?? '').toUpperCase()).find((t) => TEMPO_PATTERN.test(t));
+    out.push({
+      exerciseId: e.exerciseId,
+      targetSets: Math.min(sets.length, TEMPLATE_LIMITS.maxSets),
+      ...(reps.length > 0 ? { repsMin: Math.min(...reps), repsMax: Math.max(...reps) } : {}),
+      ...(rest !== undefined ? { restSeconds: rest } : {}),
+      ...(tempo ? { tempo } : {}),
+    });
+  }
+  return out.slice(0, TEMPLATE_LIMITS.maxExercises);
 }
 
 // ── Rest timer ───────────────────────────────────────────────────────────────
