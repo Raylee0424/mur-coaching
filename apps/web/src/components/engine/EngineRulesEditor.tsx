@@ -146,7 +146,7 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
         title="Reset engine rules?"
-        description="All global thresholds return to Ray Coaching defaults. Per-client overrides stay intact."
+        description="All global thresholds return to MUR Coaching defaults. Per-client overrides stay intact."
       >
         <footer className="flex justify-between gap-2">
           <Button variant="secondary" onClick={() => setConfirmReset(false)} disabled={pending}>

@@ -1,4 +1,4 @@
-# Ray Coaching
+# MUR Coaching
 
 A coach–client strength training platform. Clients log their sets (weight, reps, RPE). A deterministic progression engine reads each lift's last 3 sessions and recommends the next move. Coaches review and accept those calls across their roster.
 

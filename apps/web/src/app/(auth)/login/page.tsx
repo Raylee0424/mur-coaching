@@ -6,7 +6,7 @@ import { firstParam as first } from '@/lib/form';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export const metadata = { title: 'Sign in · Ray Coaching' };
+export const metadata = { title: 'Sign in · MUR Coaching' };
 
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
@@ -15,7 +15,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
 
   return (
     <>
-      <AuthHeading title="Welcome back" subtitle="Sign in to your Ray Coaching workspace." />
+      <AuthHeading title="Welcome back" subtitle="Sign in to your MUR Coaching workspace." />
       {expired ? (
         <p role="status" className="rounded-md border border-amber/40 bg-amber-bg px-3 py-2 text-sm font-medium text-amber">
           Your session expired. Please sign in again.
