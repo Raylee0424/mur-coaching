@@ -1,6 +1,6 @@
 # MUR Coaching: design overhaul spec
 
-Status: ready to execute. Author: design/eng audit, 2026-11-24. Executor: Claude Sonnet, in 4 phases, one commit per phase (more is fine). Do not ask questions; every decision is made below. If something here conflicts with the code, the code's **behaviour** wins and this spec's **styling** wins.
+Status: ready to execute. Author: design/eng audit, 2026-11-24. Execute in 4 phases, one commit per phase (more is fine). Do not ask questions; every decision is made below. If something here conflicts with the code, the code's **behaviour** wins and this spec's **styling** wins.
 
 Sources audited:
 
