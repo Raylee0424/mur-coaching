@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Prisma, PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { EXERCISES } from './exercises';
+import { EXERCISES, seedMuscles, type ExerciseSeed } from './exercises';
 import {
   CLIENT_PLANS,
   EXTRA_CLIENTS,
@@ -53,15 +53,19 @@ async function wipeDemoData(): Promise<void> {
 async function upsertGlobalExercises(): Promise<Map<string, string>> {
   const ids = new Map<string, string>();
   for (const ex of EXERCISES) {
-    const existing = await prisma.exercise.findFirst({ where: { coachId: null, name: ex.name } });
+    const existing = await prisma.exercise.findFirst({ where: { coachId: null, ownerId: null, name: ex.name } });
     const data = {
       muscleGroup: ex.muscleGroup,
       equipment: ex.equipment,
+      pattern: ex.pattern,
+      profile: ex.profile,
+      position: ex.position,
       loadIncrementKg: ex.loadIncrementKg,
+      muscles: { deleteMany: {}, create: seedMuscles(ex) },
     };
     const row = existing
       ? await prisma.exercise.update({ where: { id: existing.id }, data })
-      : await prisma.exercise.create({ data: { name: ex.name, coachId: null, ...data } });
+      : await prisma.exercise.create({ data: { name: ex.name, ...data, muscles: { create: seedMuscles(ex) } } });
     ids.set(ex.name, row.id);
   }
   return ids;
@@ -215,13 +219,14 @@ async function main(): Promise<void> {
   await createWorkouts(template.id, TEMPLATE_WEEKS, TEMPLATE_DAYS, exerciseId, new Map(), new Map());
 
   // Coach-owned exercises with exercise-level engine rules (rpeCap + rep range).
-  await prisma.exercise.createMany({
-    data: [
-      { coachId: coach.id, name: 'Pause Bench Press', muscleGroup: 'CHEST', equipment: 'Barbell', loadIncrementKg: 2.5, rpeCap: 8.5, repsMin: 3, repsMax: 5 },
-      { coachId: coach.id, name: 'Tempo Back Squat', muscleGroup: 'QUADS', equipment: 'Barbell', loadIncrementKg: 5, rpeCap: 8, repsMin: 4, repsMax: 6 },
-      { coachId: coach.id, name: 'Cable Fly', muscleGroup: 'CHEST', equipment: 'Cable', loadIncrementKg: 2.5 },
-    ],
-  });
+  const coachExercises: (ExerciseSeed & { rpeCap?: number; repsMin?: number; repsMax?: number })[] = [
+    { name: 'Pause Bench Press', muscleGroup: 'CHEST', secondary: ['TRICEPS'], equipment: 'BARBELL', pattern: 'HORIZONTAL_PUSH', profile: 'MID_RANGE', position: 'LYING', loadIncrementKg: 2.5, rpeCap: 8.5, repsMin: 3, repsMax: 5 },
+    { name: 'Tempo Back Squat', muscleGroup: 'QUADS', primary: ['GLUTES'], equipment: 'BARBELL', pattern: 'SQUAT', profile: 'LENGTHENED', position: 'STANDING', loadIncrementKg: 5, rpeCap: 8, repsMin: 4, repsMax: 6 },
+    { name: 'Cable Fly', muscleGroup: 'CHEST', equipment: 'CABLE', pattern: 'HORIZONTAL_PUSH', profile: 'LENGTHENED', position: 'STANDING', loadIncrementKg: 2.5 },
+  ];
+  for (const { primary, secondary, ...ex } of coachExercises) {
+    await prisma.exercise.create({ data: { coachId: coach.id, ...ex, muscles: { create: seedMuscles({ muscleGroup: ex.muscleGroup, primary, secondary }) } } });
+  }
 
   const now = new Date();
   const seeded: { clientId: string; autoApprove: boolean; autoApproveMaxKg: number | null; overrides: ExtraClientSeed['overrides'] }[] = [];
@@ -340,7 +345,7 @@ async function main(): Promise<void> {
 
   const [users, exercises, workouts, logs, exerciseLogs, setLogs] = await Promise.all([
     prisma.user.count({ where: { isDemo: true } }),
-    prisma.exercise.count({ where: { coachId: null } }),
+    prisma.exercise.count({ where: { coachId: null, ownerId: null } }),
     prisma.workout.count(),
     prisma.workoutLog.count(),
     prisma.exerciseLog.count(),

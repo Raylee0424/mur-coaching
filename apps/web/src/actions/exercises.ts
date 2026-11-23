@@ -5,6 +5,7 @@ import { redirect, unstable_rethrow } from 'next/navigation';
 import type { CreateExerciseRequest, ExerciseDto, UpdateExerciseRequest } from '@coaching/shared';
 import { exercisesApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
+import { Equipment } from '@coaching/shared';
 import { formString, isMuscleGroup } from '@/lib/form';
 
 type Parsed = { ok: true; value: CreateExerciseRequest } | { ok: false; error: string };
@@ -12,7 +13,8 @@ type Parsed = { ok: true; value: CreateExerciseRequest } | { ok: false; error: s
 function parse(formData: FormData, prefix = ''): Parsed {
   const name = formString(formData, `${prefix}name`).trim();
   const muscleGroup = formString(formData, `${prefix}muscleGroup`);
-  const equipment = formString(formData, `${prefix}equipment`).trim();
+  const equipmentRaw = formString(formData, `${prefix}equipment`);
+  const equipment = (Object.values(Equipment) as string[]).includes(equipmentRaw) ? (equipmentRaw as Equipment) : null;
   const increment = formString(formData, `${prefix}loadIncrementKg`).trim();
 
   if (!name) return { ok: false, error: 'Name is required.' };
@@ -67,7 +69,7 @@ export async function updateExercise(
   const changes: UpdateExerciseRequest = {};
   if (next.name !== before?.name) changes.name = next.name;
   if (next.muscleGroup !== before?.muscleGroup) changes.muscleGroup = next.muscleGroup;
-  if ((next.equipment ?? '') !== (before?.equipment ?? '')) changes.equipment = next.equipment ?? '';
+  if ((next.equipment ?? null) !== (before?.equipment ?? null)) changes.equipment = next.equipment ?? null;
   if (next.loadIncrementKg !== undefined && next.loadIncrementKg !== before?.loadIncrementKg) {
     changes.loadIncrementKg = next.loadIncrementKg;
   }
@@ -87,6 +89,7 @@ function refreshExercises(): void {
   revalidatePath('/coach/exercises');
   revalidatePath('/welcome/coach');
   revalidatePath('/coach/programs', 'layout');
+  revalidatePath('/client/exercises');
 }
 
 /** Creates (id null) or updates one exercise from the drawer. `null` clears an exercise rule. */
@@ -101,7 +104,7 @@ export async function saveExercise(id: string | null, body: CreateExerciseReques
   }
 }
 
-/** Copy of a global or own exercise, named "X (copy)". */
+/** Copy of any visible exercise into the caller's own library, named "X (copy)". */
 export async function duplicateExercise(id: string): Promise<ActionResult<ExerciseDto>> {
   try {
     const data = await exercisesApi.duplicate(id);

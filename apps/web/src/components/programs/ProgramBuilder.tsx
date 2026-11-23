@@ -5,7 +5,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { PROGRAM_LIMITS } from '@coaching/shared';
-import type { ExerciseDto, ProgramDto } from '@coaching/shared';
+import type { ClientProgramConflictsDto, ExerciseDto, ProgramDto } from '@coaching/shared';
 import { deleteProgram, saveAsTemplate, saveProgram } from '@/actions/programs';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -37,14 +37,17 @@ import {
 } from './builder-model';
 import { DayCard } from './DayCard';
 import { ExercisePicker } from './ExercisePicker';
+import { ProgramConflicts } from './ProgramConflicts';
 
 interface Props {
   program: ProgramDto | null;
   library: ExerciseDto[];
   clients: AssignableClient[];
+  /** Saved program vs. actively assigned clients' limitations (advisory). */
+  conflicts?: ClientProgramConflictsDto[];
 }
 
-export function ProgramBuilder({ program, library, clients }: Props) {
+export function ProgramBuilder({ program, library, clients, conflicts = [] }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -139,6 +142,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
 
   return (
     <div className="space-y-6">
+      <ProgramConflicts conflicts={conflicts} note={dirty ? 'Checked against the last saved version. Save to re-check.' : 'Flags are advisory: clients see them on Today and in the logger, and swaps sort safest first.'} />
       <Panel
         title="Program"
         meta={saved ? (dirty ? 'Unsaved changes' : `${saved.activeClientIds.length} active clients`) : dirty ? 'Unsaved changes' : undefined}

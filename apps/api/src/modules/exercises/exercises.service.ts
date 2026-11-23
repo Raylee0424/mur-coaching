@@ -1,19 +1,46 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Exercise, Prisma } from '@prisma/client';
-import { Role } from '@coaching/shared';
-import type { ExerciseAlternativesDto, ExerciseDto } from '@coaching/shared';
+import { Prisma } from '@prisma/client';
+import { MuscleGroup, MuscleRole, Role } from '@coaching/shared';
+import type { ExerciseAlternativesDto, ExerciseDto, ExerciseMuscleDto, LimitationFlag } from '@coaching/shared';
 import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExerciseDto, ListExercisesQuery, UpdateExerciseDto } from './dto/exercises.dto';
 import { ACCESSIBLE_LINK_STATUSES, isAccessibleLink } from '../clients/link-status';
 import { sortSafestFirst } from '../limitations/conflict';
 import { LimitationsService } from '../limitations/limitations.service';
+import { exerciseScope } from './exercise-visibility';
 
-const toDto = (e: Exercise, overrideClientCount = 0): ExerciseDto => ({
+const withMuscles = { muscles: true } satisfies Prisma.ExerciseInclude;
+type ExerciseRow = Prisma.ExerciseGetPayload<{ include: typeof withMuscles }>;
+
+const MUSCLE_ORDER = Object.values(MuscleGroup);
+
+/** Main muscle first, then other primaries, then secondaries; enum order within each group. */
+function sortedMuscles(main: MuscleGroup, rows: readonly ExerciseMuscleDto[]): ExerciseMuscleDto[] {
+  const rank = (m: ExerciseMuscleDto): number => (m.muscle === main ? 0 : m.role === MuscleRole.PRIMARY ? 1 : 2);
+  return [...rows].sort((a, b) => rank(a) - rank(b) || MUSCLE_ORDER.indexOf(a.muscle) - MUSCLE_ORDER.indexOf(b.muscle));
+}
+
+/** One row per muscle; the main muscle is always PRIMARY, whatever `extras` says about it. */
+export function muscleRows(main: MuscleGroup, extras: readonly ExerciseMuscleDto[] = []): ExerciseMuscleDto[] {
+  const byMuscle = new Map<MuscleGroup, MuscleRole>();
+  for (const m of extras) byMuscle.set(m.muscle, m.role);
+  byMuscle.set(main, MuscleRole.PRIMARY);
+  return sortedMuscles(main, [...byMuscle].map(([muscle, role]) => ({ muscle, role })));
+}
+
+const toDto = (e: ExerciseRow, overrideClientCount = 0, limitation: LimitationFlag | null = null): ExerciseDto => ({
   id: e.id,
   name: e.name,
   muscleGroup: e.muscleGroup,
+  muscles: sortedMuscles(
+    e.muscleGroup,
+    e.muscles.map((m) => ({ muscle: m.muscle, role: m.role })),
+  ),
   equipment: e.equipment,
+  pattern: e.pattern,
+  profile: e.profile,
+  position: e.position,
   loadIncrementKg: e.loadIncrementKg.toString(),
   rpeCap: e.rpeCap?.toString() ?? null,
   repsMin: e.repsMin,
@@ -21,6 +48,8 @@ const toDto = (e: Exercise, overrideClientCount = 0): ExerciseDto => ({
   archivedAt: e.archivedAt?.toISOString() ?? null,
   overrideClientCount,
   coachId: e.coachId,
+  ownerId: e.ownerId,
+  limitation,
   createdAt: e.createdAt.toISOString(),
 });
 
@@ -36,6 +65,16 @@ function resolveReps(
   return { repsMin, repsMax };
 }
 
+/** Where a user's own custom exercises live: `coachId` for a coach, `ownerId` for an athlete. */
+const ownedBy = (user: RequestUser): { coachId: string } | { ownerId: string } =>
+  user.role === Role.COACH ? { coachId: user.id } : { ownerId: user.id };
+
+const today = (): string => new Date().toISOString().slice(0, 10);
+
+/**
+ * One exercise library for coaches and athletes. Coaches own `coachId` rows, athletes own `ownerId` rows;
+ * each edits, duplicates and archives only their own. Visibility always goes through `exerciseScope`.
+ */
 @Injectable()
 export class ExercisesService {
   constructor(
@@ -44,38 +83,49 @@ export class ExercisesService {
   ) {}
 
   /**
-   * Global library plus the viewer's coach's custom exercises (a coach sees their own). Archived rows are hidden.
-   * Coaches also get `overrideClientCount`; clients always see 0.
+   * Global library plus the coach's custom exercises plus (for an athlete) their own. Archived rows are hidden.
+   * Coaches also get `overrideClientCount`; clients get the limitation flag active today.
    */
   async list(user: RequestUser, q: ListExercisesQuery): Promise<ExerciseDto[]> {
-    const coachId = await this.coachIdOf(user);
     const rows = await this.prisma.exercise.findMany({
       where: {
         archivedAt: null,
-        OR: [{ coachId: null }, ...(coachId ? [{ coachId }] : [])],
-        ...(q.muscleGroup ? { muscleGroup: q.muscleGroup } : {}),
+        ...(await this.scopeOf(user)),
+        ...(q.muscleGroup ? { muscles: { some: { muscle: q.muscleGroup } } } : {}),
+        ...(q.equipment ? { equipment: q.equipment } : {}),
+        ...(q.profile ? { profile: q.profile } : {}),
         ...(q.q ? { name: { contains: q.q.trim(), mode: 'insensitive' } } : {}),
       },
+      include: withMuscles,
       orderBy: { name: 'asc' },
     });
-    const counts = user.role === Role.COACH ? await this.overrideClientCounts(user.id) : new Map<string, number>();
-    return rows.map((r) => toDto(r, counts.get(r.id) ?? 0));
+    if (user.role === Role.COACH) {
+      const counts = await this.overrideClientCounts(user.id);
+      return rows.map((r) => toDto(r, counts.get(r.id) ?? 0));
+    }
+    const flags = await this.limitations.flagsFor(user.id, rows, today());
+    return rows.map((r) => toDto(r, 0, flags.get(r.id) ?? null));
   }
 
-  async create(coachId: string, dto: CreateExerciseDto): Promise<ExerciseDto> {
-    await this.assertNameFree(coachId, dto.name);
+  async create(user: RequestUser, dto: CreateExerciseDto): Promise<ExerciseDto> {
+    await this.assertNameFree(user, dto.name);
     const reps = resolveReps({ repsMin: null, repsMax: null }, dto);
     try {
       const row = await this.prisma.exercise.create({
         data: {
-          coachId,
+          ...ownedBy(user),
           name: dto.name,
           muscleGroup: dto.muscleGroup,
           equipment: dto.equipment ?? null,
+          pattern: dto.pattern ?? null,
+          profile: dto.profile ?? null,
+          position: dto.position ?? null,
           rpeCap: dto.rpeCap ?? null,
           ...reps,
           ...(dto.loadIncrementKg !== undefined ? { loadIncrementKg: dto.loadIncrementKg } : {}),
+          muscles: { create: muscleRows(dto.muscleGroup, dto.muscles) },
         },
+        include: withMuscles,
       });
       return toDto(row);
     } catch (err) {
@@ -83,14 +133,17 @@ export class ExercisesService {
     }
   }
 
-  /** Only the coach's own custom exercises; global, archived or other coaches' rows are 404. */
-  async update(coachId: string, id: string, dto: UpdateExerciseDto): Promise<ExerciseDto> {
-    const existing = await this.findOwned(coachId, id);
+  /** Only the caller's own custom exercises; global, archived or other users' rows are 404. */
+  async update(user: RequestUser, id: string, dto: UpdateExerciseDto): Promise<ExerciseDto> {
+    const existing = await this.findOwned(user, id);
     if (dto.name && dto.name.toLowerCase() !== existing.name.toLowerCase()) {
-      await this.assertNameFree(coachId, dto.name);
+      await this.assertNameFree(user, dto.name);
     }
     const touchesReps = dto.repsMin !== undefined || dto.repsMax !== undefined;
     const reps = touchesReps ? resolveReps(existing, dto) : null;
+    const touchesMuscles = dto.muscleGroup !== undefined || dto.muscles !== undefined;
+    const main = dto.muscleGroup ?? existing.muscleGroup;
+    const muscles = touchesMuscles ? muscleRows(main, dto.muscles ?? existing.muscles) : null;
     try {
       const row = await this.prisma.exercise.update({
         where: { id },
@@ -98,10 +151,15 @@ export class ExercisesService {
           ...(dto.name ? { name: dto.name } : {}),
           ...(dto.muscleGroup ? { muscleGroup: dto.muscleGroup } : {}),
           ...(dto.equipment !== undefined ? { equipment: dto.equipment } : {}),
+          ...(dto.pattern !== undefined ? { pattern: dto.pattern } : {}),
+          ...(dto.profile !== undefined ? { profile: dto.profile } : {}),
+          ...(dto.position !== undefined ? { position: dto.position } : {}),
           ...(dto.loadIncrementKg !== undefined ? { loadIncrementKg: dto.loadIncrementKg } : {}),
           ...(dto.rpeCap !== undefined ? { rpeCap: dto.rpeCap } : {}),
           ...(reps ?? {}),
+          ...(muscles ? { muscles: { deleteMany: {}, create: muscles } } : {}),
         },
+        include: withMuscles,
       });
       return toDto(row);
     } catch (err) {
@@ -109,13 +167,14 @@ export class ExercisesService {
     }
   }
 
-  /** Copy of a global or own exercise into the coach's library, with a free "(copy)" name. */
-  async duplicate(coachId: string, id: string): Promise<ExerciseDto> {
-    const src = await this.prisma.exercise.findFirst({ where: { id, archivedAt: null, OR: [{ coachId: null }, { coachId }] } });
+  /** Copy of any visible exercise into the caller's own library, with a free "(copy)" name. */
+  async duplicate(user: RequestUser, id: string): Promise<ExerciseDto> {
+    const scope = await this.scopeOf(user);
+    const src = await this.prisma.exercise.findFirst({ where: { id, archivedAt: null, ...scope }, include: withMuscles });
     if (!src) throw new NotFoundException('Exercise not found');
 
     const taken = await this.prisma.exercise.findMany({
-      where: { name: { startsWith: src.name, mode: 'insensitive' }, OR: [{ coachId: null }, { coachId }] },
+      where: { name: { startsWith: src.name, mode: 'insensitive' }, ...scope },
       select: { name: true },
     });
     const used = new Set(taken.map((t) => t.name.toLowerCase()));
@@ -125,15 +184,20 @@ export class ExercisesService {
     try {
       const row = await this.prisma.exercise.create({
         data: {
-          coachId,
+          ...ownedBy(user),
           name,
           muscleGroup: src.muscleGroup,
           equipment: src.equipment,
+          pattern: src.pattern,
+          profile: src.profile,
+          position: src.position,
           loadIncrementKg: src.loadIncrementKg,
           rpeCap: src.rpeCap,
           repsMin: src.repsMin,
           repsMax: src.repsMax,
+          muscles: { create: muscleRows(src.muscleGroup, src.muscles) },
         },
+        include: withMuscles,
       });
       return toDto(row);
     } catch (err) {
@@ -142,21 +206,21 @@ export class ExercisesService {
   }
 
   /** Soft delete: hidden from lists and pickers; programs, logs and recommendations keep referencing it. */
-  async archive(coachId: string, id: string): Promise<void> {
-    await this.findOwned(coachId, id);
+  async archive(user: RequestUser, id: string): Promise<void> {
+    await this.findOwned(user, id);
     await this.prisma.exercise.update({ where: { id }, data: { archivedAt: new Date() } });
   }
 
-  /** Same muscle group, not archived, visible to the client's coach, each with the client's latest top set. */
+  /** Same muscle group, not archived, visible to the client, each with the client's latest top set. */
   async alternatives(user: RequestUser, id: string): Promise<ExerciseAlternativesDto> {
-    const coachId = await this.coachIdOf(user);
-    const visible: Prisma.ExerciseWhereInput['OR'] = [{ coachId: null }, ...(coachId ? [{ coachId }] : [])];
+    const scope = await this.scopeOf(user);
     // The source may itself be archived: the prescription still points at it.
-    const source = await this.prisma.exercise.findFirst({ where: { id, OR: visible } });
+    const source = await this.prisma.exercise.findFirst({ where: { id, ...scope } });
     if (!source) throw new NotFoundException('Exercise not found');
 
     const alts = await this.prisma.exercise.findMany({
-      where: { id: { not: id }, muscleGroup: source.muscleGroup, archivedAt: null, OR: visible },
+      where: { id: { not: id }, muscleGroup: source.muscleGroup, archivedAt: null, ...scope },
+      include: withMuscles,
       orderBy: { name: 'asc' },
     });
     const logs = await this.prisma.exerciseLog.findMany({
@@ -166,7 +230,7 @@ export class ExercisesService {
       include: { sets: { where: { isWarmup: false, reps: { gt: 0 } } }, workoutLog: { select: { performedAt: true } } },
     });
     const latest = new Map(logs.map((l) => [l.exerciseId, l]));
-    const flags = await this.limitations.flagsFor(user.id, alts, new Date().toISOString().slice(0, 10));
+    const flags = await this.limitations.flagsFor(user.id, alts, today());
 
     const options = alts.map((a) => {
         const log = latest.get(a.id);
@@ -200,8 +264,8 @@ export class ExercisesService {
     };
   }
 
-  private async findOwned(coachId: string, id: string): Promise<Exercise> {
-    const existing = await this.prisma.exercise.findFirst({ where: { id, coachId, archivedAt: null } });
+  private async findOwned(user: RequestUser, id: string): Promise<ExerciseRow> {
+    const existing = await this.prisma.exercise.findFirst({ where: { id, ...ownedBy(user), archivedAt: null }, include: withMuscles });
     if (!existing) throw new NotFoundException('Exercise not found');
     return existing;
   }
@@ -236,16 +300,17 @@ export class ExercisesService {
     return new Map(rows.map((r) => [r.exerciseId, r.n]));
   }
 
-  private async coachIdOf(user: RequestUser): Promise<string | null> {
-    if (user.role === Role.COACH) return user.id;
+  /** Coach: global + own. Athlete: global + their coach's (while the link is accessible) + their own. */
+  private async scopeOf(user: RequestUser): Promise<Prisma.ExerciseWhereInput> {
+    if (user.role === Role.COACH) return exerciseScope({ coachId: user.id });
     const link = await this.prisma.coachClient.findUnique({ where: { clientId: user.id } });
-    return link && isAccessibleLink(link.status) ? link.coachId : null;
+    return exerciseScope({ coachId: link && isAccessibleLink(link.status) ? link.coachId : null, ownerId: user.id });
   }
 
-  /** Names are unique case-insensitively across the global library and the coach's own exercises. */
-  private async assertNameFree(coachId: string, name: string): Promise<void> {
+  /** Names are unique case-insensitively across everything the caller can see. */
+  private async assertNameFree(user: RequestUser, name: string): Promise<void> {
     const clash = await this.prisma.exercise.findFirst({
-      where: { name: { equals: name, mode: 'insensitive' }, OR: [{ coachId: null }, { coachId }] },
+      where: { name: { equals: name, mode: 'insensitive' }, ...(await this.scopeOf(user)) },
       select: { id: true },
     });
     if (clash) throw new ConflictException('An exercise with this name already exists');

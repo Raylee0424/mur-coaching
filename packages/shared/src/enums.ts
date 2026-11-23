@@ -92,8 +92,131 @@ export function parseSwapReason(text: string): { reason: SwapReason; note: strin
   return null;
 }
 
-export const LimitationTarget = { MUSCLE: 'MUSCLE', EXERCISE: 'EXERCISE' } as const;
+export const Equipment = {
+  BARBELL: 'BARBELL',
+  DUMBBELL: 'DUMBBELL',
+  CABLE: 'CABLE',
+  MACHINE: 'MACHINE',
+  SMITH_MACHINE: 'SMITH_MACHINE',
+  BODYWEIGHT: 'BODYWEIGHT',
+  KETTLEBELL: 'KETTLEBELL',
+  BAND: 'BAND',
+  SPECIALTY_BAR: 'SPECIALTY_BAR',
+  OTHER: 'OTHER',
+} as const;
+export type Equipment = (typeof Equipment)[keyof typeof Equipment];
+
+export const EQUIPMENT_LABELS: Record<Equipment, string> = {
+  BARBELL: 'Barbell',
+  DUMBBELL: 'Dumbbell',
+  CABLE: 'Cable',
+  MACHINE: 'Machine / plate-loaded',
+  SMITH_MACHINE: 'Smith machine',
+  BODYWEIGHT: 'Bodyweight',
+  KETTLEBELL: 'Kettlebell',
+  BAND: 'Band',
+  SPECIALTY_BAR: 'Specialty bar',
+  OTHER: 'Other',
+};
+
+export const MuscleRole = { PRIMARY: 'PRIMARY', SECONDARY: 'SECONDARY' } as const;
+export type MuscleRole = (typeof MuscleRole)[keyof typeof MuscleRole];
+
+export const ResistanceProfile = { LENGTHENED: 'LENGTHENED', MID_RANGE: 'MID_RANGE', SHORTENED: 'SHORTENED' } as const;
+export type ResistanceProfile = (typeof ResistanceProfile)[keyof typeof ResistanceProfile];
+
+export const RESISTANCE_PROFILE_LABELS: Record<ResistanceProfile, string> = {
+  LENGTHENED: 'Lengthened',
+  MID_RANGE: 'Mid-range',
+  SHORTENED: 'Shortened',
+};
+
+export const ExercisePosition = { STANDING: 'STANDING', SEATED: 'SEATED', SUPPORTED: 'SUPPORTED', LYING: 'LYING' } as const;
+export type ExercisePosition = (typeof ExercisePosition)[keyof typeof ExercisePosition];
+
+export const EXERCISE_POSITION_LABELS: Record<ExercisePosition, string> = {
+  STANDING: 'Standing',
+  SEATED: 'Seated',
+  SUPPORTED: 'Prone / supported',
+  LYING: 'Lying (supine)',
+};
+
+export const MovementPattern = {
+  SQUAT: 'SQUAT',
+  HINGE: 'HINGE',
+  LUNGE: 'LUNGE',
+  HORIZONTAL_PUSH: 'HORIZONTAL_PUSH',
+  VERTICAL_PUSH: 'VERTICAL_PUSH',
+  HORIZONTAL_PULL: 'HORIZONTAL_PULL',
+  VERTICAL_PULL: 'VERTICAL_PULL',
+  CARRY: 'CARRY',
+  CORE: 'CORE',
+  ARM_ISOLATION: 'ARM_ISOLATION',
+  LEG_ISOLATION: 'LEG_ISOLATION',
+} as const;
+export type MovementPattern = (typeof MovementPattern)[keyof typeof MovementPattern];
+
+export const MOVEMENT_PATTERN_LABELS: Record<MovementPattern, string> = {
+  SQUAT: 'Squat',
+  HINGE: 'Hinge',
+  LUNGE: 'Lunge',
+  HORIZONTAL_PUSH: 'Horizontal push',
+  VERTICAL_PUSH: 'Vertical push',
+  HORIZONTAL_PULL: 'Horizontal pull',
+  VERTICAL_PULL: 'Vertical pull',
+  CARRY: 'Carry',
+  CORE: 'Core',
+  ARM_ISOLATION: 'Arm isolation',
+  LEG_ISOLATION: 'Leg isolation',
+};
+
+export const Joint = {
+  NECK: 'NECK',
+  SHOULDER: 'SHOULDER',
+  ELBOW: 'ELBOW',
+  WRIST: 'WRIST',
+  LOWER_BACK: 'LOWER_BACK',
+  HIP: 'HIP',
+  KNEE: 'KNEE',
+  ANKLE: 'ANKLE',
+} as const;
+export type Joint = (typeof Joint)[keyof typeof Joint];
+
+export const JOINT_LABELS: Record<Joint, string> = {
+  NECK: 'Neck',
+  SHOULDER: 'Shoulder',
+  ELBOW: 'Elbow',
+  WRIST: 'Wrist',
+  LOWER_BACK: 'Lower back',
+  HIP: 'Hip',
+  KNEE: 'Knee',
+  ANKLE: 'Ankle',
+};
+
+/**
+ * Fixed joint → movement patterns that load it. A JOINT limitation flags any exercise tagged with one of these
+ * patterns. Deterministic and deliberately broad: flags are advisory and never block logging.
+ */
+export const JOINT_PATTERNS: Record<Joint, readonly MovementPattern[]> = {
+  NECK: ['VERTICAL_PUSH', 'CARRY'],
+  SHOULDER: ['HORIZONTAL_PUSH', 'VERTICAL_PUSH', 'HORIZONTAL_PULL', 'VERTICAL_PULL'],
+  ELBOW: ['HORIZONTAL_PUSH', 'VERTICAL_PUSH', 'HORIZONTAL_PULL', 'VERTICAL_PULL', 'ARM_ISOLATION'],
+  WRIST: ['HORIZONTAL_PUSH', 'VERTICAL_PUSH', 'CARRY', 'ARM_ISOLATION'],
+  LOWER_BACK: ['HINGE', 'SQUAT', 'CARRY'],
+  HIP: ['SQUAT', 'HINGE', 'LUNGE'],
+  KNEE: ['SQUAT', 'LUNGE', 'LEG_ISOLATION'],
+  ANKLE: ['SQUAT', 'LUNGE', 'CARRY', 'LEG_ISOLATION'],
+};
+
+export const LimitationTarget = { MUSCLE: 'MUSCLE', EXERCISE: 'EXERCISE', JOINT: 'JOINT', PATTERN: 'PATTERN' } as const;
 export type LimitationTarget = (typeof LimitationTarget)[keyof typeof LimitationTarget];
+
+export const LIMITATION_TARGET_LABELS: Record<LimitationTarget, string> = {
+  MUSCLE: 'Muscle',
+  EXERCISE: 'Exercise',
+  JOINT: 'Joint / area',
+  PATTERN: 'Movement pattern',
+};
 
 export const LimitationSeverity = { AVOID: 'AVOID', CAUTION: 'CAUTION' } as const;
 export type LimitationSeverity = (typeof LimitationSeverity)[keyof typeof LimitationSeverity];

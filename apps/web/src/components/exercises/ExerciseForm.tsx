@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useRef } from 'react';
-import { MUSCLE_GROUP_LABELS, MuscleGroup } from '@coaching/shared';
+import { EQUIPMENT_LABELS, Equipment, MUSCLE_GROUP_LABELS, MuscleGroup } from '@coaching/shared';
 import type { ExerciseDto } from '@coaching/shared';
 import { createExercise, updateExercise } from '@/actions/exercises';
 import type { ActionResult } from '@/lib/action-result';
@@ -67,7 +67,14 @@ export function ExerciseForm(props: Props) {
       </div>
       <div>
         <Label htmlFor={`${idPrefix}-equipment`}>Equipment (optional)</Label>
-        <Input id={`${idPrefix}-equipment`} name="equipment" maxLength={60} defaultValue={initial?.equipment ?? ''} />
+        <Select id={`${idPrefix}-equipment`} name="equipment" defaultValue={initial?.equipment ?? ''}>
+          <option value="">None</option>
+          {Object.values(Equipment).map((eq) => (
+            <option key={eq} value={eq}>
+              {EQUIPMENT_LABELS[eq]}
+            </option>
+          ))}
+        </Select>
       </div>
       <div>
         <Label htmlFor={`${idPrefix}-inc`}>Load increment (kg)</Label>

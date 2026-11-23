@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import type { ProgramDto, ProgramTreeInput } from '@coaching/shared';
+import type { ClientProgramConflictsDto, ProgramDto, ProgramTreeInput } from '@coaching/shared';
 import { programsApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
 
@@ -63,6 +63,17 @@ export async function assignProgram(
   }
   refresh(programId);
   return { ok: true, data: outcomes };
+}
+
+/** Read-only: limitation conflicts for these clients against the saved program. Advisory; never blocks assigning. */
+export async function programConflicts(programId: string, clientIds: string[]): Promise<ActionResult<ClientProgramConflictsDto[]>> {
+  if (clientIds.length === 0) return { ok: true, data: [] };
+  try {
+    return { ok: true, data: await programsApi.conflicts(programId, clientIds) };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
 }
 
 /** "Save as template": a deep copy of the saved program flagged as a template (no assignments). */

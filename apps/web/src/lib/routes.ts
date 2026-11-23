@@ -43,6 +43,7 @@ export const COACH_NAV: readonly NavItem[] = [
 export const CLIENT_NAV: readonly NavItem[] = [
   { href: '/client', label: 'Today', exact: true, icon: 'today' },
   { href: '/client/history', label: 'History', icon: 'history' },
+  { href: '/client/exercises', label: 'Exercises', icon: 'dumbbell' },
   { href: '/client/tools', label: 'Tools', icon: 'tools' },
   { href: '/client/profile', label: 'Profile', icon: 'user' },
 ];

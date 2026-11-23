@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, Matches, MaxLength, ValidateIf } from 'class-validator';
-import { LimitationSeverity, LimitationTarget, MuscleGroup } from '@coaching/shared';
+import { Joint, LimitationSeverity, LimitationTarget, MovementPattern, MuscleGroup } from '@coaching/shared';
 import type { CreateLimitationRequest, UpdateLimitationRequest } from '@coaching/shared';
 
 const trim = ({ value }: { value: unknown }): unknown => (typeof value === 'string' ? value.trim() : value);
@@ -15,6 +15,12 @@ export class CreateLimitationDto implements CreateLimitationRequest {
 
   @ValidateIf((o: CreateLimitationDto) => o.target === LimitationTarget.EXERCISE) @IsString() @MaxLength(40)
   exerciseId?: string;
+
+  @ValidateIf((o: CreateLimitationDto) => o.target === LimitationTarget.JOINT) @IsIn(Object.values(Joint))
+  joint?: Joint;
+
+  @ValidateIf((o: CreateLimitationDto) => o.target === LimitationTarget.PATTERN) @IsIn(Object.values(MovementPattern))
+  pattern?: MovementPattern;
 
   @IsIn(Object.values(LimitationSeverity))
   severity!: LimitationSeverity;

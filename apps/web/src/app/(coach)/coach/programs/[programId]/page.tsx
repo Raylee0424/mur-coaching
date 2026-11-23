@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, unstable_rethrow } from 'next/navigation';
 import { Role } from '@coaching/shared';
 import { ProgramBuilder } from '@/components/programs/ProgramBuilder';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -17,10 +17,15 @@ export default async function EditProgramPage({ params }: { params: Promise<{ pr
     }),
     loadBuilderData(),
   ]);
+  // Advisory only: a failed check must not block the builder.
+  const conflicts = program.activeClientIds.length > 0 ? await programsApi.conflicts(program.id).catch((err: unknown) => {
+          unstable_rethrow(err);
+          return [];
+        }) : [];
   return (
     <>
       <PageHeader title={program.name} />
-      <ProgramBuilder key={program.id} program={program} library={data.library} clients={data.clients} />
+      <ProgramBuilder key={program.id} program={program} library={data.library} clients={data.clients} conflicts={conflicts} />
     </>
   );
 }
