@@ -17,10 +17,14 @@ async function run<T>(op: () => Promise<T>): Promise<ActionResult<T>> {
   }
 }
 
-export const createExerciseNote = (exerciseId: string, body: string): Promise<ActionResult<ExerciseNoteDto>> =>
-  run(() => exerciseNotesApi.create({ exerciseId, body }));
+export async function createExerciseNote(exerciseId: string, body: string): Promise<ActionResult<ExerciseNoteDto>> {
+  return run(() => exerciseNotesApi.create({ exerciseId, body }));
+}
 
-export const updateExerciseNote = (id: string, body: string): Promise<ActionResult<ExerciseNoteDto>> =>
-  run(() => exerciseNotesApi.update(id, { body }));
+export async function updateExerciseNote(id: string, body: string): Promise<ActionResult<ExerciseNoteDto>> {
+  return run(() => exerciseNotesApi.update(id, { body }));
+}
 
-export const deleteExerciseNote = (id: string): Promise<ActionResult> => run(() => exerciseNotesApi.remove(id));
+export async function deleteExerciseNote(id: string): Promise<ActionResult> {
+  return run(() => exerciseNotesApi.remove(id));
+}
