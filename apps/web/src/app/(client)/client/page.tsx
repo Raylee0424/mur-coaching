@@ -98,7 +98,7 @@ export default async function ClientHome() {
   const eyebrow =
     today.blockName && today.currentWeek !== null
       ? `${today.blockName} · Week ${today.currentWeek}${today.totalWeeks ? ` of ${today.totalWeeks}` : ''}`
-      : 'Ray Coaching';
+      : 'MUR Coaching';
   const workout = today.state === 'READY' ? today.workout : null;
   const banner = today.banner;
   const tone = banner ? ACTION_TONE[banner.action] : null;

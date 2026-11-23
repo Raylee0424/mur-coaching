@@ -28,7 +28,7 @@ export function MarketingNav() {
       <div className={clsx(CONTAINER, 'flex h-16 items-center justify-between gap-4 lg:h-20 lg:gap-8')}>
         <a href="#top" className="inline-flex shrink-0 items-center gap-2.5 rounded-[8px]">
           <Logo />
-          <span className="sr-only font-display text-xl font-semibold tracking-tight sm:not-sr-only">Ray Coaching</span>
+          <span className="sr-only font-display text-xl font-semibold tracking-tight sm:not-sr-only">MUR Coaching</span>
         </a>
 
         <nav aria-label="Page sections" className="hidden items-center gap-8 lg:flex">

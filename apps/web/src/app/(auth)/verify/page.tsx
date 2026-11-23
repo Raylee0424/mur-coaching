@@ -4,7 +4,7 @@ import { VerifyForm } from '@/components/shell/auth/VerifyForm';
 import { getCurrentUser } from '@/lib/auth';
 import { homeFor, onboardingFor } from '@/lib/routes';
 
-export const metadata = { title: 'Verify email · Ray Coaching' };
+export const metadata = { title: 'Verify email · MUR Coaching' };
 
 export default async function VerifyPage() {
   const user = await getCurrentUser();

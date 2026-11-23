@@ -3,7 +3,7 @@ import { firstParam } from '@/lib/form';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export const metadata = { title: 'Set new password · Ray Coaching' };
+export const metadata = { title: 'Set new password · MUR Coaching' };
 
 export default async function ResetPage({ searchParams }: { searchParams: SearchParams }) {
   const token = firstParam((await searchParams).token);

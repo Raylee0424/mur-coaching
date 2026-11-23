@@ -11,7 +11,7 @@ export function CallToAction() {
       <div className={clsx(CONTAINER)}>
         <div className="flex flex-col items-center gap-6 rounded-md border border-line bg-card px-5 py-10 text-center sm:px-10 sm:py-14">
           <h2 id="cta-heading" className="text-balance text-[28px] font-extrabold leading-tight lg:text-[40px]">
-            See Ray Coaching in Action
+            See MUR Coaching in Action
           </h2>
           <p className="max-w-xl text-pretty text-muted">
             Explore both the Coach Workspace and the Client Set Logger with seeded 3-session progression data.

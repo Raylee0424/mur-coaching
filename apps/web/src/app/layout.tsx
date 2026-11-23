@@ -8,7 +8,7 @@ const body = Instrument_Sans({ subsets: ['latin'], variable: '--font-body' });
 const mono = Source_Code_Pro({ subsets: ['latin'], weight: ['600'], variable: '--font-mono' });
 
 export const metadata: Metadata = {
-  title: 'Ray Coaching',
+  title: 'MUR Coaching',
   description: 'Coach-built programs and a progressive-overload engine that tells you when to add weight or deload.',
 };
 

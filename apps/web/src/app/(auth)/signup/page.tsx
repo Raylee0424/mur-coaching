@@ -1,7 +1,7 @@
 import { AuthHeading } from '@/components/shell/auth/AuthHeading';
 import { SignupForm } from '@/components/shell/auth/SignupForm';
 
-export const metadata = { title: 'Create account · Ray Coaching' };
+export const metadata = { title: 'Create account · MUR Coaching' };
 
 export default function SignupPage() {
   return (
