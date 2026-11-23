@@ -21,10 +21,11 @@ describe('routes', () => {
 });
 
 describe('CLIENT_NAV', () => {
-  it('is Today / History / Profile, with Today matched exactly', () => {
+  it('is Today / History / Tools / Profile, with Today matched exactly', () => {
     expect(CLIENT_NAV.map((i) => [i.label, i.href])).toEqual([
       ['Today', '/client'],
       ['History', '/client/history'],
+      ['Tools', '/client/tools'],
       ['Profile', '/client/profile'],
     ]);
     expect(CLIENT_NAV[0]?.exact).toBe(true);

@@ -9,6 +9,10 @@ export interface SetLogDto {
   weightKg: DecimalString;
   rpe: DecimalString | null;
   isWarmup: boolean;
+  rir: number | null;
+  /** e.g. `3-1-1-0` (eccentric-pause-concentric-top). */
+  tempo: string | null;
+  restSeconds: number | null;
 }
 
 export interface ExerciseLogDto {
@@ -22,6 +26,7 @@ export interface ExerciseLogDto {
   swappedFromExerciseId: string | null;
   swapReason: string | null;
   swappedFrom: { id: string; name: string } | null;
+  notes: string | null;
 }
 
 export interface WorkoutLogDto {
@@ -40,6 +45,9 @@ export interface SetLogInput {
   weightKg: number;
   rpe?: number;
   isWarmup?: boolean;
+  rir?: number;
+  tempo?: string;
+  restSeconds?: number;
 }
 
 export interface ExerciseLogInput {
@@ -49,6 +57,7 @@ export interface ExerciseLogInput {
   swappedFromExerciseId?: string;
   swapReason?: SwapReason;
   swapNote?: string;
+  notes?: string;
   sets: SetLogInput[];
 }
 
@@ -81,4 +90,10 @@ export const WORKOUT_LOG_LIMITS = {
   maxWeightKg: 9999,
   rpeMin: 1,
   rpeMax: 10,
+  rirMax: 10,
+  maxRestSeconds: 3600,
+  maxNoteLength: 1000,
 } as const;
+
+/** Four dash-separated digits or `X` (explosive): `3-1-1-0`, `2-0-X-0`. */
+export const TEMPO_PATTERN = /^[0-9X]-[0-9X]-[0-9X]-[0-9X]$/;

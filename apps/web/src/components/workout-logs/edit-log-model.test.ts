@@ -10,6 +10,9 @@ const set = (id: string, reps: number, kg: string, rpe: string | null, warm = fa
   weightKg: kg,
   rpe,
   isWarmup: warm,
+  rir: null,
+  tempo: null,
+  restSeconds: null,
 });
 
 const log: WorkoutLogDto = {
@@ -31,6 +34,7 @@ const log: WorkoutLogDto = {
       swappedFromExerciseId: null,
       swapReason: null,
       swappedFrom: null,
+      notes: null,
       sets: [set('s1', 5, '60.00', null, true), set('s2', 8, '100.00', '8.5')],
     },
     {
@@ -43,6 +47,7 @@ const log: WorkoutLogDto = {
       swappedFromExerciseId: 'squat',
       swapReason: 'Pain: left knee',
       swappedFrom: { id: 'squat', name: 'Squat' },
+      notes: null,
       sets: [set('s3', 10, '150.00', '8')],
     },
   ],

@@ -1,4 +1,4 @@
-import { WORKOUT_LOG_LIMITS } from '@coaching/shared';
+import { TEMPO_PATTERN, WORKOUT_LOG_LIMITS } from '@coaching/shared';
 import type { CreateWorkoutLogRequest, ExerciseLogInput, LimitationFlag, SwapReason, WeightUnit, WorkoutLogDto } from '@coaching/shared';
 import { toNumber } from '@/lib/format';
 import { displayToKg, kgToDisplay, unitLabel } from '@/lib/units';
@@ -11,6 +11,8 @@ export interface DraftSet {
   weight: string;
   rpe: string;
   isWarmup: boolean;
+  /** `3-1-1-0`; blank when not tracked. */
+  tempo?: string;
 }
 
 export interface DraftExercise {
@@ -21,6 +23,8 @@ export interface DraftExercise {
   /** Set when the client swapped away from the prescribed exercise; `undo` restores it. */
   swap?: { fromExerciseId: string; fromWorkoutExerciseId?: string; reason: SwapReason; note: string };
   sets: DraftSet[];
+  /** Session note for this lift (`ExerciseLog.notes`). */
+  notes?: string;
 }
 
 export interface DraftLog {
@@ -80,6 +84,7 @@ export function fromLastLog(log: WorkoutLogDto, performedAtLocal: string, unit: 
         weight: String(kgToDisplay(toNumber(set.weightKg), unit)),
         rpe: set.rpe === null ? '' : String(toNumber(set.rpe)),
         isWarmup: set.isWarmup,
+        ...(set.tempo ? { tempo: set.tempo } : {}),
       })),
     })),
   };
@@ -224,6 +229,7 @@ export function validateDraft(draft: DraftLog, now: Date): ValidationResult {
       const weight = set.weight.trim();
       const weightKg = displayToKg(Number(weight), draft.unit);
       const rpe = set.rpe.trim();
+      const tempo = (set.tempo ?? '').trim().toUpperCase();
 
       if (!WHOLE.test(reps) || Number(reps) > L.maxReps) errors[`${key}.reps`] = `Whole number, 0–${L.maxReps}.`;
       if (!DECIMAL_2.test(weight) || weightKg > L.maxWeightKg) {
@@ -234,14 +240,19 @@ export function validateDraft(draft: DraftLog, now: Date): ValidationResult {
         errors[`${key}.rpe`] = `${L.rpeMin}–${L.rpeMax}, up to 1 decimal.`;
       }
 
+      if (tempo !== '' && !TEMPO_PATTERN.test(tempo)) errors[`${key}.tempo`] = 'Tempo looks like 3-1-1-0.';
+
       sets.push({
         reps: Number(reps),
         weightKg,
         ...(rpe !== '' ? { rpe: Number(rpe) } : {}),
         ...(set.isWarmup ? { isWarmup: true } : {}),
+        ...(tempo !== '' ? { tempo } : {}),
       });
     });
 
+    const exerciseNote = (exercise.notes ?? '').trim();
+    if (exerciseNote.length > L.maxNoteLength) errors[`${base}.notes`] = `Note: at most ${L.maxNoteLength} characters.`;
     if (exercise.swap && exercise.swap.note.length > 200) errors[`${base}.swap`] = 'Swap note: at most 200 characters.';
     exerciseLogs.push({
       exerciseId: exercise.exerciseId,
@@ -253,6 +264,7 @@ export function validateDraft(draft: DraftLog, now: Date): ValidationResult {
             ...(exercise.swap.note ? { swapNote: exercise.swap.note } : {}),
           }
         : {}),
+      ...(exerciseNote ? { notes: exerciseNote } : {}),
       sets,
     });
   });
@@ -512,16 +524,20 @@ export function startFreeform(performedAtLocal: string, unit: WeightUnit): FlowS
 }
 
 /** Logs the steppers' numbers as the next set of an exercise. */
-export function commitSet(draft: DraftLog, exerciseKey: string, v: StepValues): DraftLog {
+export function commitSet(draft: DraftLog, exerciseKey: string, v: StepValues, tempo = ''): DraftLog {
   return mapExercise(draft, exerciseKey, (exercise) => ({
     ...exercise,
-    sets: [...exercise.sets, { key: nextKey(), weight: String(v.weight), reps: String(v.reps), rpe: String(v.rpe), isWarmup: false }],
+    sets: [...exercise.sets, { key: nextKey(), weight: String(v.weight), reps: String(v.reps), rpe: String(v.rpe), isWarmup: false, ...(tempo.trim() ? { tempo: tempo.trim() } : {}) }],
   }));
 }
 
 /** Rewrites one logged set from edited numbers (keeps the warm-up flag). */
 export function editSetValues(draft: DraftLog, exerciseKey: string, setKey: string, v: StepValues): DraftLog {
   return patchSet(draft, exerciseKey, setKey, { weight: String(v.weight), reps: String(v.reps), rpe: String(v.rpe) });
+}
+
+export function setExerciseNote(draft: DraftLog, exerciseKey: string, notes: string): DraftLog {
+  return mapExercise(draft, exerciseKey, (exercise) => ({ ...exercise, notes }));
 }
 
 /** Exercises with no logged sets are skipped on finish. */

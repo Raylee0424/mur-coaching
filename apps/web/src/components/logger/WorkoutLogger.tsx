@@ -14,11 +14,12 @@ import type {
 } from '@coaching/shared';
 import { submitWorkoutLog } from '@/actions/workout-logs';
 import { Button } from '@/components/ui/Button';
-import { FormError, Label, Select } from '@/components/ui/Field';
+import { FormError, Input, Label, Select } from '@/components/ui/Field';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SetEditorSheet } from '@/components/workout-logs/SetEditorSheet';
+import { TEMPO_PATTERN } from '@coaching/shared';
 import { toNumber } from '@/lib/format';
 import { kgToDisplay, unitLabel } from '@/lib/units';
 import { LoggedSets } from './LoggedSets';
@@ -40,6 +41,7 @@ import {
   nextSetDefaults,
   removeSet,
   setExerciseId,
+  setExerciseNote,
   startFreeform,
   startFromLastLog,
   startFromToday,
@@ -75,6 +77,8 @@ interface Props {
   unit: WeightUnit;
   /** Onboarding starting weights by exercise id (kg). */
   baselines: Record<string, Baseline>;
+  /** Persistent notes by exercise id (`ExerciseNote`), shown while logging that lift. */
+  savedNotes: Record<string, string[]>;
 }
 
 interface Done {
@@ -82,7 +86,7 @@ interface Done {
   sets: number;
 }
 
-export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit, baselines }: Props) {
+export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit, baselines, savedNotes }: Props) {
   const increments = useMemo(() => Object.fromEntries(library.map((e) => [e.id, e.loadIncrementKg])), [library]);
   const byId = useMemo(() => new Map(library.map((e) => [e.id, e])), [library]);
 
@@ -98,6 +102,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
     const first = flow.draft.exercises[0];
     return nextSetDefaults(first ? flow.plans[first.key] : undefined, [], unit, first ? baselines[first.exerciseId] : undefined);
   });
+  const [tempo, setTempo] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [error, setError] = useState<string>();
@@ -113,6 +118,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
   const emptyCount = draft.exercises.filter((e) => e.sets.length === 0).length;
   const lastIndex = draft.exercises.length - 1;
   const rpeProblem = rpeError(values.rpe);
+  const tempoProblem = tempo.trim() !== '' && !TEMPO_PATTERN.test(tempo.trim().toUpperCase());
 
   // Leaving mid-session would silently drop the sets.
   useEffect(() => {
@@ -139,6 +145,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
     if (!target) return;
     setIndex(i);
     setValues(nextSetDefaults(next.plans[target.key], target.sets, unit, baselines[target.exerciseId]));
+    setTempo(next.draft.exercises[i]?.sets.at(-1)?.tempo ?? '');
     rest.reset();
     setConfirmFinish(false);
     setError(undefined);
@@ -159,8 +166,8 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
   }
 
   function logSet(): void {
-    if (rpeProblem) return;
-    setFlow({ ...flow, draft: commitSet(draft, key, values) });
+    if (rpeProblem || tempoProblem) return;
+    setFlow({ ...flow, draft: commitSet(draft, key, values, tempo.trim().toUpperCase()) });
     setAnnounce(
       `Set ${logged.length + 1} logged: ${formatStepValue('weight', values.weight)} ${unitLabel(unit)} for ${values.reps} reps.`,
     );
@@ -388,12 +395,28 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
                   }
                 />
               </div>
+              <div className="border-t border-line pt-4">
+                <Label htmlFor="set-tempo">Tempo (optional)</Label>
+                <Input
+                  id="set-tempo"
+                  value={tempo}
+                  maxLength={7}
+                  placeholder="3-1-1-0"
+                  autoCapitalize="characters"
+                  aria-invalid={tempoProblem}
+                  aria-describedby="set-tempo-hint"
+                  onChange={(e) => setTempo(e.target.value)}
+                />
+                <p id="set-tempo-hint" className={clsx('mt-1 text-meta', tempoProblem ? 'font-medium text-danger' : 'text-faint')}>
+                  Lowering, pause, lifting, top pause in seconds. Use X for explosive.
+                </p>
+              </div>
               {rpeProblem ? (
                 <p role="alert" className="text-meta font-medium text-danger">
                   {RPE_ERROR}
                 </p>
               ) : null}
-              <Button size="lg" className="w-full" disabled={rpeProblem !== null} onClick={logSet}>
+              <Button size="lg" className="w-full" disabled={rpeProblem !== null || tempoProblem} onClick={logSet}>
                 {extra ? 'Log extra set' : 'Log set'}
               </Button>
             </section>
@@ -405,6 +428,33 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
         </p>
 
         <LoggedSets sets={logged} unit={unit} onEdit={setEditing} />
+
+        {hasExercise ? (
+          <section aria-label="Exercise notes" className="space-y-3">
+            {(savedNotes[exercise.exerciseId] ?? []).length > 0 ? (
+              <div className="border-l-2 border-l-sky bg-card px-3 py-2">
+                <p className="font-mono text-micro uppercase text-muted">Your saved notes</p>
+                <ul className="mt-1 space-y-1 text-ui">
+                  {(savedNotes[exercise.exerciseId] ?? []).map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div>
+              <Label htmlFor="exercise-note">Note for this session</Label>
+              <textarea
+                id="exercise-note"
+                rows={2}
+                maxLength={WORKOUT_LOG_LIMITS.maxNoteLength}
+                value={exercise.notes ?? ''}
+                onChange={(e) => setFlow({ ...flow, draft: setExerciseNote(draft, key, e.target.value) })}
+                placeholder="How it felt, what to fix next time."
+                className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 font-sans text-body text-ink placeholder:text-faint hover:border-faint"
+              />
+            </div>
+          </section>
+        ) : null}
 
         <FormError>{error}</FormError>
 
