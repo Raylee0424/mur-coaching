@@ -13,7 +13,7 @@ export function RestoreClientButton({ clientId, name }: { clientId: string; name
     <span className="inline-flex flex-col items-start gap-1">
       <Button
         variant="secondary"
-        className="min-h-9 py-1"
+        size="sm"
         aria-label={`Restore ${name}`}
         disabled={pending}
         onClick={() =>
@@ -25,7 +25,7 @@ export function RestoreClientButton({ clientId, name }: { clientId: string; name
       >
         {pending ? 'Restoring…' : 'Restore'}
       </Button>
-      {error ? <span className="text-xs text-danger">{error}</span> : null}
+      {error ? <span className="text-meta text-danger">{error}</span> : null}
     </span>
   );
 }

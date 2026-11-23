@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
 import type { ClientView, WeightUnit } from '@coaching/shared';
-import { CLIENT_STATUS_META as STATUS } from './status';
 import { Badge } from '@/components/ui/Badge';
+import { StatStrip } from '@/components/ui/StatStrip';
 import { programWeek } from '@/lib/format';
 import { formatWeight } from '@/lib/units';
+import { CLIENT_STATUS_META as STATUS } from './status';
 
 export interface HeaderStats {
   adherencePct: number | null;
@@ -12,76 +12,38 @@ export interface HeaderStats {
   pending: number;
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p.charAt(0).toUpperCase())
-    .join('');
+/** Program context for the top bar's `meta` slot. */
+export function clientMeta(client: ClientView): string | null {
+  const a = client.activeAssignment;
+  if (!a) return null;
+  return `${a.program.name} · W${programWeek(a.startDate, a.program.durationWeeks)}/${a.program.durationWeeks}`;
 }
 
-export function ClientHeader({
-  client,
-  stats,
-  unit,
-  actions,
-}: {
-  client: ClientView;
-  stats: HeaderStats;
-  unit: WeightUnit;
-  actions?: ReactNode;
-}) {
+/** The strip under the top bar: status, contact, program and headline numbers. */
+export function ClientHeader({ client, stats, unit }: { client: ClientView; stats: HeaderStats; unit: WeightUnit }) {
   const assignment = client.activeAssignment;
-  const week = assignment ? programWeek(assignment.startDate, assignment.program.durationWeeks) : null;
-  const items = [
-    { label: 'Adherence', value: stats.adherencePct === null ? '—' : `${Math.round(stats.adherencePct)}%` },
-    { label: 'Weekly volume', value: stats.weeklyVolumeKg === null ? '—' : formatWeight(stats.weeklyVolumeKg, unit) },
-    { label: 'Pending calls', value: String(stats.pending) },
-  ];
   return (
-    <section aria-label="Client summary" className="mb-6 flex flex-wrap items-center justify-between gap-5 rounded-lg border border-line bg-card p-5">
-      <div className="flex min-w-0 items-center gap-4">
-        <span aria-hidden="true" className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary-container font-display text-lg font-bold text-primary">
-          {initials(client.name)}
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-2xl font-extrabold tracking-tight">{client.name}</h1>
-            <Badge tone={STATUS[client.status].tone}>{STATUS[client.status].label}</Badge>
-          </div>
-          <p className="truncate text-sm text-muted">{client.email}</p>
-          <p className="text-sm">
-            {assignment ? (
-              <>
-                <span className="font-semibold">{assignment.program.name}</span>
-                <span className="text-muted">
-                  {' '}
-                  · Week {week} of {assignment.program.durationWeeks}
-                </span>
-              </>
-            ) : (
-              <span className="text-muted">
-                No program assigned ·{' '}
-                <Link href="/coach/programs" className="font-semibold text-primary-soft underline">
-                  Assign a program
-                </Link>
-              </span>
-            )}
-          </p>
-        </div>
+    <section aria-label="Client summary" className="mb-6 space-y-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ui">
+        <Badge tone={STATUS[client.status].tone}>{STATUS[client.status].label}</Badge>
+        <span className="text-meta text-muted">{client.email}</span>
+        {assignment ? null : (
+          <span className="text-muted">
+            No program assigned ·{' '}
+            <Link href="/coach/programs" className="text-ink underline">
+              Assign a program
+            </Link>
+          </span>
+        )}
       </div>
-      <div className="flex flex-wrap items-center gap-6">
-        <dl className="flex gap-6">
-          {items.map((i) => (
-            <div key={i.label}>
-              <dt className="text-xs font-semibold uppercase tracking-wider text-muted">{i.label}</dt>
-              <dd className="font-display text-xl font-bold tabular-nums">{i.value}</dd>
-            </div>
-          ))}
-        </dl>
-        {actions}
-      </div>
+      <StatStrip
+        label="Client summary numbers"
+        items={[
+          { label: 'Adherence · 28d', value: stats.adherencePct === null ? '—' : `${Math.round(stats.adherencePct)}%` },
+          { label: 'Weekly volume', value: stats.weeklyVolumeKg === null ? '—' : formatWeight(stats.weeklyVolumeKg, unit) },
+          { label: 'Pending calls', value: String(stats.pending), emphasis: stats.pending > 0 },
+        ]}
+      />
     </section>
   );
 }

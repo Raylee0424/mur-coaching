@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RecommendationQueueItem } from '@coaching/shared';
-import { bulkMessage, parseActionFilter, pruneSelection, queueHref, selectionState, toggleAll, toggleId } from './queue-model';
+import { bulkMessage, cancel, flushAll, parseActionFilter, pruneSelection, queueHref, schedule, scheduledIds, selectionState, toggleAll, toggleId, undoMessage, visibleItems } from './queue-model';
 
 const item = (id: string): RecommendationQueueItem => ({
   id,
@@ -54,5 +54,34 @@ describe('bulkMessage', () => {
   it('pluralises and mentions skips', () => {
     expect(bulkMessage('ACCEPTED', { updated: 1, skipped: 0 })).toBe('Accepted 1 recommendation.');
     expect(bulkMessage('DISMISSED', { updated: 2, skipped: 1 })).toBe('Dismissed 2 recommendations. 1 already resolved or replaced.');
+  });
+});
+
+describe('deferred commits', () => {
+  const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+
+  it('schedules and cancels by token', () => {
+    const s1 = schedule({}, 't1', ['a', 'b'], 'ACCEPTED');
+    expect(scheduledIds(s1)).toEqual(new Set(['a', 'b']));
+    const { next, cancelled } = cancel(s1, 't1');
+    expect(cancelled).toEqual({ ids: ['a', 'b'], status: 'ACCEPTED' });
+    expect(scheduledIds(next).size).toBe(0);
+    expect(cancel(next, 'nope').cancelled).toBeUndefined();
+  });
+
+  it('flushAll returns every commit and empties the map', () => {
+    const map = schedule(schedule({}, 't1', ['a'], 'ACCEPTED'), 't2', ['b'], 'DISMISSED');
+    const { next, commits } = flushAll(map);
+    expect(commits).toHaveLength(2);
+    expect(Object.keys(next)).toHaveLength(0);
+  });
+
+  it('hides scheduled rows', () => {
+    expect(visibleItems(items, new Set(['b'])).map((i) => i.id)).toEqual(['a', 'c']);
+  });
+
+  it('words the undo toast', () => {
+    expect(undoMessage('ACCEPTED', [{ clientName: 'Marcus Vance', exerciseName: 'Back squat' }])).toBe('Accepted Marcus Vance · Back squat');
+    expect(undoMessage('DISMISSED', [{ clientName: 'a', exerciseName: 'b' }, { clientName: 'c', exerciseName: 'd' }])).toBe('Dismissed 2 calls');
   });
 });

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RecommendationStatus, Role } from '@coaching/shared';
-import { ClientHeader } from '@/components/clients/ClientHeader';
+import { ClientHeader, clientMeta } from '@/components/clients/ClientHeader';
 import { ClientSettingsDrawer } from '@/components/clients/ClientSettingsDrawer';
 import { ClientTabs } from '@/components/clients/ClientTabs';
 import { LiftsTab } from '@/components/clients/LiftsTab';
@@ -10,6 +10,7 @@ import { OverviewTab } from '@/components/clients/OverviewTab';
 import { currentMonth, isMonthKey, nextSession } from '@/components/clients/calendar-model';
 import { parseTab } from '@/components/clients/overview-model';
 import { buttonClass } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { WorkoutLogList } from '@/components/workout-logs/WorkoutLogList';
 import { ApiError } from '@/lib/api/client';
 import { clientsApi, exercisesApi, progressionApi, workoutLogsApi } from '@/lib/api/endpoints';
@@ -49,13 +50,18 @@ export default async function ClientDetailPage({
 
     return (
       <>
+        <PageHeader
+          title={client.name}
+          back={{ href: '/coach/clients', label: 'Back to roster' }}
+          meta={clientMeta(client)}
+          actions={<ClientSettingsDrawer settings={settings} coachUnit={user.weightUnit} />}
+        />
         <ClientHeader
           client={client}
           unit={user.weightUnit}
           stats={{ adherencePct: overview.adherence.value, weeklyVolumeKg: overview.weeklyVolumeKg.value, pending: pending.length }}
-          actions={<ClientSettingsDrawer settings={settings} coachUnit={user.weightUnit} />}
         />
-        <ClientTabs clientId={clientId} active={tab} />
+        <ClientTabs clientId={clientId} active={tab} pending={pending.length} />
         {tab === 'overview' ? (
           <OverviewTab
             clientId={clientId}
@@ -77,19 +83,16 @@ export default async function ClientDetailPage({
           />
         ) : null}
         {tab === 'history' && logs ? (
-          <section aria-labelledby="history-heading" className="space-y-4">
-            <h2 id="history-heading" className="font-display text-lg font-bold">
-              Session history
-            </h2>
+          <section aria-label="Session history" className="space-y-4">
             <WorkoutLogList logs={logs.items} unit={user.weightUnit} />
             <div className="flex gap-2">
               {cursor ? (
-                <Link href={`/coach/clients/${clientId}?tab=history`} className={buttonClass('secondary')}>
+                <Link href={`/coach/clients/${clientId}?tab=history`} className={buttonClass('secondary', undefined, 'sm')}>
                   Back to latest
                 </Link>
               ) : null}
               {logs.nextCursor ? (
-                <Link href={`/coach/clients/${clientId}?tab=history&cursor=${encodeURIComponent(logs.nextCursor)}`} className={buttonClass('secondary')}>
+                <Link href={`/coach/clients/${clientId}?tab=history&cursor=${encodeURIComponent(logs.nextCursor)}`} className={buttonClass('secondary', undefined, 'sm')}>
                   Older sessions
                 </Link>
               ) : null}

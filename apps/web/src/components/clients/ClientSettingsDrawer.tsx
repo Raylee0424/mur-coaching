@@ -3,14 +3,17 @@
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState, useTransition } from 'react';
 import clsx from 'clsx';
+import { Settings } from 'lucide-react';
 import { CoachClientStatus, ENGINE_LIMITS, GOAL_OPTIONS, LIMITATION_OPTIONS, WeightUnit } from '@coaching/shared';
 import type { ClientSettingsDto, ResolvedSetting } from '@coaching/shared';
 import { setClientStatus, updateClientSettings } from '@/actions/clients';
 import { Button } from '@/components/ui/Button';
 import { Chips } from '@/components/ui/Chips';
 import { FieldError, FormError, Input, Label } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import { OverrideField } from '@/components/ui/OverrideField';
 import { Sheet } from '@/components/ui/Sheet';
+import { useToast } from '@/components/ui/Toast';
 import { unitLabel } from '@/lib/units';
 import { OVERRIDE_KEYS, buildRequest, toDraft, type OverrideKey, type SettingsDraft } from './client-settings-model';
 
@@ -21,9 +24,9 @@ const fromLabel = (s: ResolvedSetting<number>): string =>
 
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="space-y-4 border-t border-line pt-5 first:border-0 first:pt-0">
+    <section className="space-y-4 border-t border-line pt-6 first:border-0 first:pt-0">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-display text-base font-bold">{title}</h3>
+        <h3 className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>{title}</h3>
         {action}
       </div>
       {children}
@@ -35,6 +38,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
 export function ClientSettingsDrawer({ settings, coachUnit }: { settings: ClientSettingsDto; coachUnit: WeightUnit }) {
   const id = useId();
   const router = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [original, setOriginal] = useState(settings);
   const [draft, setDraft] = useState<SettingsDraft>(() => toDraft(settings, coachUnit));
@@ -68,6 +72,7 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
         setOriginal(r.data);
         setDraft(toDraft(r.data, coachUnit));
         setOpen(false);
+        toast.show({ message: 'Client settings saved', tone: 'ok' });
       } else setFormError(r.error);
     });
   }
@@ -92,11 +97,8 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
   const o = original.defaults;
   return (
     <>
-      <Button variant="secondary" aria-label="Client settings" className="min-h-9 py-1" onClick={openDrawer}>
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
-        </svg>
+      <Button variant="secondary" size="sm" aria-label="Client settings" onClick={openDrawer}>
+        <Icon icon={Settings} />
         Settings
       </Button>
 
@@ -106,6 +108,16 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
         variant="drawer"
         title={`${original.name.replace(' (Demo)', '')} settings`}
         description="Changes apply to this client only."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button onClick={save} disabled={!canSave}>
+              {pending ? 'Saving…' : 'Save changes'}
+            </Button>
+          </>
+        }
       >
         <div className="space-y-6">
           <Section title="Profile & limitations">
@@ -121,8 +133,8 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                 <FieldError>{errors.name}</FieldError>
               </div>
               <fieldset>
-                <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">Units</legend>
-                <div className="flex rounded-full border border-line p-0.5">
+                <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Units</legend>
+                <div className="flex gap-0.5 rounded border border-line bg-canvas-low p-0.5">
                   {[WeightUnit.KG, WeightUnit.LB].map((u) => (
                     <button
                       key={u}
@@ -130,8 +142,8 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                       aria-pressed={draft.weightUnit === u}
                       onClick={() => patch({ weightUnit: u })}
                       className={clsx(
-                        'min-h-10 flex-1 rounded-full text-sm font-semibold',
-                        draft.weightUnit === u ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
+                        'h-8 flex-1 rounded-sm font-mono text-micro uppercase',
+                        draft.weightUnit === u ? 'bg-raised text-ink' : 'text-muted hover:text-ink',
                       )}
                     >
                       {u === WeightUnit.KG ? 'kg' : 'lb'}
@@ -155,14 +167,14 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                 maxLength={1000}
                 value={draft.limitationsNote}
                 onChange={(e) => patch({ limitationsNote: e.target.value })}
-                className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink"
+                className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 text-ui text-ink hover:border-faint"
               />
             </div>
           </Section>
 
           <Section title="Training schedule">
             <fieldset>
-              <legend className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Training days</legend>
+              <legend className="mb-2 font-mono text-micro uppercase text-muted">Training days</legend>
               <div className="grid grid-cols-7 gap-1">
                 {WEEKDAYS.map((label, i) => {
                   const day = i + 1;
@@ -176,8 +188,8 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                         patch({ trainingDays: on ? draft.trainingDays.filter((d) => d !== day) : [...draft.trainingDays, day] })
                       }
                       className={clsx(
-                        'min-h-11 rounded-md text-xs font-semibold ring-1 ring-inset',
-                        on ? 'bg-primary text-primary-ink ring-primary' : 'text-muted ring-line-strong hover:bg-raised',
+                        'h-9 rounded border font-mono text-micro uppercase',
+                        on ? 'border-ink bg-raised text-ink' : 'border-line-strong text-muted hover:text-ink',
                       )}
                     >
                       {label}
@@ -206,17 +218,17 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
           <Section
             title="Engine overrides"
             action={
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setDraft((d) => ({ ...d, overrides: { ...d.overrides, ...Object.fromEntries(OVERRIDE_KEYS.map((k) => [k, ''])) } }))}
                 disabled={OVERRIDE_KEYS.every((k) => draft.overrides[k] === '')}
-                className="text-xs font-semibold text-primary-soft underline-offset-2 hover:underline disabled:text-muted disabled:no-underline"
               >
-                Reset all to default
-              </button>
+                Reset all
+              </Button>
             }
           >
-            <p className="text-sm text-muted">Empty fields inherit your rules. Overrides beat both your rules and the prescription.</p>
+            <p className="text-meta text-muted">Empty fields inherit your rules. Overrides beat both your rules and the prescription.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <OverrideField
                 label="Load increment"
@@ -275,13 +287,13 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
             <label className="flex min-h-11 items-start gap-3">
               <input
                 type="checkbox"
-                className="mt-1 size-5 accent-primary"
+                className="mt-0.5 size-4"
                 checked={draft.autoApprove}
                 onChange={(e) => patch({ autoApprove: e.target.checked })}
               />
               <span>
-                <span className="block text-sm font-semibold">Apply engine calls without my review</span>
-                <span className="block text-xs text-muted">Only Increase load calls are applied automatically.</span>
+                <span className="block text-ui font-medium">Apply engine calls without my review</span>
+                <span className="block text-meta text-muted">Only Increase load calls are applied automatically.</span>
               </span>
             </label>
             {draft.autoApprove ? (
@@ -303,21 +315,22 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
             ) : null}
           </Section>
 
-          <Section title="Danger zone">
-            <p className="text-sm text-muted">Pausing keeps the client on your roster but removes them from the progression queue. Archiving removes them from your roster.</p>
+          <Section title="Status">
+            <p className="text-meta text-muted">Pausing keeps the client on your roster but removes them from the progression queue. Archiving removes them from your roster.</p>
             {confirm ? (
-              <div role="alertdialog" aria-label="Confirm" className="space-y-3 rounded-md border border-danger/40 bg-danger-bg p-4">
-                <p className="text-sm">
+              <div role="alertdialog" aria-label="Confirm" className="space-y-3 border-l-2 border-l-danger bg-danger-bg px-3 py-3">
+                <p className="text-ui">
                   {confirm === 'ARCHIVE'
                     ? 'Archive this client? They leave your roster and you lose access until they are restored.'
                     : 'Pause this client? They stay on your roster but drop out of the progression queue.'}
                 </p>
                 <div className="flex justify-between gap-2">
-                  <Button variant="secondary" onClick={() => setConfirm(null)} disabled={pending}>
+                  <Button variant="ghost" size="sm" onClick={() => setConfirm(null)} disabled={pending}>
                     Cancel
                   </Button>
                   <Button
                     variant="danger"
+                    size="sm"
                     disabled={pending}
                     onClick={() => changeStatus(confirm === 'ARCHIVE' ? CoachClientStatus.ARCHIVED : CoachClientStatus.PAUSED)}
                   >
@@ -328,15 +341,15 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
             ) : (
               <div className="flex flex-wrap gap-2">
                 {paused ? (
-                  <Button variant="secondary" disabled={pending} onClick={() => changeStatus(CoachClientStatus.ACTIVE)}>
+                  <Button variant="secondary" size="sm" disabled={pending} onClick={() => changeStatus(CoachClientStatus.ACTIVE)}>
                     Resume client
                   </Button>
                 ) : (
-                  <Button variant="secondary" onClick={() => setConfirm('PAUSE')}>
+                  <Button variant="danger" size="sm" onClick={() => setConfirm('PAUSE')}>
                     Pause client
                   </Button>
                 )}
-                <Button variant="danger" onClick={() => setConfirm('ARCHIVE')}>
+                <Button variant="danger" size="sm" onClick={() => setConfirm('ARCHIVE')}>
                   Archive client
                 </Button>
               </div>
@@ -345,14 +358,6 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
 
           <FormError>{formError}</FormError>
 
-          <footer className="sticky bottom-0 -mx-5 flex justify-between gap-2 border-t border-line bg-card px-5 py-4 md:-mx-6 md:px-6">
-            <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
-              Cancel
-            </Button>
-            <Button onClick={save} disabled={!canSave}>
-              {pending ? 'Saving…' : 'Save changes'}
-            </Button>
-          </footer>
         </div>
       </Sheet>
     </>

@@ -1,11 +1,14 @@
 'use client';
 
+import { Info } from 'lucide-react';
 import { useState } from 'react';
 import type { RecommendationDto, WeightUnit } from '@coaching/shared';
 import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { SheetButton } from '@/components/ui/Sheet';
 import { formatTarget } from '@/lib/format';
-import { ActionBadge } from './ActionBadge';
+import clsx from 'clsx';
+import { ACTION_META, ActionBadge } from './ActionBadge';
 import { MetricsTable } from './MetricsTable';
 import { WhyDrawer } from './WhyDrawer';
 
@@ -28,7 +31,8 @@ export function WhyThisCall({
   if (audience === 'coach') {
     return (
       <>
-        <Button variant="secondary" className="min-h-9 py-1" onClick={() => setOpen(true)}>
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+          <Icon icon={Info} />
           {label}
         </Button>
         {open ? <WhyDrawer recommendationId={rec.id} unit={unit} onClose={() => setOpen(false)} /> : null}
@@ -38,23 +42,23 @@ export function WhyThisCall({
 
   const target = formatTarget(rec, unit);
   return (
-    <SheetButton label={label} title={`Why this call: ${exerciseName}`} variant="drawer" buttonClassName="min-h-9 py-1">
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-center gap-3">
+    <SheetButton label={label} title={`Why this call: ${exerciseName}`} variant="drawer" buttonVariant="ghost" buttonClassName="h-11 px-4">
+      <div className="space-y-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <ActionBadge action={rec.action} />
-          {target ? <span className="font-display text-2xl font-extrabold tabular">{target}</span> : null}
+          {target ? <span className={clsx('font-mono text-metric', ACTION_META[rec.action].text)}>{target}</span> : null}
         </div>
-        <section className="space-y-1">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Reasoning</h3>
-          <p className="text-sm">{rec.reason}</p>
+        <section>
+          <h3 className="mb-3 border-b border-line pb-2 font-mono text-micro uppercase text-muted">Reasoning</h3>
+          <p className="text-ui">{rec.reason}</p>
         </section>
-        <section className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
+        <section>
+          <h3 className="mb-3 border-b border-line pb-2 font-mono text-micro uppercase text-muted">
             Based on {rec.metrics.length} {rec.metrics.length === 1 ? 'session' : 'sessions'}
           </h3>
           <MetricsTable metrics={rec.metrics} unit={unit} />
         </section>
-        <p className="rounded-md bg-raised p-3 text-sm text-muted">
+        <p className="border-l-2 border-l-line-strong px-3 text-meta text-muted">
           This target comes from your logged sets. Accept it to lock it in for your next session.
         </p>
       </div>

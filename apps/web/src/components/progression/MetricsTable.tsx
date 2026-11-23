@@ -1,32 +1,34 @@
+import clsx from 'clsx';
 import type { SessionMetrics, WeightUnit } from '@coaching/shared';
+import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
 import { formatDate, formatRpe } from '@/lib/format';
 import { formatWeight } from '@/lib/units';
 
 export function MetricsTable({ metrics, unit }: { metrics: SessionMetrics[]; unit: WeightUnit }) {
   if (metrics.length === 0) return null;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[28rem] text-left text-sm">
+    <div className="overflow-x-auto rounded-md border border-line">
+      <table className={clsx(TABLE, 'min-w-[28rem]')}>
         <caption className="sr-only">Sessions the engine analysed, oldest first</caption>
-        <thead>
-          <tr className="border-b border-line text-xs uppercase tracking-wide text-muted">
-            <th scope="col" className="py-1 pr-3 font-semibold">Date</th>
-            <th scope="col" className="py-1 pr-3 font-semibold">Top set</th>
-            <th scope="col" className="py-1 pr-3 font-semibold">e1RM</th>
-            <th scope="col" className="py-1 pr-3 font-semibold">Avg RPE</th>
-            <th scope="col" className="py-1 font-semibold">Volume</th>
+        <thead className={THEAD}>
+          <tr>
+            <th scope="col" className={TH}>Date</th>
+            <th scope="col" className={TH_NUM}>Top set</th>
+            <th scope="col" className={TH_NUM}>e1RM</th>
+            <th scope="col" className={TH_NUM}>Avg RPE</th>
+            <th scope="col" className={TH_NUM}>Volume</th>
           </tr>
         </thead>
         <tbody>
           {metrics.map((m) => (
-            <tr key={m.exerciseLogId} className="border-b border-line last:border-0">
-              <td className="py-1.5 pr-3">{formatDate(m.performedAt)}</td>
-              <td className="py-1.5 pr-3">
+            <tr key={m.exerciseLogId} className={TR}>
+              <td className={clsx(TD, 'font-mono')}>{formatDate(m.performedAt)}</td>
+              <td className={TD_NUM}>
                 {formatWeight(m.topWeightKg, unit)} × {m.topSetReps}
               </td>
-              <td className="py-1.5 pr-3">{formatWeight(m.e1rmKg, unit)}</td>
-              <td className="py-1.5 pr-3">{m.avgRpe === null ? '—' : formatRpe(m.avgRpe).replace('RPE ', '')}</td>
-              <td className="py-1.5">{formatWeight(m.volumeKg, unit)}</td>
+              <td className={TD_NUM}>{formatWeight(m.e1rmKg, unit)}</td>
+              <td className={TD_NUM}>{m.avgRpe === null ? '—' : formatRpe(m.avgRpe).replace('RPE ', '')}</td>
+              <td className={TD_NUM}>{formatWeight(m.volumeKg, unit)}</td>
             </tr>
           ))}
         </tbody>

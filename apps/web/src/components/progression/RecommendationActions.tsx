@@ -1,10 +1,13 @@
 'use client';
 
+import { Check, RefreshCw, X } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { recommendationAction } from '@/actions/progression';
 import { Button } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   clientId: string;
@@ -12,11 +15,16 @@ interface Props {
   exerciseId: string;
   /** Coach view: may dismiss and re-evaluate. Clients may only accept. */
   canDismiss: boolean;
-  /** Shown in the dismiss dialog. */
+  /** Shown in the dismiss dialog and toasts. */
   exerciseName?: string;
+  /** Stack the buttons (LiftCard side column). */
+  stacked?: boolean;
 }
 
-export function RecommendationActions({ clientId, recommendationId, exerciseId, canDismiss, exerciseName }: Props) {
+const DONE = { ACCEPTED: 'Accepted', DISMISSED: 'Dismissed', REEVALUATE: 'Re-evaluated' } as const;
+
+export function RecommendationActions({ clientId, recommendationId, exerciseId, canDismiss, exerciseName, stacked }: Props) {
+  const toast = useToast();
   const [error, setError] = useState<string>();
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -31,22 +39,26 @@ export function RecommendationActions({ clientId, recommendationId, exerciseId, 
     startTransition(async () => {
       const result = await recommendationAction(null, fd);
       setConfirming(false);
-      if (!result.ok) setError(result.error);
+      if (result.ok) toast.show({ message: `${DONE[intent]}${exerciseName ? ` ${exerciseName}` : ''}`, tone: 'ok' });
+      else setError(result.error);
     });
   }
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => run('ACCEPTED')} disabled={pending}>
+      <div className={stacked ? 'flex flex-col items-stretch gap-1' : 'flex flex-wrap gap-2'}>
+        <Button variant="secondary" size={canDismiss ? 'sm' : 'lg'} onClick={() => run('ACCEPTED')} disabled={pending}>
+          <Icon icon={Check} />
           Accept
         </Button>
         {canDismiss ? (
           <>
-            <Button variant="secondary" onClick={() => setConfirming(true)} disabled={pending}>
+            <Button variant="ghost" size="sm" onClick={() => setConfirming(true)} disabled={pending}>
+              <Icon icon={X} />
               Dismiss
             </Button>
-            <Button variant="secondary" onClick={() => run('REEVALUATE')} disabled={pending}>
+            <Button variant="ghost" size="sm" onClick={() => run('REEVALUATE')} disabled={pending}>
+              <Icon icon={RefreshCw} />
               Re-evaluate
             </Button>
           </>
@@ -59,15 +71,18 @@ export function RecommendationActions({ clientId, recommendationId, exerciseId, 
           onClose={() => setConfirming(false)}
           title="Dismiss recommendation"
           description={`The engine's call${exerciseName ? ` for ${exerciseName}` : ''} will be dismissed. The client keeps the current prescription. Re-evaluate later to get a fresh call.`}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setConfirming(false)} disabled={pending}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={() => run('DISMISSED')} disabled={pending}>
+                {pending ? 'Dismissing…' : 'Dismiss call'}
+              </Button>
+            </>
+          }
         >
-          <footer className="flex justify-between gap-2">
-            <Button variant="secondary" onClick={() => setConfirming(false)} disabled={pending}>
-              Cancel
-            </Button>
-            <Button onClick={() => run('DISMISSED')} disabled={pending}>
-              {pending ? 'Dismissing…' : 'Confirm'}
-            </Button>
-          </footer>
+          <p className="text-ui text-muted">This cannot be undone from here.</p>
         </Sheet>
       ) : null}
     </div>
