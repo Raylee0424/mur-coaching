@@ -1,9 +1,10 @@
+import { Equipment } from '@coaching/shared';
 import type { ExerciseDto, MuscleGroup } from '@coaching/shared';
 
 export interface PickerFilters {
   q: string;
   group: MuscleGroup | '';
-  equipment: string;
+  equipment: Equipment | '';
 }
 
 export function filterExercises(library: readonly ExerciseDto[], f: PickerFilters): ExerciseDto[] {
@@ -11,7 +12,7 @@ export function filterExercises(library: readonly ExerciseDto[], f: PickerFilter
   return library.filter(
     (e) =>
       (!f.group || e.muscleGroup === f.group) &&
-      (!f.equipment || (e.equipment ?? '').toLowerCase() === f.equipment.toLowerCase()) &&
+      (!f.equipment || e.equipment === f.equipment) &&
       (!needle || e.name.toLowerCase().includes(needle)),
   );
 }
@@ -24,12 +25,8 @@ export function groupCounts(library: readonly ExerciseDto[], order: readonly Mus
   });
 }
 
-/** Distinct equipment labels, sorted, case-insensitively de-duplicated. */
-export function equipmentOptions(library: readonly ExerciseDto[]): string[] {
-  const seen = new Map<string, string>();
-  for (const e of library) {
-    const label = e.equipment?.trim();
-    if (label && !seen.has(label.toLowerCase())) seen.set(label.toLowerCase(), label);
-  }
-  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+/** Equipment present in the library, in enum order. */
+export function equipmentOptions(library: readonly ExerciseDto[]): Equipment[] {
+  const present = new Set(library.map((e) => e.equipment));
+  return Object.values(Equipment).filter((eq) => present.has(eq));
 }

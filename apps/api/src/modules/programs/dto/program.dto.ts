@@ -94,6 +94,14 @@ export class ListProgramsQuery implements ListProgramsQueryShape {
   template?: boolean;
 }
 
+export class ProgramConflictsQuery {
+  /** Comma-separated client ids. */
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.split(',').map((v) => v.trim()).filter(Boolean) : value))
+  @IsArray() @ArrayMaxSize(200) @IsString({ each: true }) @MaxLength(40, { each: true })
+  clientIds?: string[];
+}
+
 export class DuplicateProgramDto implements DuplicateProgramRequest {
   @IsOptional() @Transform(trim) @IsString() @MinLength(1) @MaxLength(100)
   name?: string;

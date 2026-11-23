@@ -7,6 +7,7 @@ import type {
   ClientOverviewDto,
   CreateInviteRequest,
   CreateInviteResponse,
+  ClientProgramConflictsDto,
   CreateLimitationRequest,
   LimitationDto,
   UpdateLimitationRequest,
@@ -214,6 +215,11 @@ export const programsApi = {
   remove: (id: string) => apiFetch<void>(`/programs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   assign: (clientId: string, body: CreateAssignmentRequest) =>
     apiFetch<AssignmentDto>(`/clients/${encodeURIComponent(clientId)}/assignments`, { method: 'POST', body }),
+  /** Advisory limitation conflicts: for `clientIds`, or for every client actively assigned when omitted. */
+  conflicts: (id: string, clientIds?: readonly string[]) =>
+    apiFetch<ClientProgramConflictsDto[]>(`/programs/${encodeURIComponent(id)}/conflicts`, {
+      query: { clientIds: clientIds && clientIds.length > 0 ? clientIds.join(',') : undefined },
+    }),
 };
 
 export const meApi = {

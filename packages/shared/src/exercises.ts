@@ -1,12 +1,23 @@
-import type { MuscleGroup } from './enums';
+import type { Equipment, ExercisePosition, MovementPattern, MuscleGroup, MuscleRole, ResistanceProfile } from './enums';
 import type { DecimalString, IsoDateString } from './common';
 import type { LimitationFlag } from './limitations';
+
+export interface ExerciseMuscleDto {
+  muscle: MuscleGroup;
+  role: MuscleRole;
+}
 
 export interface ExerciseDto {
   id: string;
   name: string;
+  /** Main primary muscle. Always present in `muscles` as PRIMARY. */
   muscleGroup: MuscleGroup;
-  equipment: string | null;
+  /** Every muscle trained, primaries first. */
+  muscles: ExerciseMuscleDto[];
+  equipment: Equipment | null;
+  pattern: MovementPattern | null;
+  profile: ResistanceProfile | null;
+  position: ExercisePosition | null;
   loadIncrementKg: DecimalString;
   /** Exercise-level engine rules; null = inherit. */
   rpeCap: DecimalString | null;
@@ -20,15 +31,25 @@ export interface ExerciseDto {
    * whose own overrides can take precedence over the exercise rules.
    */
   overrideClientCount: number;
-  /** null = global library; otherwise the owning coach. */
+  /** Set when a coach owns it. Global when both coachId and ownerId are null. */
   coachId: string | null;
+  /** Set when an athlete owns it (their own custom exercise). */
+  ownerId: string | null;
+  /** Client lists only: the active limitation covering this exercise today; always null for coaches. */
+  limitation: LimitationFlag | null;
   createdAt: IsoDateString;
 }
 
 export interface CreateExerciseRequest {
   name: string;
+  /** Main primary muscle. */
   muscleGroup: MuscleGroup;
-  equipment?: string;
+  /** Extra muscles. `muscleGroup` is always stored as PRIMARY, whatever this says about it. */
+  muscles?: ExerciseMuscleDto[];
+  equipment?: Equipment | null;
+  pattern?: MovementPattern | null;
+  profile?: ResistanceProfile | null;
+  position?: ExercisePosition | null;
   loadIncrementKg?: number;
   rpeCap?: number | null;
   /** Both rep bounds are set together or both null. */
@@ -42,7 +63,7 @@ export interface ExerciseAlternativeDto {
   id: string;
   name: string;
   muscleGroup: MuscleGroup;
-  equipment: string | null;
+  equipment: Equipment | null;
   /** From the client's own latest top set of this exercise; null if never logged. */
   suggested: { weightKg: DecimalString; reps: number; rpe: DecimalString | null; performedAt: IsoDateString } | null;
   /** Active limitation that covers this exercise; AVOID options sort last. */
@@ -55,6 +76,9 @@ export interface ExerciseAlternativesDto {
 }
 
 export interface ListExercisesQuery {
+  /** Matches any muscle the exercise trains, primary or secondary. */
   muscleGroup?: MuscleGroup;
+  equipment?: Equipment;
+  profile?: ResistanceProfile;
   q?: string;
 }
