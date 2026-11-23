@@ -26,15 +26,16 @@ pnpm build
 - Every coach route enforces `CoachClient` tenancy.
 
 ## Low-Token Context Protocol
-Vault: `/Users/raylee/Documents/Obsidian Vault/Project Brain/Projects/MUR Coaching/`
+Brain: `docs/brain/` (symlink to `/Users/raylee/Documents/Obsidian Vault/Project Brain/Projects/MUR Coaching/`, gitignored).
 
-1. Always start by reading ONLY `MUR Coaching MOC.md` and `MUR Coaching - Active State.md`.
-2. Then open ONLY the 1–2 topic notes relevant to the current task.
-3. Never bulk-read the whole folder.
+1. Every session, read ONLY `docs/brain/MUR Coaching MOC.md` and `docs/brain/MUR Coaching - Active State.md`.
+2. Then open ONLY the single domain note for the task plus `docs/brain/MUR Coaching - Stitch Screens.md`.
+3. NEVER scan or bulk-read `design/stitch/`. Read ONLY the `code.html` files that Stitch Screens maps to the current feature.
+4. Never bulk-read the brain folder.
 
 ## Memory Offload Rule
-After completing work:
+After every batch, so the user can `/clear` before the next one:
 
 1. Overwrite `MUR Coaching - Active State.md`.
-2. Append a 1-line entry to `MUR Coaching - Feature Log.md`, keeping newest first.
-3. Update status in `MUR Coaching - Roadmap.md`.
+2. Append a 1-line entry to `MUR Coaching - Feature Log.md`, newest first.
+3. Update the domain note status (`planned` → `partial` → `done`) and `MUR Coaching - Roadmap.md`.

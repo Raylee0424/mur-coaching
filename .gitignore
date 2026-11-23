@@ -6,3 +6,5 @@ dist
 .env.local
 next-env.d.ts
 *.tsbuildinfo
+docs/brain
+design/
