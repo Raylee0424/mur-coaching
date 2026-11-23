@@ -53,7 +53,7 @@ export function RecommendationList({ recommendations, exerciseNames, canDismiss,
         pending.map(card)
       )}
       {resolved.length > 0 ? (
-        <details className="rounded-lg border border-line bg-card p-4">
+        <details className="rounded-md border border-line bg-card p-4">
           <summary className="cursor-pointer text-sm font-semibold">Resolved ({resolved.length})</summary>
           <div className="mt-4 space-y-4">{resolved.map(card)}</div>
         </details>

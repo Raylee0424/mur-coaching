@@ -85,7 +85,7 @@ export function ExerciseForm(props: Props) {
       <div className="space-y-3 sm:col-span-2">
         <FormError>{state?.ok === false ? state.error : undefined}</FormError>
         {state?.ok && !edit ? (
-          <p role="status" className="text-sm font-medium text-emerald">
+          <p role="status" className="text-ui text-emerald">
             Added “{state.data}”.
           </p>
         ) : null}

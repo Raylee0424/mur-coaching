@@ -47,11 +47,3 @@
     }
   }
 }
-
-@layer components {
-  /* Back-compat during migration; Phase 4 removes every `.tabular` use. */
-  .tabular {
-    font-family: var(--font-mono), ui-monospace, monospace;
-    font-variant-numeric: tabular-nums slashed-zero;
-  }
-}

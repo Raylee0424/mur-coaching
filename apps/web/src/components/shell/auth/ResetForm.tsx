@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { CircleCheck, Unlink } from 'lucide-react';
 import { useActionState, useState } from 'react';
 import { resetPassword } from '@/actions/auth';
 import type { ActionResult } from '@/lib/action-result';
@@ -18,12 +19,9 @@ export function ResetForm({ token }: { token: string | undefined }) {
   if (state?.ok) {
     return (
       <div className="space-y-6">
-        <StatusIcon tone="emerald">
-          <circle cx="12" cy="12" r="10" />
-          <path d="m8 12 3 3 5-6" />
-        </StatusIcon>
+        <StatusIcon tone="emerald" icon={CircleCheck} />
         <AuthHeading title="Password updated" subtitle="You can now sign in with your new password." />
-        <Link href="/login" className={buttonClass('primary')}>
+        <Link href="/login" className={buttonClass('primary', undefined, 'lg')}>
           Back to sign in
         </Link>
       </div>
@@ -33,12 +31,9 @@ export function ResetForm({ token }: { token: string | undefined }) {
   if (!token) {
     return (
       <div className="space-y-6">
-        <StatusIcon tone="rose">
-          <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
-          <path d="m3 3 18 18" />
-        </StatusIcon>
+        <StatusIcon tone="rose" icon={Unlink} />
         <AuthHeading title="Reset link missing" subtitle="Open the link from your email, or request a new one." />
-        <Link href="/forgot" className={buttonClass('primary')}>
+        <Link href="/forgot" className={buttonClass('primary', undefined, 'lg')}>
           Request a new link
         </Link>
       </div>
@@ -52,20 +47,20 @@ export function ResetForm({ token }: { token: string | undefined }) {
         <input type="hidden" name="token" value={token} />
         <div>
           <Label htmlFor="reset-password">New password</Label>
-          <PasswordInput id="reset-password" name="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+          <PasswordInput size="lg" id="reset-password" name="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
           <PasswordMeter password={password} />
         </div>
         <div>
           <Label htmlFor="reset-confirm">Confirm password</Label>
-          <PasswordInput id="reset-confirm" name="confirm" autoComplete="new-password" required placeholder="Re-enter password" />
+          <PasswordInput size="lg" id="reset-confirm" name="confirm" autoComplete="new-password" required placeholder="Re-enter password" />
         </div>
         <FormError>{state?.ok === false ? state.error : undefined}</FormError>
         {state?.ok === false && state.error.includes('Request a new one') ? (
-          <Link href="/forgot" className="inline-block text-sm font-semibold text-primary hover:underline">
+          <Link href="/forgot" className="inline-block text-sm text-ink underline underline-offset-2 hover:text-primary-soft">
             Request a new link
           </Link>
         ) : null}
-        <SubmitButton className="w-full" pendingLabel="Updating…">
+        <SubmitButton size="lg" className="w-full" pendingLabel="Updating…">
           Update password
         </SubmitButton>
       </form>

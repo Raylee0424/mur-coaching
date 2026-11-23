@@ -1,6 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
+import { Check } from 'lucide-react';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { MUSCLE_GROUP_LABELS, MuscleGroup, WORKOUT_LOG_LIMITS } from '@coaching/shared';
 import type {
@@ -14,6 +15,8 @@ import type {
 import { submitWorkoutLog } from '@/actions/workout-logs';
 import { Button } from '@/components/ui/Button';
 import { FormError, Label, Select } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { SetEditorSheet } from '@/components/workout-logs/SetEditorSheet';
 import { toNumber } from '@/lib/format';
 import { kgToDisplay, unitLabel } from '@/lib/units';
@@ -232,13 +235,10 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
   }
 
   const header = (
-    <header className="flex items-start justify-between gap-3 border-b border-line pb-4">
+    <header className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-primary tabular">
-          {hasExercise ? eyebrow(plan, logged.length, unit) : `EXERCISE ${index + 1}`}
-        </p>
-        <h1 className="mt-1 break-words font-display text-xl font-bold">{name}</h1>
-        {workoutName ? <p className="mt-0.5 text-xs text-muted">{workoutName}</p> : null}
+        <p className="font-mono text-micro uppercase text-faint">{hasExercise ? eyebrow(plan, logged.length, unit) : `EXERCISE ${index + 1}`}</p>
+        <h2 className="mt-1 break-words font-display text-title font-semibold">{name}</h2>
       </div>
       <RestPill startedAt={rest.startedAt} now={rest.now} restSeconds={plan?.restSeconds ?? null} />
     </header>
@@ -246,12 +246,17 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
 
   return (
     <>
-      <div className="mx-auto max-w-xl space-y-5">
+      <PageHeader
+        title={workoutName || 'Log session'}
+        back={{ href: '/client', label: 'Back to today' }}
+        meta={`${draft.exercises.filter((e) => e.sets.length > 0).length} / ${draft.exercises.length} exercises`}
+      />
+      <div className="max-w-xl space-y-5">
         {header}
 
         {draft.exercises.length > 1 ? (
           <nav aria-label="Exercises in this session">
-            <ol className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            <ol className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
               {draft.exercises.map((e, i) => {
                 const label = plans[e.key]?.name || byId.get(e.exerciseId)?.name || 'New exercise';
                 return (
@@ -261,13 +266,11 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
                       aria-current={i === index ? 'step' : undefined}
                       onClick={() => goTo(i)}
                       className={clsx(
-                        'min-h-11 max-w-44 truncate rounded-full border px-3.5 text-xs font-semibold',
-                        i === index
-                          ? 'border-primary bg-primary-container text-primary-soft'
-                          : 'border-line bg-card text-muted hover:bg-raised',
+                        'inline-flex h-9 max-w-44 items-center gap-1.5 truncate rounded-sm px-3 text-ui',
+                        i === index ? 'bg-raised text-ink shadow-[inset_0_-2px_0_theme(colors.signal.DEFAULT)]' : 'text-muted hover:bg-raised/60 hover:text-ink',
                       )}
                     >
-                      {e.sets.length > 0 ? <span aria-hidden="true">✓ </span> : null}
+                      {e.sets.length > 0 ? <Icon icon={Check} size={14} /> : null}
                       {label}
                       <span className="sr-only">{e.sets.length > 0 ? `, ${e.sets.length} sets logged` : ', not started'}</span>
                     </button>
@@ -279,7 +282,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
         ) : null}
 
         {!hasExercise ? (
-          <section className="space-y-3 rounded-lg border border-line bg-card p-4">
+          <section className="space-y-3">
             <div>
               <Label htmlFor="pick-exercise">Exercise</Label>
               <Select id="pick-exercise" value="" onChange={(e) => chooseExercise(e.target.value)}>
@@ -309,23 +312,24 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
                   <SwapExerciseButton current={{ id: exercise.exerciseId, name }} unit={unit} onSwap={swap} />
                 ) : null}
                 {exercise.swap ? (
-                  <p className="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md bg-amber-bg px-3 py-2 text-xs text-amber">
+                  <p className="flex min-w-0 flex-1 flex-wrap items-center gap-2 border-l-2 border-l-sky bg-card px-3 py-2 text-meta">
                     <span>Swapped from {byId.get(exercise.swap.fromExerciseId)?.name ?? 'the prescribed lift'}</span>
                     {logged.length === 0 ? (
-                      <button type="button" onClick={undo} className="ml-auto min-h-6 font-semibold underline">
+                      <Button variant="ghost" size="sm" className="ml-auto" onClick={undo}>
                         Undo
-                      </button>
+                      </Button>
                     ) : null}
                   </p>
                 ) : null}
               </div>
             ) : null}
 
-            <section aria-label="Log a set" className="space-y-4 rounded-lg border border-line bg-card p-4 tabular">
+            <section aria-label="Log a set" className="space-y-4">
               <Stepper
-                label={`Weight (${unitLabel(unit)})`}
+                label="Weight"
                 noun="weight"
                 display={formatStepValue('weight', values.weight)}
+                unit={unitLabel(unit)}
                 stepLabel={formatStepValue('weight', weightStep)}
                 canDecrease={values.weight > 0}
                 canIncrease={values.weight < maxWeight}
@@ -376,12 +380,12 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
                 />
               </div>
               {rpeProblem ? (
-                <p role="alert" className="text-xs font-semibold text-danger">
+                <p role="alert" className="text-meta font-medium text-danger">
                   {RPE_ERROR}
                 </p>
               ) : null}
-              <Button className="min-h-12 w-full" disabled={rpeProblem !== null} onClick={logSet}>
-                {extra ? 'Log extra set' : 'Log Set'}
+              <Button size="lg" className="w-full" disabled={rpeProblem !== null} onClick={logSet}>
+                {extra ? 'Log extra set' : 'Log set'}
               </Button>
             </section>
           </>
@@ -399,16 +403,16 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
           <div
             role="alertdialog"
             aria-label="Finish workout?"
-            className="space-y-3 rounded-lg border border-amber/40 bg-amber-bg p-4"
+            className="space-y-3 border-l-2 border-l-amber bg-amber-bg px-3 py-3"
           >
-            <p className="text-sm text-amber">
+            <p className="text-ui text-amber">
               {emptyCount} {emptyCount === 1 ? 'exercise has' : 'exercises have'} no sets logged and will be skipped.
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="secondary" className="min-h-12" onClick={() => setConfirmFinish(false)} disabled={pending}>
+              <Button variant="secondary" size="lg" onClick={() => setConfirmFinish(false)} disabled={pending}>
                 Keep logging
               </Button>
-              <Button className="min-h-12" onClick={() => finish(true)} disabled={pending} aria-busy={pending}>
+              <Button size="lg" onClick={() => finish(true)} disabled={pending} aria-busy={pending}>
                 {pending ? 'Saving…' : 'Finish anyway'}
               </Button>
             </div>
@@ -417,21 +421,15 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
           <div className="grid grid-cols-2 gap-3 pt-1">
             <Button
               variant="secondary"
-              className="min-h-12"
+              size="lg"
               disabled={index === lastIndex && (logged.length === 0 || !hasExercise)}
               onClick={nextExercise}
             >
               {index < lastIndex ? 'Next exercise' : 'Add exercise'}
             </Button>
-            <button
-              type="button"
-              onClick={() => finish()}
-              disabled={pending}
-              aria-busy={pending}
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/50 bg-primary-container px-4 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-container/70 disabled:opacity-50"
-            >
+            <Button size="lg" onClick={() => finish()} disabled={pending} aria-busy={pending}>
               {pending ? 'Saving…' : 'Finish workout'}
-            </button>
+            </Button>
           </div>
         )}
       </div>

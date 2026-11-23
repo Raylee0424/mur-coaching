@@ -25,32 +25,32 @@ export function InviteForm({ token, preview, summary }: { token: string; preview
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4 rounded-md border border-line bg-canvas-low p-4">
-        <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-container font-display font-bold text-primary">
+      <div className="flex items-center gap-4 border-y border-line py-4">
+        <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-md bg-raised font-mono text-ui text-ink">
           {initials(preview.coachName)}
         </span>
         <div className="min-w-0">
-          <p className="font-semibold">{preview.coachName} invited you to train</p>
-          {summary ? <p className="text-sm text-muted">{summary}</p> : null}
+          <p className="text-ui font-medium">{preview.coachName} invited you to train</p>
+          {summary ? <p className="text-meta text-muted">{summary}</p> : null}
         </div>
       </div>
       <form action={action} className="space-y-5">
         <input type="hidden" name="token" value={token} />
         <div>
           <Label htmlFor="invite-name">Full name</Label>
-          <Input id="invite-name" name="name" autoComplete="name" required maxLength={100} defaultValue={preview.name} />
+          <Input size="lg" id="invite-name" name="name" autoComplete="name" required maxLength={100} defaultValue={preview.name} />
         </div>
         <div>
           <Label htmlFor="invite-email">Email</Label>
-          <Input id="invite-email" type="email" value={preview.email} readOnly aria-readonly="true" className="text-muted" />
+          <Input size="lg" id="invite-email" type="email" value={preview.email} readOnly aria-readonly="true" className="text-muted" />
         </div>
         <div>
           <Label htmlFor="invite-password">Create password</Label>
-          <PasswordInput id="invite-password" name="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+          <PasswordInput size="lg" id="invite-password" name="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
           <PasswordMeter password={password} />
         </div>
         <FormError>{state?.ok === false ? state.error : undefined}</FormError>
-        <SubmitButton className="w-full" pendingLabel="Creating account…">
+        <SubmitButton size="lg" className="w-full" pendingLabel="Creating account…">
           Accept and continue
         </SubmitButton>
       </form>

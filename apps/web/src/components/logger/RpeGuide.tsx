@@ -1,14 +1,17 @@
 'use client';
 
 import clsx from 'clsx';
+import { ChevronRight, CircleCheck, CircleHelp } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { formatStepValue, rpeGuideRows, type RpeRow } from './logger-model';
 
 const TONE: Record<RpeRow['tone'], string> = {
   rose: 'text-rose',
   amber: 'text-amber',
-  primary: 'text-primary',
+  primary: 'text-ink',
   emerald: 'text-emerald',
   ink: 'text-ink',
 };
@@ -27,16 +30,13 @@ export function RpeGuide({
   const rows = rpeGuideRows(target);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="min-h-6 text-xs font-semibold text-primary-soft underline"
-      >
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        <Icon icon={CircleHelp} />
         RPE guide
-      </button>
+      </Button>
       {open ? (
         <Sheet open={open} onClose={() => setOpen(false)} variant="bottom" title="Tap to select RPE" description="How many clean reps you had left after the set.">
-          <ul className="space-y-2.5">
+          <ul className="divide-y divide-line border-y border-line">
             {rows.map((row) => {
               const isTarget = target !== null && row.rpe === target;
               const selected = current === row.rpe;
@@ -50,28 +50,27 @@ export function RpeGuide({
                       setOpen(false);
                     }}
                     className={clsx(
-                      'flex min-h-14 w-full items-center justify-between gap-3 rounded-md border p-3.5 text-left transition-colors',
-                      isTarget ? 'border-primary bg-primary-container' : 'border-line bg-canvas-low hover:bg-raised',
-                      selected && !isTarget && 'border-line-strong',
+                      'flex min-h-14 w-full items-center justify-between gap-3 px-1 py-3 text-left transition-colors hover:bg-raised/60',
+                      isTarget && 'bg-raised',
                     )}
                   >
                     <span>
-                      <span className={clsx('block font-display text-lg font-bold tabular', isTarget ? 'text-primary' : TONE[row.tone])}>
+                      <span className={clsx('block font-mono text-[20px] leading-6', TONE[row.tone])}>
                         RPE {formatStepValue('rpe', row.rpe)}
                       </span>
-                      <span className={clsx('block text-sm', isTarget ? 'text-primary-soft' : 'text-muted')}>
+                      <span className="block text-ui text-muted">
                         {row.note}
                         {isTarget ? ' (Target)' : ''}
                       </span>
                     </span>
                     {selected ? (
-                      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6 shrink-0 text-primary" fill="currentColor">
-                        <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1.2 14.4-4-4 1.4-1.4 2.6 2.6 5-5 1.4 1.4-6.4 6.4z" />
-                      </svg>
+                      <span className="text-emerald">
+                        <Icon icon={CircleCheck} size={20} />
+                      </span>
                     ) : (
-                      <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="m9 6 6 6-6 6" />
-                      </svg>
+                      <span className="text-faint">
+                        <Icon icon={ChevronRight} size={20} />
+                      </span>
                     )}
                   </button>
                 </li>
