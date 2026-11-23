@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { meApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { formatClock } from '@/components/logger/logger-model';
+import { LimitationBadge } from '@/components/limitations/LimitationBadge';
 import { WhyButton } from './_components/WhyButton';
 import { bannerLabel, bannerText, targetSourceNote, todayTargetLine } from './_components/today-model';
 
@@ -28,9 +29,12 @@ function ExerciseRow({ exercise, unit, coachName }: { exercise: TodayExercise; u
   return (
     <li className="flex min-h-14 items-center justify-between gap-3 py-3">
       <div className="min-w-0">
-        <Link href={`/client/lifts/${exercise.exerciseId}`} className="block text-ui font-medium hover:underline">
-          {exercise.name}
-        </Link>
+        <span className="flex flex-wrap items-center gap-2">
+          <Link href={`/client/lifts/${exercise.exerciseId}`} className="text-ui font-medium hover:underline">
+            {exercise.name}
+          </Link>
+          {exercise.limitation ? <LimitationBadge flag={exercise.limitation} /> : null}
+        </span>
         <p className="text-meta text-faint">
           <span className="font-mono">
             {exercise.sets} {exercise.sets === 1 ? 'set' : 'sets'}

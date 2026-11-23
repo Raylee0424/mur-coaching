@@ -1,5 +1,5 @@
 import { WORKOUT_LOG_LIMITS } from '@coaching/shared';
-import type { CreateWorkoutLogRequest, ExerciseLogInput, SwapReason, WeightUnit, WorkoutLogDto } from '@coaching/shared';
+import type { CreateWorkoutLogRequest, ExerciseLogInput, LimitationFlag, SwapReason, WeightUnit, WorkoutLogDto } from '@coaching/shared';
 import { toNumber } from '@/lib/format';
 import { displayToKg, kgToDisplay, unitLabel } from '@/lib/units';
 
@@ -301,6 +301,8 @@ export interface ExercisePlan {
   weightStep: number;
   /** Plan before a swap, so Undo can restore it. */
   original?: ExercisePlan;
+  /** Active limitation on this exercise (advisory; never blocks logging). */
+  limitation?: LimitationFlag | null;
 }
 
 export type Plans = Record<string, ExercisePlan>;
@@ -443,6 +445,7 @@ export interface TodayWorkoutInput {
     sets: number;
     restSeconds: number | null;
     target: { weightKg: string | number | null; repsMin: number | null; repsMax: number | null; rpe: string | number | null };
+    limitation?: LimitationFlag | null;
   }>;
 }
 
@@ -468,6 +471,7 @@ export function startFromToday(
       },
       previous: [],
       weightStep: weightStepFor(incrementKg[e.exerciseId] ?? 2.5, unit),
+      limitation: e.limitation ?? null,
     };
     return { key, exerciseId: e.exerciseId, workoutExerciseId: e.workoutExerciseId, sets: [] };
   });

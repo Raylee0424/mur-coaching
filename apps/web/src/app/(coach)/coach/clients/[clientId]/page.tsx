@@ -6,6 +6,7 @@ import { ClientSettingsDrawer } from '@/components/clients/ClientSettingsDrawer'
 import { ClientTabs } from '@/components/clients/ClientTabs';
 import { LiftsTab } from '@/components/clients/LiftsTab';
 import { NotesTab } from '@/components/clients/NotesTab';
+import { LimitationsPanel } from '@/components/limitations/LimitationsPanel';
 import { OverviewTab } from '@/components/clients/OverviewTab';
 import { currentMonth, isMonthKey, nextSession } from '@/components/clients/calendar-model';
 import { parseTab } from '@/components/clients/overview-model';
@@ -13,7 +14,7 @@ import { buttonClass } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { WorkoutLogList } from '@/components/workout-logs/WorkoutLogList';
 import { ApiError } from '@/lib/api/client';
-import { clientsApi, exercisesApi, progressionApi, workoutLogsApi } from '@/lib/api/endpoints';
+import { clientsApi, exercisesApi, limitationsApi, progressionApi, workoutLogsApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam } from '@/lib/form';
 
@@ -46,6 +47,7 @@ export default async function ClientDetailPage({
     ]);
     const exerciseNames = new Map(exercises.map((e) => [e.id, e.name]));
     const pending = recommendations.filter((r) => r.status === RecommendationStatus.PENDING);
+    const limitations = tab === 'overview' ? await limitationsApi.list(clientId) : [];
     const logs = tab === 'history' ? await workoutLogsApi.listForClient(clientId, { limit: HISTORY_PAGE, ...(cursor ? { cursor } : {}) }) : null;
 
     return (
@@ -71,6 +73,16 @@ export default async function ClientDetailPage({
             unit={user.weightUnit}
             hasProgram={client.activeAssignment !== null}
           />
+        ) : null}
+        {tab === 'overview' ? (
+          <div className="mt-6">
+            <LimitationsPanel
+              clientId={clientId}
+              limitations={limitations}
+              exercises={exercises.map((e) => ({ id: e.id, name: e.name }))}
+              today={new Date().toISOString().slice(0, 10)}
+            />
+          </div>
         ) : null}
         {tab === 'lifts' ? (
           <LiftsTab

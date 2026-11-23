@@ -15,6 +15,7 @@ import type {
 import { submitWorkoutLog } from '@/actions/workout-logs';
 import { Button } from '@/components/ui/Button';
 import { FormError, Label, Select } from '@/components/ui/Field';
+import { LimitationBadge } from '@/components/limitations/LimitationBadge';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SetEditorSheet } from '@/components/workout-logs/SetEditorSheet';
@@ -190,6 +191,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
         : null,
       previous: [],
       weightStep: weightStepFor(incrementKg, unit),
+      limitation: alt.limitation ?? null,
       original: plan?.original ?? plan,
     };
     const next: FlowStart = {
@@ -239,6 +241,13 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
       <div className="min-w-0">
         <p className="font-mono text-micro uppercase text-faint">{hasExercise ? eyebrow(plan, logged.length, unit) : `EXERCISE ${index + 1}`}</p>
         <h2 className="mt-1 break-words font-display text-title font-semibold">{name}</h2>
+        {plan?.limitation ? (
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-meta text-muted">
+            <LimitationBadge flag={plan.limitation} />
+            {plan.limitation.note ? <span>{plan.limitation.note}</span> : null}
+            <span className="text-faint">You can still log it. Swap if it hurts.</span>
+          </p>
+        ) : null}
       </div>
       <RestPill startedAt={rest.startedAt} now={rest.now} restSeconds={plan?.restSeconds ?? null} />
     </header>

@@ -91,3 +91,11 @@ export function parseSwapReason(text: string): { reason: SwapReason; note: strin
   }
   return null;
 }
+
+export const LimitationTarget = { MUSCLE: 'MUSCLE', EXERCISE: 'EXERCISE' } as const;
+export type LimitationTarget = (typeof LimitationTarget)[keyof typeof LimitationTarget];
+
+export const LimitationSeverity = { AVOID: 'AVOID', CAUTION: 'CAUTION' } as const;
+export type LimitationSeverity = (typeof LimitationSeverity)[keyof typeof LimitationSeverity];
+
+export const LIMITATION_SEVERITY_LABELS: Record<LimitationSeverity, string> = { AVOID: 'Avoid', CAUTION: 'Caution' };
