@@ -1,9 +1,12 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RecommendationStatus, Role } from '@coaching/shared';
 import type { RecommendationDto } from '@coaching/shared';
 import { formatStepValue, formatTargetLine } from '@/components/logger/logger-model';
-import { ActionBadge } from '@/components/progression/ActionBadge';
+import { ACTION_META, ActionBadge } from '@/components/progression/ActionBadge';
+import { Panel } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatStrip, type StatItem } from '@/components/ui/StatStrip';
+import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ApiError } from '@/lib/api/client';
 import { progressionApi } from '@/lib/api/endpoints';
@@ -44,102 +47,92 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
   const increment = rec?.settings?.loadIncrementKg.value;
   const last3 = series.slice(-3).reverse();
   const tone = rec ? ACTION_TONE[rec.action] : null;
+  const tops = series.map((x) => x.topWeightKg);
+  const rpes = series.slice(-8).flatMap((x) => (x.avgRpe === null ? [] : [x.avgRpe]));
+  const stats: StatItem[] =
+    series.length === 0
+      ? []
+      : [
+          { label: 'Best top set', value: formatWeight(Math.max(...tops), unit) },
+          { label: 'Last top set', value: formatWeight(tops[tops.length - 1] ?? 0, unit) },
+          { label: 'Sessions', value: String(series.length) },
+          { label: 'Avg RPE', value: rpes.length ? formatStepValue('rpe', rpes.reduce((a, b) => a + b, 0) / rpes.length) : '—' },
+        ];
 
   return (
-    <div className="mx-auto max-w-xl space-y-5">
-      <header className="flex items-center gap-3 border-b border-line pb-4">
-        <Link
-          href="/client/history?tab=charts"
-          aria-label="Back to history"
-          className="inline-flex size-12 shrink-0 items-center justify-center rounded-md border border-line bg-card hover:bg-raised"
-        >
-          <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5m6-6-6 6 6 6" />
-          </svg>
-        </Link>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Lift telemetry</p>
-          <h1 className="break-words font-display text-xl font-bold">{exercise.name}</h1>
-        </div>
-      </header>
+    <>
+      <PageHeader title={exercise.name} back={{ href: '/client/history?tab=charts', label: 'Back to history' }} />
+      <div className="max-w-xl space-y-6">
+        {rec && tone ? (
+          <section aria-labelledby="next-target" className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="next-target" className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
+                Next target
+              </h2>
+              <ActionBadge action={rec.action} />
+            </div>
+            <p className={`font-mono text-metric-lg ${tone.text}`}>{line || <span className="font-sans text-body text-muted">Pick your own weight</span>}</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-mono text-meta text-muted">
+                {cap !== undefined ? `RPE cap ${formatStepValue('rpe', cap)}` : ''}
+                {cap !== undefined && increment !== undefined ? ' · ' : ''}
+                {increment !== undefined ? `step +${formatWeight(increment, unit)}` : ''}
+              </p>
+              <WhyButton
+                recommendationId={rec.id}
+                exerciseName={exercise.name}
+                unit={unit}
+                coachName={null}
+                override={
+                  rec.overriddenAt
+                    ? {
+                        weightKg: rec.overrideWeightKg,
+                        repsMin: rec.overrideRepsMin,
+                        repsMax: rec.overrideRepsMax,
+                        rpe: rec.overrideRpe,
+                        note: rec.overrideNote,
+                        byName: null,
+                        at: rec.overriddenAt,
+                      }
+                    : null
+                }
+              />
+            </div>
+            {rec.status === RecommendationStatus.PENDING ? <p className="text-meta text-amber">Waiting for your coach to approve this change.</p> : null}
+            <p className={`border-l-2 px-3 text-ui ${ACTION_META[rec.action].rule}`}>{rec.reason}</p>
+          </section>
+        ) : (
+          <EmptyState title="No target yet">Log this lift in a session and your next target shows up here.</EmptyState>
+        )}
 
-      {rec && tone ? (
-        <section aria-labelledby="next-target" className="space-y-4 rounded-lg border border-line bg-card p-5">
-          <div className="flex items-center justify-between gap-2">
-            <h2 id="next-target" className="font-sans text-[11px] font-semibold uppercase tracking-wider text-muted">
-              Next target
-            </h2>
-            <ActionBadge action={rec.action} />
-          </div>
-          <p className="font-display text-3xl font-extrabold text-primary tabular">{line || 'Pick your own weight'}</p>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-muted tabular">
-              {cap !== undefined ? `RPE Cap: ${formatStepValue('rpe', cap)}` : ''}
-              {cap !== undefined && increment !== undefined ? ' · ' : ''}
-              {increment !== undefined ? `Increment: +${formatWeight(increment, unit)}` : ''}
-            </p>
-            <WhyButton
-              recommendationId={rec.id}
-              exerciseName={exercise.name}
-              unit={unit}
-              coachName={null}
-              className="text-sm text-primary"
-              override={
-                rec.overriddenAt
-                  ? {
-                      weightKg: rec.overrideWeightKg,
-                      repsMin: rec.overrideRepsMin,
-                      repsMax: rec.overrideRepsMax,
-                      rpe: rec.overrideRpe,
-                      note: rec.overrideNote,
-                      byName: null,
-                      at: rec.overriddenAt,
-                    }
-                  : null
-              }
-            />
-          </div>
-          {rec.status === RecommendationStatus.PENDING ? (
-            <p className="text-xs font-semibold text-amber">Waiting for your coach to approve this change.</p>
-          ) : null}
-          <div className={`rounded-md border p-3.5 ${tone.box}`}>
-            <p className="text-sm">{rec.reason}</p>
-          </div>
-        </section>
-      ) : (
-        <EmptyState title="No target yet">Log this lift in a session and your next target shows up here.</EmptyState>
-      )}
+        {stats.length > 0 ? <StatStrip label="Lift stats" items={stats} /> : null}
 
-      {last3.length > 0 ? (
-        <section aria-labelledby="last-3" className="overflow-hidden rounded-lg border border-line bg-card">
-          <div className="border-b border-line px-4 py-3">
-            <h2 id="last-3" className="font-sans text-base font-bold tracking-normal">
-              Last {last3.length === 1 ? 'Session' : `${last3.length} Sessions`}
-            </h2>
-          </div>
-          <table className="w-full border-collapse text-left tabular">
-            <thead>
-              <tr className="border-b border-line bg-canvas-low">
-                {['Date', 'Weight', 'Reps', 'RPE'].map((h) => (
-                  <th key={h} scope="col" className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {last3.map((s) => (
-                <tr key={s.exerciseLogId}>
-                  <td className="px-4 py-3 text-sm text-muted">{shortDate(s.performedAt)}</td>
-                  <td className="px-4 py-3 text-sm">{`${formatStepValue('weight', kgToDisplay(s.topWeightKg, unit))} ${unitLabel(unit)}`}</td>
-                  <td className="px-4 py-3 text-sm">{s.topSetReps}</td>
-                  <td className="px-4 py-3 text-sm">{s.avgRpe === null ? '—' : formatStepValue('rpe', s.avgRpe)}</td>
+        {last3.length > 0 ? (
+          <Panel title={`Last ${last3.length === 1 ? 'session' : `${last3.length} sessions`}`}>
+            <table className={TABLE}>
+              <caption className="sr-only">Recent sessions, newest first</caption>
+              <thead className={THEAD}>
+                <tr>
+                  <th scope="col" className={TH}>Date</th>
+                  <th scope="col" className={TH_NUM}>Weight</th>
+                  <th scope="col" className={TH_NUM}>Reps</th>
+                  <th scope="col" className={TH_NUM}>RPE</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ) : null}
-    </div>
+              </thead>
+              <tbody>
+                {last3.map((s) => (
+                  <tr key={s.exerciseLogId} className={TR}>
+                    <td className={`${TD} h-12 font-mono text-muted`}>{shortDate(s.performedAt)}</td>
+                    <td className={`${TD_NUM} h-12`}>{`${formatStepValue('weight', kgToDisplay(s.topWeightKg, unit))} ${unitLabel(unit)}`}</td>
+                    <td className={`${TD_NUM} h-12`}>{s.topSetReps}</td>
+                    <td className={`${TD_NUM} h-12`}>{s.avgRpe === null ? '—' : formatStepValue('rpe', s.avgRpe)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+        ) : null}
+      </div>
+    </>
   );
 }

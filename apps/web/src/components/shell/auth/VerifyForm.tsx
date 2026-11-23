@@ -84,24 +84,24 @@ export function VerifyForm() {
                 onKeyDown={(e) => onKeyDown(i, e)}
                 onPaste={onPaste}
                 onFocus={(e) => e.target.select()}
-                className="tabular size-12 min-w-0 flex-1 rounded-md border border-line bg-canvas-low text-center font-display text-2xl font-bold text-ink aria-[invalid=true]:border-danger sm:h-14"
+                className="size-12 min-w-0 flex-1 rounded border border-line-strong bg-canvas-low text-center font-mono text-h2 text-ink hover:border-faint aria-[invalid=true]:border-danger sm:h-14"
               />
             ))}
           </div>
         </fieldset>
         <FormError>{state?.ok === false ? state.error : undefined}</FormError>
-        <SubmitButton className="w-full" disabled={!isCompleteCode(code)} pendingLabel="Verifying…">
+        <SubmitButton size="lg" className="w-full" disabled={!isCompleteCode(code)} pendingLabel="Verifying…">
           Verify email
         </SubmitButton>
       </form>
-      <div className="space-y-2 text-sm text-muted">
+      <div className="space-y-2 text-ui text-muted">
         <div className="flex flex-wrap items-center gap-2">
           <span>Didn&apos;t receive a code?</span>
-          <button type="button" onClick={resend} disabled={seconds > 0 || resending} className="font-semibold text-primary hover:underline disabled:text-muted disabled:no-underline">
+          <button type="button" onClick={resend} disabled={seconds > 0 || resending} className="text-ink underline underline-offset-2 hover:text-primary-soft disabled:text-muted disabled:no-underline">
             {seconds > 0 ? `Resend in ${seconds}s` : 'Resend code'}
           </button>
         </div>
-        {resent ? <p role="status" className="text-emerald">A new code was sent. Older codes no longer work.</p> : null}
+        {resent ? <p role="status" className="text-meta text-emerald">A new code was sent. Older codes no longer work.</p> : null}
         <FormError>{resendError}</FormError>
       </div>
     </div>

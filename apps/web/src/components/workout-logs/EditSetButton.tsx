@@ -61,7 +61,7 @@ export function EditSetButton({
       <button
         type="button"
         onClick={openSheet}
-        className="-mx-1 flex min-h-11 w-full items-center rounded px-1 text-left hover:bg-raised"
+        className="-mx-1 flex min-h-11 w-full items-center rounded px-1 text-left font-mono hover:bg-raised"
         aria-label={`Edit set ${set.setNumber} of ${exerciseName}`}
       >
         {children}
@@ -95,13 +95,13 @@ export function EditSetButton({
           override={
             confirmSession ? (
               <div className="space-y-4">
-                <p className="text-sm">This is the last set in the session. Delete the whole session?</p>
+                <p className="text-ui">This is the last set in the session. Delete the whole session?</p>
                 <FormError>{error}</FormError>
-                <div className="flex justify-between gap-2">
-                  <Button variant="secondary" onClick={() => setConfirmSession(false)} disabled={pending}>
+                <div className="flex justify-between gap-2 border-t border-line pt-4">
+                  <Button variant="ghost" size="lg" onClick={() => setConfirmSession(false)} disabled={pending}>
                     Go back
                   </Button>
-                  <Button variant="danger" onClick={deleteSession} disabled={pending}>
+                  <Button variant="danger" size="lg" onClick={deleteSession} disabled={pending}>
                     {pending ? 'Deleting…' : 'Delete session'}
                   </Button>
                 </div>

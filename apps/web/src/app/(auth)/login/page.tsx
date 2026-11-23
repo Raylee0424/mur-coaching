@@ -17,14 +17,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
     <>
       <AuthHeading title="Welcome back" subtitle="Sign in to your MUR Coaching workspace." />
       {expired ? (
-        <p role="status" className="rounded-md border border-amber/40 bg-amber-bg px-3 py-2 text-sm font-medium text-amber">
+        <p role="status" className="border-l-2 border-l-amber bg-amber-bg px-3 py-2 text-ui text-amber">
           Your session expired. Please sign in again.
         </p>
       ) : null}
       <SignInForm {...(next ? { next } : {})} />
-      <p className="text-center text-sm text-muted">
+      <p className="text-center text-ui text-muted">
         New here?{' '}
-        <Link href="/signup" className="font-semibold text-primary hover:underline">
+        <Link href="/signup" className="text-ink underline underline-offset-2">
           Create account
         </Link>
       </p>
