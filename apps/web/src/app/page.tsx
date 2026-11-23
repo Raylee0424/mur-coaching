@@ -1,10 +1,10 @@
 import { CallToAction } from '@/components/marketing/CallToAction';
+import { EngineRules } from '@/components/marketing/EngineRules';
 import { Hero } from '@/components/marketing/Hero';
-import { HowItWorks } from '@/components/marketing/HowItWorks';
+import { Loop } from '@/components/marketing/Loop';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
-import { ProgressionEngine } from '@/components/marketing/ProgressionEngine';
-import { RoleCards } from '@/components/marketing/RoleCards';
+import { Workspaces } from '@/components/marketing/Workspaces';
 
 /** Public landing page. Middleware sends signed-in users to their home instead. */
 export default function Home() {
@@ -13,9 +13,9 @@ export default function Home() {
       <MarketingNav />
       <main className="flex-1">
         <Hero />
-        <HowItWorks />
-        <ProgressionEngine />
-        <RoleCards />
+        <EngineRules />
+        <Loop />
+        <Workspaces />
         <CallToAction />
       </main>
       <MarketingFooter />
