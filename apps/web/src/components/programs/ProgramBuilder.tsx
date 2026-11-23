@@ -173,7 +173,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
             maxLength={1000}
             value={draft.description}
             onChange={(e) => update({ ...draft, description: e.target.value })}
-            className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -189,7 +189,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
               Save as template
             </Button>
           ) : null}
-          {saved?.isTemplate ? <Badge tone="indigo">Template</Badge> : null}
+          {saved?.isTemplate ? <Badge tone="neutral">Template</Badge> : null}
           {saved ? (
             <AssignProgramButton
               programId={saved.id}
@@ -230,7 +230,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
                   aria-selected={w === week}
                   onClick={() => selectWeek(w)}
                   className={clsx(
-                    'min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                    'min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors',
                     w === week ? 'bg-primary text-primary-ink' : 'text-muted ring-1 ring-inset ring-line-strong hover:text-ink',
                   )}
                 >

@@ -52,7 +52,7 @@ export function TrainingCalendar({
   const prev = shiftMonth(month, -1);
   const next = shiftMonth(month, 1);
   const navClass =
-    'inline-flex size-10 items-center justify-center rounded-full text-muted ring-1 ring-inset ring-line-strong hover:bg-raised hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
+    'inline-flex size-10 items-center justify-center rounded-full text-muted ring-1 ring-inset ring-line-strong hover:bg-raised hover:text-ink';
 
   return (
     <section aria-labelledby="calendar-heading" className="rounded-lg border border-line bg-card p-5">
@@ -107,7 +107,7 @@ export function TrainingCalendar({
                   aria-describedby={id}
                   aria-label={`${shortDate(day.date)}, ${DAY_STATUS_LABEL[day.status]}${day.workoutName ? `, ${day.workoutName}` : ''}`}
                   className={clsx(
-                    'group relative flex h-14 flex-col justify-between rounded-md border p-1.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:h-16',
+                    'group relative flex h-14 flex-col justify-between rounded-md border p-1.5 text-xs sm:h-16',
                     CELL[day.status],
                   )}
                 >

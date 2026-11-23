@@ -123,7 +123,7 @@ function Editor({ unit, initial, weightStep, rpeMin, allowClearRpe, showWarmup, 
           type="button"
           onClick={onDelete}
           disabled={pending}
-          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-rose/40 bg-rose-bg text-sm font-semibold text-rose transition-colors hover:bg-rose/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose disabled:opacity-50"
+          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border border-rose/40 bg-rose-bg text-sm font-semibold text-rose transition-colors hover:bg-rose/20 disabled:opacity-50"
         >
           Delete set
         </button>
@@ -131,7 +131,7 @@ function Editor({ unit, initial, weightStep, rpeMin, allowClearRpe, showWarmup, 
           type="button"
           onClick={() => onSave(v)}
           disabled={pending || rpeBad}
-          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-ink transition-colors hover:bg-primary-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:bg-primary/30"
+          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-ink transition-colors hover:bg-primary-soft disabled:bg-primary/30"
         >
           {pending ? 'Saving…' : 'Save'}
         </button>

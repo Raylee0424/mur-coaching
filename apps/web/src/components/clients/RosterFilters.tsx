@@ -52,7 +52,7 @@ export function RosterFilters({ counts, filter, q }: { counts: RosterSummaryDto[
               href={rosterHref(c.filter, text)}
               aria-current={on ? 'page' : undefined}
               className={clsx(
-                'inline-flex min-h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                'inline-flex min-h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors',
                 on ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
               )}
             >
@@ -74,7 +74,7 @@ export function RosterFilters({ counts, filter, q }: { counts: RosterSummaryDto[
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Search clients or programs…"
-            className="block min-h-10 w-full rounded-full border border-line bg-canvas-low pl-9 pr-3 text-sm text-ink placeholder:text-muted/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            className="block min-h-10 w-full rounded-full border border-line bg-canvas-low pl-9 pr-3 text-sm text-ink placeholder:text-muted/60"
           />
         </label>
       </form>

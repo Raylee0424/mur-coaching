@@ -84,7 +84,7 @@ export function VerifyForm() {
                 onKeyDown={(e) => onKeyDown(i, e)}
                 onPaste={onPaste}
                 onFocus={(e) => e.target.select()}
-                className="tabular size-12 min-w-0 flex-1 rounded-md border border-line bg-canvas-low text-center font-display text-2xl font-bold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary aria-[invalid=true]:border-danger sm:h-14"
+                className="tabular size-12 min-w-0 flex-1 rounded-md border border-line bg-canvas-low text-center font-display text-2xl font-bold text-ink aria-[invalid=true]:border-danger sm:h-14"
               />
             ))}
           </div>

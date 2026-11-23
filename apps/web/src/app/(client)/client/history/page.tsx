@@ -18,7 +18,7 @@ const MAX_LIFTS = 8;
 const MAX_POINTS = 12;
 
 function Tabs({ tab }: { tab: 'sessions' | 'charts' }) {
-  const base = 'flex min-h-10 items-center justify-center rounded-full text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
+  const base = 'flex min-h-10 items-center justify-center rounded-full text-sm font-semibold';
   return (
     <nav aria-label="History views" className="grid grid-cols-2 gap-1 rounded-full border border-line bg-card p-1">
       <Link href="/client/history" aria-current={tab === 'sessions' ? 'page' : undefined} className={clsx(base, tab === 'sessions' ? 'bg-raised text-ink' : 'text-muted hover:text-ink')}>

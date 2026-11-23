@@ -9,20 +9,49 @@
   body {
     @apply bg-canvas text-ink antialiased;
     font-family: var(--font-body), system-ui, sans-serif;
+    font-size: 15px;
   }
   h1,
   h2,
-  h3 {
+  h3,
+  .font-display {
     font-family: var(--font-display), system-ui, sans-serif;
+    font-stretch: 87.5%;
     letter-spacing: -0.02em;
   }
+  .font-mono,
   table,
-  input,
-  .tabular {
-    font-variant-numeric: tabular-nums;
+  input[type='number'],
+  output {
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  :focus-visible {
+    outline: 2px solid theme('colors.signal.DEFAULT');
+    outline-offset: 2px;
   }
   ::selection {
-    background: #c6ff00;
-    color: #0a0c10;
+    background: theme('colors.signal.DEFAULT');
+    color: theme('colors.canvas');
+  }
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='range'] {
+    accent-color: theme('colors.ink');
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Back-compat during migration; Phase 4 removes every `.tabular` use. */
+  .tabular {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums slashed-zero;
   }
 }

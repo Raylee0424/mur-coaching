@@ -32,7 +32,6 @@ export default async function ProgramsPage({ searchParams }: { searchParams: Sea
     <>
       <PageHeader
         title="Programs"
-        subtitle="Build a weekly split once, save it as a template and assign it to clients."
         actions={
           <Link href="/coach/programs/new" className={buttonClass('primary')}>
             New program
@@ -46,7 +45,7 @@ export default async function ProgramsPage({ searchParams }: { searchParams: Sea
             href={t.href}
             aria-current={t.key === tab ? 'page' : undefined}
             className={clsx(
-              '-mb-px inline-flex min-h-11 items-center gap-2 border-b-2 px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
+              '-mb-px inline-flex min-h-11 items-center gap-2 border-b-2 px-4 text-sm font-semibold focus-visible:-outline-offset-2',
               t.key === tab ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink',
             )}
           >
@@ -87,11 +86,11 @@ export default async function ProgramsPage({ searchParams }: { searchParams: Sea
 function ProgramCard({ program: p }: { program: ProgramSummaryDto }) {
   return (
     <li>
-      <Link href={`/coach/programs/${p.id}`} className="block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+      <Link href={`/coach/programs/${p.id}`} className="block rounded-lg">
         <Card className="h-full space-y-2 transition-colors hover:border-line-strong">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-display text-lg font-bold">{p.name}</h2>
-            {p.isTemplate ? <Badge tone="indigo">Template</Badge> : null}
+            {p.isTemplate ? <Badge tone="neutral">Template</Badge> : null}
           </div>
           {p.description ? <p className="line-clamp-2 text-sm text-muted">{p.description}</p> : null}
           <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">

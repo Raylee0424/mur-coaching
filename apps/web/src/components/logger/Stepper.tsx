@@ -19,7 +19,7 @@ interface StepperProps {
 
 /** Big +/- stepper: 48px buttons, live value. */
 export function Stepper({ label, noun, display, stepLabel, onStep, canDecrease = true, canIncrease = true, compact, action }: StepperProps) {
-  const button = 'flex h-12 w-14 items-center justify-center rounded-md border border-line bg-canvas-low text-sm font-semibold tabular text-ink transition-colors hover:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:text-muted/40 disabled:hover:border-line';
+  const button = 'flex h-12 w-14 items-center justify-center rounded-md border border-line bg-canvas-low text-sm font-semibold tabular text-ink transition-colors hover:border-primary disabled:cursor-not-allowed disabled:text-muted/40 disabled:hover:border-line';
   return (
     <div role="group" aria-label={label} className="flex items-center justify-between gap-3">
       <div className="min-w-0">

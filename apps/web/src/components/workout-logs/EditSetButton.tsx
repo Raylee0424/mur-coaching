@@ -61,7 +61,7 @@ export function EditSetButton({
       <button
         type="button"
         onClick={openSheet}
-        className="-mx-1 flex min-h-11 w-full items-center rounded px-1 text-left hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        className="-mx-1 flex min-h-11 w-full items-center rounded px-1 text-left hover:bg-raised"
         aria-label={`Edit set ${set.setNumber} of ${exerciseName}`}
       >
         {children}

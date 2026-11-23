@@ -57,7 +57,7 @@ export function WhyButton({ recommendationId, exerciseName, unit, coachName, ove
         onClick={openSheet}
         aria-label={`Why this target for ${exerciseName}?`}
         className={clsx(
-          'inline-flex min-h-8 items-center text-xs font-semibold text-muted underline hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+          'inline-flex min-h-8 items-center text-xs font-semibold text-muted underline hover:text-primary',
           className,
         )}
       >

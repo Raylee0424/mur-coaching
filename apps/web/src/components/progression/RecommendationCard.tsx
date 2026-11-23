@@ -38,8 +38,8 @@ export function RecommendationCard({ recommendation: rec, exerciseName, canDismi
   return (
     <article
       className={clsx(
-        'space-y-3 rounded-lg border border-l-4 border-line bg-card p-5 ',
-        ACTION_META[rec.action].border,
+        'space-y-3 rounded-md border border-l-2 border-line bg-card p-4',
+        ACTION_META[rec.action].rule,
         !pending && 'opacity-90',
       )}
     >

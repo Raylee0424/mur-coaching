@@ -1,26 +1,30 @@
 import clsx from 'clsx';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Icon } from './Icon';
 
-export type BadgeTone = 'emerald' | 'amber' | 'sky' | 'slate' | 'red' | 'indigo';
+export type BadgeTone = 'emerald' | 'amber' | 'sky' | 'slate' | 'red' | 'neutral' | 'signal';
 
 const TONES: Record<BadgeTone, string> = {
-  emerald: 'bg-emerald-bg text-emerald ring-emerald/30',
-  amber: 'bg-amber-bg text-amber ring-amber/30',
-  sky: 'bg-sky-bg text-sky ring-sky/30',
-  slate: 'bg-raised text-muted ring-line-strong',
-  red: 'bg-rose-bg text-rose ring-rose/30',
-  indigo: 'bg-primary-container text-primary ring-primary/30',
+  emerald: 'border-emerald/35 text-emerald',
+  sky: 'border-sky/35 text-sky',
+  amber: 'border-amber/35 text-amber',
+  red: 'border-rose/35 text-rose',
+  slate: 'border-line-strong text-muted',
+  neutral: 'border-line-strong text-ink',
+  signal: 'border-signal/40 bg-signal-bg text-signal',
 };
 
 /** Always carries text: colour is never the only signal. */
-export function Badge({ tone = 'slate', children }: { tone?: BadgeTone; children: ReactNode }) {
+export function Badge({ tone = 'slate', icon, children }: { tone?: BadgeTone; icon?: LucideIcon; children: ReactNode }) {
   return (
     <span
       className={clsx(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ring-1 ring-inset',
+        'inline-flex h-5 items-center gap-1 whitespace-nowrap rounded-sm border px-1.5 font-mono text-micro uppercase',
         TONES[tone],
       )}
     >
+      {icon ? <Icon icon={icon} size={14} /> : null}
       {children}
     </span>
   );

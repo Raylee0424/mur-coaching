@@ -35,7 +35,7 @@ export function ExercisePicker({
         aria-pressed={on}
         onClick={() => setGroup(value)}
         className={clsx(
-          'min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold ring-1 ring-inset transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+          'min-h-9 shrink-0 rounded-full px-3 text-xs font-semibold ring-1 ring-inset transition-colors',
           on ? 'bg-primary text-primary-ink ring-primary' : 'text-ink ring-line-strong hover:bg-raised',
         )}
       >
@@ -79,7 +79,7 @@ export function ExercisePicker({
               type="button"
               disabled={!targetLabel}
               onClick={() => onPick(e)}
-              className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-raised focus-visible:-outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span>
                 <span className="block font-semibold">{e.name}</span>

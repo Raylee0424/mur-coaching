@@ -21,7 +21,7 @@ export function HistorySessions({ logs, unit, editable = false }: { logs: Workou
         const sets = log.exerciseLogs.reduce((n, e) => n + e.sets.length, 0);
         return (
           <details key={log.id} open={i === 0} className="group rounded-lg border border-line bg-card p-4">
-            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
               <div>
                 <p className="font-display text-base font-bold">{formatDate(log.performedAt)}</p>
                 <p className="text-xs text-muted tabular">

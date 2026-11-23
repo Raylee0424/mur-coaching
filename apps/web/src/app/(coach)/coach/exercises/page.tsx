@@ -23,7 +23,7 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Se
 
   return (
     <>
-      <PageHeader title="Exercise library" subtitle={`${exercises.length} ${exercises.length === 1 ? 'exercise' : 'exercises'}`} />
+      <PageHeader title="Exercise library" meta={`${exercises.length} ${exercises.length === 1 ? 'exercise' : 'exercises'}`} />
       <ExerciseFilters q={q} muscleGroup={muscleGroup ?? ''} />
       <ExerciseLibrary exercises={exercises} coachId={user.id} filtered={Boolean(q || muscleGroup)} />
     </>

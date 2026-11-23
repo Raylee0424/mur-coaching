@@ -26,21 +26,21 @@ export function LineChart({ points, unit, title }: { points: Point[]; unit: stri
       {ticks.map((t) => (
         <g key={t}>
           <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} className="stroke-line" strokeWidth="1" />
-          <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" className="fill-muted text-[11px]">
+          <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" className="fill-faint font-mono" fontSize="10.5">
             {Math.round(t)}
           </text>
         </g>
       ))}
-      <path d={path} fill="none" className="stroke-primary" strokeWidth="2.5" strokeLinejoin="round" />
+      <path d={path} fill="none" className="stroke-ink" strokeWidth="1.5" strokeLinejoin="round" />
       {points.map((p, i) => (
-        <circle key={p.label + i} cx={x(i)} cy={y(p.value)} r="4" className="fill-canvas stroke-primary" strokeWidth="2">
+        <circle key={p.label + i} cx={x(i)} cy={y(p.value)} r="3" className="fill-ink stroke-canvas" strokeWidth="1">
           <title>{`${p.label}: ${Math.round(p.value * 10) / 10} ${unit}`}</title>
         </circle>
       ))}
-      <text x={PAD.l} y={H - 8} className="fill-muted text-[11px]">
+      <text x={PAD.l} y={H - 8} className="fill-faint font-mono" fontSize="10.5">
         {points[0]?.label}
       </text>
-      <text x={W - PAD.r} y={H - 8} textAnchor="end" className="fill-muted text-[11px]">
+      <text x={W - PAD.r} y={H - 8} textAnchor="end" className="fill-faint font-mono" fontSize="10.5">
         {points[points.length - 1]?.label}
       </text>
     </svg>

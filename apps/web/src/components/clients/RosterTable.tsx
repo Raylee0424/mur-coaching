@@ -145,10 +145,7 @@ function Row({ client, show }: { client: RosterClientDto; show: (c: RosterColumn
             <span className="flex flex-wrap gap-1">
               {pendingEntries.map((a) => (
                 <span key={a} className="whitespace-nowrap">
-                  <Badge tone={ACTION_META[a].tone}>
-                    <span aria-hidden="true" className="mr-1">
-                      {ACTION_META[a].symbol}
-                    </span>
+                  <Badge tone={ACTION_META[a].tone} icon={ACTION_META[a].icon}>
                     {client.pendingByAction[a]} {SHORT_ACTION[a]}
                   </Badge>
                 </span>

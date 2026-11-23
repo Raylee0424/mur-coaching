@@ -51,7 +51,7 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
         <Link
           href="/client/history?tab=charts"
           aria-label="Back to history"
-          className="inline-flex size-12 shrink-0 items-center justify-center rounded-md border border-line bg-card hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          className="inline-flex size-12 shrink-0 items-center justify-center rounded-md border border-line bg-card hover:bg-raised"
         >
           <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 12H5m6-6-6 6 6 6" />

@@ -46,7 +46,7 @@ export function NotesTab({ clientId, initial }: { clientId: string; initial: str
             setJustSaved(false);
           }}
           placeholder="e.g. Left shoulder tight on heavy pressing, keep an eye on it."
-          className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink placeholder:text-muted/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink placeholder:text-muted/60"
         />
         <p className="mt-1 text-right text-xs tabular-nums text-muted">
           {text.length} / {MAX}

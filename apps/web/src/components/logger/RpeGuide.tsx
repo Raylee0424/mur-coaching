@@ -30,7 +30,7 @@ export function RpeGuide({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="min-h-6 text-xs font-semibold text-primary-soft underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        className="min-h-6 text-xs font-semibold text-primary-soft underline"
       >
         RPE guide
       </button>
@@ -50,7 +50,7 @@ export function RpeGuide({
                       setOpen(false);
                     }}
                     className={clsx(
-                      'flex min-h-14 w-full items-center justify-between gap-3 rounded-md border p-3.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                      'flex min-h-14 w-full items-center justify-between gap-3 rounded-md border p-3.5 text-left transition-colors',
                       isTarget ? 'border-primary bg-primary-container' : 'border-line bg-canvas-low hover:bg-raised',
                       selected && !isTarget && 'border-line-strong',
                     )}

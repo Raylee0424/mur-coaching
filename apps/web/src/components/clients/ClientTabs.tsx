@@ -14,7 +14,7 @@ export function ClientTabs({ clientId, active }: { clientId: string; active: Cli
             href={tabHref(clientId, t.key)}
             aria-current={on ? 'page' : undefined}
             className={clsx(
-              '-mb-px inline-flex min-h-11 items-center border-b-2 px-4 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
+              '-mb-px inline-flex min-h-11 items-center border-b-2 px-4 text-sm font-semibold transition-colors focus-visible:-outline-offset-2',
               on ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink',
             )}
           >

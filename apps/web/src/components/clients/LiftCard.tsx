@@ -18,8 +18,6 @@ const STATUS: Record<Exclude<RecommendationStatus, 'PENDING'>, { label: string; 
   SUPERSEDED: { label: 'Superseded', tone: 'slate' },
 };
 
-const SPARK_COLOR = { INCREASE_LOAD: '#34D399', INCREASE_REPS: '#38BDF8', HOLD: '#94A3B8', DELOAD: '#FBBF24' } as const;
-
 /** One engine card on the client's Lifts tab: last sessions, trend, the call and its actions. */
 export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; exerciseName: string; unit: WeightUnit }) {
   const last = rec.metrics[rec.metrics.length - 1];
@@ -35,7 +33,7 @@ export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; 
   const editable = pending || rec.status === RecommendationStatus.ACCEPTED;
 
   return (
-    <article className={clsx('space-y-4 rounded-lg border border-l-4 border-line bg-card p-5', ACTION_META[rec.action].border, !pending && 'opacity-90')}>
+    <article className={clsx('space-y-4 rounded-md border border-l-2 border-line bg-card p-4', ACTION_META[rec.action].rule, !pending && 'opacity-90')}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-lg font-bold">{exerciseName}</h3>
@@ -83,7 +81,7 @@ export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; 
         {weights.length > 0 ? (
           <div className="flex flex-col items-start gap-1 sm:items-center">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Top-set trend</span>
-            <Sparkline values={weights} color={SPARK_COLOR[rec.action]} label={`Top-set weight across ${weights.length} sessions: ${weights.map((w) => formatWeight(w, unit)).join(', ')}`} />
+            <Sparkline values={weights} tone={rec.action} label={`Top-set weight across ${weights.length} sessions: ${weights.map((w) => formatWeight(w, unit)).join(', ')}`} />
             {diff !== null && weights.length > 1 ? (
               <span className="text-xs tabular-nums text-muted">
                 {diff > 0 ? '+' : diff < 0 ? '−' : ''}

@@ -2,26 +2,29 @@ import clsx from 'clsx';
 import type { ComponentProps } from 'react';
 
 const CONTROL =
-  'block min-h-11 w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink ' +
-  'placeholder:text-muted/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 ' +
-  'focus-visible:outline-primary aria-[invalid=true]:border-danger';
+  'block w-full rounded border border-line-strong bg-canvas-low px-3 text-ink placeholder:text-faint ' +
+  'transition-colors hover:border-faint aria-[invalid=true]:border-danger';
+
+type ControlSize = 'md' | 'lg';
+const CONTROL_SIZE: Record<ControlSize, string> = { md: 'h-9 text-ui', lg: 'h-11 text-body' };
 
 export function Label({ className, ...rest }: ComponentProps<'label'>) {
-  return <label className={clsx('mb-1 block text-xs font-semibold uppercase tracking-wider text-muted', className)} {...rest} />;
+  return <label className={clsx('mb-1.5 block font-mono text-micro uppercase text-muted', className)} {...rest} />;
 }
 
-export function Input({ className, ...rest }: ComponentProps<'input'>) {
-  return <input className={clsx(CONTROL, className)} {...rest} />;
+export function Input({ className, size, ...rest }: Omit<ComponentProps<'input'>, 'size'> & { size?: ControlSize }) {
+  const numeric = rest.type === 'number' || rest.inputMode === 'decimal' || rest.inputMode === 'numeric';
+  return <input className={clsx(CONTROL, CONTROL_SIZE[size ?? 'md'], numeric && 'font-mono', className)} {...rest} />;
 }
 
-export function Select({ className, ...rest }: ComponentProps<'select'>) {
-  return <select className={clsx(CONTROL, className)} {...rest} />;
+export function Select({ className, size, ...rest }: Omit<ComponentProps<'select'>, 'size'> & { size?: ControlSize }) {
+  return <select className={clsx(CONTROL, CONTROL_SIZE[size ?? 'md'], className)} {...rest} />;
 }
 
 export function FieldError({ id, children }: { id?: string; children?: string }) {
   if (!children) return null;
   return (
-    <p id={id} className="mt-1 text-sm font-medium text-danger">
+    <p id={id} className="mt-1 text-meta font-medium text-danger">
       {children}
     </p>
   );
@@ -31,7 +34,7 @@ export function FieldError({ id, children }: { id?: string; children?: string })
 export function FormError({ children }: { children?: string }) {
   if (!children) return null;
   return (
-    <p role="alert" className="rounded-md border border-danger/40 bg-danger-bg px-3 py-2 text-sm font-medium text-danger">
+    <p role="alert" className="rounded border-l-2 border-danger bg-danger-bg px-3 py-2 text-ui text-danger">
       {children}
     </p>
   );

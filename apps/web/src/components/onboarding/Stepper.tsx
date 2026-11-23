@@ -50,7 +50,7 @@ export function StepHeader({ steps, current, variant = 'bars', onSelect }: StepH
             return (
               <li key={s} aria-current={active ? 'step' : undefined}>
                 {onSelect && i < current ? (
-                  <button type="button" onClick={() => onSelect(i)} className={clsx(cls, 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary')}>
+                  <button type="button" onClick={() => onSelect(i)} className={clsx(cls, '')}>
                     {body}
                   </button>
                 ) : (

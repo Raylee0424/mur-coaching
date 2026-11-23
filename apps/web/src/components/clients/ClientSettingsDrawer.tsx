@@ -155,7 +155,7 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                 maxLength={1000}
                 value={draft.limitationsNote}
                 onChange={(e) => patch({ limitationsNote: e.target.value })}
-                className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink"
               />
             </div>
           </Section>
