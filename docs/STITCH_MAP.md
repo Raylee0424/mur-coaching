@@ -1,6 +1,6 @@
 # Stitch design → project map
 
-Source designs: `~/Downloads/stitch_strength_coaching_platform_landing_page/<folder>/code.html` (Tailwind HTML mockups, ApexMetric tokens already in `apps/web/tailwind.config.ts`).
+Source designs: `design/stitch/<folder>/code.html` (44 folders, Tailwind HTML mockups; tokens in `design/stitch/apexmetric_design_system.md` and `apps/web/tailwind.config.ts`). The full folder → phase → route map lives in the Obsidian note `MUR Coaching - Stitch Screens` (`docs/brain/`); the table below covers the first build only, and several folder names were renamed since (`client_today` → `athlete_web_home_today_dashboard`, `client_active_workout_logger` → `athlete_web_active_workout_logger`).
 
 | Stitch folder | Project location | Gap |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ Source designs: `~/Downloads/stitch_strength_coaching_platform_landing_page/<fol
 | client_active_workout_logger, 1._edit_logged_set_bottom_sheet, 2._rpe_guide_bottom_sheet, 7._swap_exercise_bottom_sheet | `client/log`, `components/logger/*`, `EditSetButton` | API: swap alternatives; session-complete targets |
 | client_history, client_lift_detail | `client/history`, `client/lifts/[exerciseId]` | restyle; per-lift charts tab |
 
-Decisions (user, 2026-11-21): build all auth flows; emails are logged to the API console (no provider). No messaging: hide "Ask my coach"; swaps are recorded on the log, not notified; invites are copyable links.
+Decisions (user, 2026-11-21): build all auth flows; emails are logged to the API console (no provider); swaps are recorded on the log, not notified; invites are copyable links. ~~No messaging~~ lifted 2026-11-24: messaging is in scope (`coach_web_real_time_coach_client_messaging`, Phase 2).
 
 ## API additions
 
