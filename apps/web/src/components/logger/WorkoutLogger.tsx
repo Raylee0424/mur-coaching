@@ -261,7 +261,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
                       aria-current={i === index ? 'step' : undefined}
                       onClick={() => goTo(i)}
                       className={clsx(
-                        'min-h-11 max-w-44 truncate rounded-full border px-3.5 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                        'min-h-11 max-w-44 truncate rounded-full border px-3.5 text-xs font-semibold',
                         i === index
                           ? 'border-primary bg-primary-container text-primary-soft'
                           : 'border-line bg-card text-muted hover:bg-raised',
@@ -428,7 +428,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, library, unit
               onClick={() => finish()}
               disabled={pending}
               aria-busy={pending}
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/50 bg-primary-container px-4 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-container/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+              className="inline-flex min-h-12 items-center justify-center rounded-full border border-primary/50 bg-primary-container px-4 text-sm font-semibold text-primary-soft transition-colors hover:bg-primary-container/70 disabled:opacity-50"
             >
               {pending ? 'Saving…' : 'Finish workout'}
             </button>

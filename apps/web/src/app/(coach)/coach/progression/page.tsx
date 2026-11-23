@@ -20,7 +20,7 @@ export default async function ProgressionQueuePage({ searchParams }: { searchPar
     <>
       <PageHeader
         title="Progression queue"
-        subtitle={`${queue.counts.total} pending ${queue.counts.total === 1 ? 'recommendation' : 'recommendations'}. Accept in bulk, or open a call to see why the engine made it.`}
+        meta={`${queue.counts.total} pending`}
       />
       <ProgressionQueue queue={queue} action={action} q={q} unit={user.weightUnit} />
     </>

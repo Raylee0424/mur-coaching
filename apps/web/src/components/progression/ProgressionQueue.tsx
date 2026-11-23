@@ -1,6 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
+import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -8,6 +9,7 @@ import type { RecommendationAction, RecommendationQueueItem, RecommendationQueue
 import { bulkResolveRecommendations } from '@/actions/progression';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { formatTarget } from '@/lib/format';
 import { formatWeight } from '@/lib/units';
@@ -86,9 +88,9 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
   }
 
   const state = selectionState(items, selected);
-  const chips: { key: ActionFilter; label: string; count: number; symbol?: string }[] = [
+  const chips: { key: ActionFilter; label: string; count: number; icon?: LucideIcon }[] = [
     { key: 'ALL', label: 'All', count: counts.total },
-    ...ACTION_FILTERS.map((a: RecommendationAction) => ({ key: a, label: ACTION_META[a].label, count: counts.byAction[a], symbol: ACTION_META[a].symbol })),
+    ...ACTION_FILTERS.map((a: RecommendationAction) => ({ key: a, label: ACTION_META[a].label, count: counts.byAction[a], icon: ACTION_META[a].icon })),
   ];
 
   return (
@@ -104,11 +106,11 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
                   href={queueHref(c.key, text)}
                   aria-current={on ? 'page' : undefined}
                   className={clsx(
-                    'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                    'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors',
                     on ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
                   )}
                 >
-                  {c.symbol ? <span aria-hidden="true">{c.symbol}</span> : null}
+                  {c.icon ? <Icon icon={c.icon} size={14} /> : null}
                   {c.label}
                   <span className={clsx('tabular-nums', on ? 'text-primary-ink/70' : 'text-muted')}>({c.count})</span>
                 </Link>
@@ -123,7 +125,7 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Filter by client or lift…"
-                className="block min-h-10 w-full rounded-full border border-line bg-canvas-low px-4 text-sm text-ink placeholder:text-muted/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                className="block min-h-10 w-full rounded-full border border-line bg-canvas-low px-4 text-sm text-ink placeholder:text-muted/60"
               />
             </label>
           </form>

@@ -188,7 +188,7 @@ function InviteSheet({ templates, onClose }: { templates: ProgramSummaryDto[]; o
                       aria-pressed={unit === u}
                       onClick={() => setUnit(u)}
                       className={clsx(
-                        'min-h-9 flex-1 rounded-full text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                        'min-h-9 flex-1 rounded-full text-sm font-semibold',
                         unit === u ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
                       )}
                     >

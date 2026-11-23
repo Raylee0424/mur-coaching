@@ -95,7 +95,7 @@ export function ExerciseLibrary({ exercises, coachId, filtered }: { exercises: E
                     <td className="px-3 py-3">
                       {e.overrideClientCount > 0 ? (
                         <span className="whitespace-nowrap">
-                          <Badge tone="indigo">{formatOverrides(e.overrideClientCount)}</Badge>
+                          <Badge tone="neutral">{formatOverrides(e.overrideClientCount)}</Badge>
                         </span>
                       ) : (
                         <span className="text-muted">0</span>

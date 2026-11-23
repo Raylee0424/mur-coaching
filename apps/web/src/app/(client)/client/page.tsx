@@ -30,7 +30,7 @@ function ExerciseRow({ exercise, unit, coachName }: { exercise: TodayExercise; u
       <div className="min-w-0 space-y-0.5">
         <Link
           href={`/client/lifts/${exercise.exerciseId}`}
-          className="block text-sm font-semibold hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          className="block text-sm font-semibold hover:text-primary"
         >
           {exercise.name}
         </Link>
@@ -61,7 +61,7 @@ function ExerciseRow({ exercise, unit, coachName }: { exercise: TodayExercise; u
       <Link
         href={`/client/lifts/${exercise.exerciseId}`}
         aria-label={`Open ${exercise.name} details`}
-        className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-raised"
       >
         <Chevron />
       </Link>

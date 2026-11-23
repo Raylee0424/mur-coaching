@@ -34,7 +34,7 @@ interface Props {
 }
 
 const textarea =
-  'block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
+  'block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink';
 
 export function ClientOnboarding({ me, unit, lifts, hasCoach, replay }: Props) {
   const id = useId();
@@ -84,7 +84,7 @@ export function ClientOnboarding({ me, unit, lifts, hasCoach, replay }: Props) {
             type="button"
             onClick={back}
             disabled={step === 0 || pending}
-            className="inline-flex min-h-11 items-center gap-1 rounded-md pr-3 text-sm font-semibold text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:invisible"
+            className="inline-flex min-h-11 items-center gap-1 rounded-md pr-3 text-sm font-semibold text-muted hover:text-ink disabled:invisible"
           >
             <span aria-hidden="true">←</span> Back
           </button>
@@ -99,7 +99,7 @@ export function ClientOnboarding({ me, unit, lifts, hasCoach, replay }: Props) {
                 setErrors({});
                 setStep(step + 1);
               }}
-              className="min-h-11 rounded-md pl-3 text-sm font-semibold text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              className="min-h-11 rounded-md pl-3 text-sm font-semibold text-muted hover:text-ink"
             >
               Skip
             </button>

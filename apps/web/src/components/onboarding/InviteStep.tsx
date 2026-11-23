@@ -40,7 +40,7 @@ export function InviteStep({ onInvited }: { onInvited?: () => void }) {
             aria-label="Invite link"
             value={inviteUrl}
             onFocus={(e) => e.target.select()}
-            className="tabular min-h-11 min-w-0 flex-1 rounded-md border border-emerald/40 bg-canvas-low px-3 text-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            className="tabular min-h-11 min-w-0 flex-1 rounded-md border border-emerald/40 bg-canvas-low px-3 text-sm text-ink"
           />
           <Button variant="secondary" onClick={() => void copy(inviteUrl)}>
             {copied ? 'Copied' : 'Copy link'}

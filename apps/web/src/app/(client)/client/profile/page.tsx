@@ -50,7 +50,7 @@ export default async function ProfilePage() {
                   className={
                     active
                       ? 'min-h-11 rounded-full bg-primary px-4 text-sm font-bold text-primary-ink'
-                      : 'min-h-11 rounded-full px-4 text-sm font-semibold text-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary'
+                      : 'min-h-11 rounded-full px-4 text-sm font-semibold text-muted hover:text-ink'
                   }
                 >
                   {unit === WeightUnit.KG ? 'kg' : 'lb'}

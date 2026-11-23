@@ -19,7 +19,7 @@ export function LoggedSets({ sets, unit, onEdit }: { sets: DraftSet[]; unit: Wei
                 type="button"
                 onClick={() => onEdit(set.key)}
                 aria-label={`Edit set ${i + 1}: ${formatStepValue('weight', v.weight)} ${unitLabel(unit)} for ${v.reps} reps at RPE ${formatStepValue('rpe', v.rpe)}`}
-                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-md border border-line bg-card px-4 py-3 text-left hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-md border border-line bg-card px-4 py-3 text-left hover:bg-raised"
               >
                 <span className="flex items-center gap-2.5 text-sm font-semibold">
                   <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0 text-primary" fill="currentColor">

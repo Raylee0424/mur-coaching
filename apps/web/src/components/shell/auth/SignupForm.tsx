@@ -51,7 +51,7 @@ export function SignupForm() {
               aria-checked={on}
               onClick={() => setRole(r.role)}
               className={clsx(
-                'flex flex-col gap-2 rounded-md border p-4 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                'flex flex-col gap-2 rounded-md border p-4 text-left transition-colors',
                 on ? 'border-2 border-primary bg-raised' : 'border-line bg-canvas-low hover:border-line-strong',
               )}
             >

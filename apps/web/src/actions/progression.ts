@@ -15,6 +15,7 @@ import { toActionError, type ActionResult } from '@/lib/action-result';
 import { formString } from '@/lib/form';
 
 function refresh(clientId: string): void {
+  revalidatePath('/coach', 'layout');
   revalidatePath(`/coach/clients/${clientId}`);
   revalidatePath('/coach/progression');
   revalidatePath('/client');
@@ -109,6 +110,7 @@ export async function bulkResolveRecommendations(
   if (ids.length === 0) return { ok: false, error: 'Select at least one recommendation.' };
   try {
     const data = await progressionApi.bulkResolve({ ids, status });
+    revalidatePath('/coach', 'layout');
     revalidatePath('/coach/progression');
     revalidatePath('/coach/clients');
     revalidatePath('/coach/clients/[clientId]', 'page');
@@ -117,6 +119,7 @@ export async function bulkResolveRecommendations(
   } catch (err) {
     unstable_rethrow(err);
     if (err instanceof ApiError && err.status === 404) {
+      revalidatePath('/coach', 'layout');
       revalidatePath('/coach/progression');
       return { ok: false, error: 'Some of these recommendations no longer exist. The list has been refreshed.' };
     }

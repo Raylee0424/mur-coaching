@@ -89,7 +89,7 @@ function SwapSheet({
                 aria-pressed={reason === r}
                 onClick={() => setReason(r)}
                 className={clsx(
-                  'min-h-12 rounded-full border px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                  'min-h-12 rounded-full border px-4 text-sm font-semibold',
                   reason === r ? 'border-primary bg-primary-container text-primary-soft' : 'border-line bg-canvas-low text-muted hover:bg-raised',
                 )}
               >
@@ -108,7 +108,7 @@ function SwapSheet({
               maxLength={200}
               onChange={(e) => setNote(e.target.value)}
               placeholder={reason === SwapReason.PAIN ? 'Where does it hurt?' : 'Anything your coach should know'}
-              className="block min-h-12 w-full rounded-md border border-line bg-canvas-low px-3 text-base text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              className="block min-h-12 w-full rounded-md border border-line bg-canvas-low px-3 text-base text-ink"
             />
           </div>
         ) : null}
@@ -143,7 +143,7 @@ function SwapSheet({
                     aria-checked={selected}
                     onClick={() => setChoice(a.id)}
                     className={clsx(
-                      'flex min-h-14 w-full items-center justify-between gap-3 rounded-md border p-3.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+                      'flex min-h-14 w-full items-center justify-between gap-3 rounded-md border p-3.5 text-left',
                       selected ? 'border-primary bg-raised' : 'border-line bg-canvas-low hover:bg-raised',
                     )}
                   >

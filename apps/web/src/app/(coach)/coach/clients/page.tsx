@@ -33,7 +33,6 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
     <>
       <PageHeader
         title="Roster overview"
-        subtitle="Your clients, their adherence and what the engine wants you to review."
         actions={<InviteClientModal templates={templates} />}
       />
       <div className="space-y-6">

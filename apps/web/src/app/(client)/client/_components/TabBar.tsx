@@ -4,12 +4,8 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { NavItem } from '@/lib/routes';
-
-const ICONS: Record<string, string> = {
-  '/client': 'M7 2v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-2V2h-2v2H9V2H7zm-2 8h14v10H5V10z',
-  '/client/history': 'M13 3a9 9 0 00-9 9H1l4 4 4-4H6a7 7 0 117 7 7 7 0 01-4.9-2l-1.4 1.4A9 9 0 1013 3zm-1 5v5l4.3 2.5.8-1.3-3.6-2.2V8H12z',
-  '/client/profile': 'M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5z',
-};
+import { Icon } from '@/components/ui/Icon';
+import { NAV_ICONS } from '@/components/shell/nav-icons';
 
 /** Paths that light a tab besides its own prefix (lift detail belongs to History). */
 function isActive(item: NavItem, pathname: string): boolean {
@@ -34,13 +30,12 @@ export function TabBar({ items }: { items: readonly NavItem[] }) {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={clsx(
-              'flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
-              active ? 'text-primary' : 'text-muted hover:text-ink',
+              'relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded text-meta font-medium',
+              active ? 'text-ink' : 'text-faint hover:text-ink',
             )}
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="size-6" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={active ? 0 : 1.8}>
-              <path d={ICONS[item.href] ?? ICONS['/client']} />
-            </svg>
+            {active ? <span aria-hidden="true" className="absolute inset-x-6 -top-px h-0.5 bg-signal" /> : null}
+            <Icon icon={NAV_ICONS[item.icon]} size={20} />
             {item.label}
           </Link>
         );

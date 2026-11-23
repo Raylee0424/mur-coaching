@@ -139,7 +139,7 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
             value={draft.note}
             onChange={set('note')}
             placeholder="Why you changed it, in plain words"
-            className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink placeholder:text-muted/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink placeholder:text-muted/60"
           />
           <FieldError>{errors.note}</FieldError>
         </div>
