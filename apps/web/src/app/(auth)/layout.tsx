@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Logo } from '@/components/marketing/MarketingNav';
+import { Wordmark } from '@/components/shell/Wordmark';
 
 const LOG = [
   { date: 'Nov 20', weight: '155.0 kg', reps: '5 / 5', rpe: '8.0' },
@@ -12,7 +12,7 @@ const LOG = [
 function EnginePreview() {
   return (
     <figure aria-label="Example progression engine call" className="w-full max-w-md space-y-6">
-      <div className="space-y-5 rounded-lg border border-line bg-raised p-6 shadow-2xl shadow-black/40">
+      <div className="space-y-5 rounded-lg border border-line bg-raised p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Engine log · Barbell back squat</p>
@@ -52,7 +52,6 @@ function EnginePreview() {
           <span className="tabular font-display text-lg font-bold text-emerald">+2.5 kg</span>
         </div>
       </div>
-      <figcaption className="text-center text-sm text-muted">No black-box AI, just transparent strength rules.</figcaption>
     </figure>
   );
 }
@@ -61,12 +60,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       <main className="flex min-h-dvh flex-col px-5 py-6 sm:px-10 lg:py-8">
-        <Link href="/" className="inline-flex w-fit items-center gap-2.5 rounded-[8px]">
-          <Logo />
-          <span className="font-display text-xl font-semibold tracking-tight">MUR Coaching</span>
+        <Link href="/" aria-label="MUR Coaching home" className="inline-flex w-fit">
+          <Wordmark />
         </Link>
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 py-10">{children}</div>
-        <p className="text-center text-xs text-muted">MUR Coaching · Deterministic Strength Progression</p>
       </main>
       <aside className="hidden items-center justify-center border-l border-line bg-card p-10 lg:flex">
         <EnginePreview />

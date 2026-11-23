@@ -1,28 +1,27 @@
 import clsx from 'clsx';
 import Link from 'next/link';
-import { Logo } from './MarketingNav';
+import { Wordmark } from '@/components/shell/Wordmark';
 import { CONTAINER } from './Section';
 
-const LINK = 'text-xs font-semibold text-muted transition-colors hover:text-ink';
+const LINK = 'text-meta text-muted transition-colors hover:text-ink';
 
 export function MarketingFooter() {
   return (
-    <footer>
-      <div className={clsx(CONTAINER, 'flex flex-col items-center justify-between gap-4 py-8 sm:flex-row')}>
-        <div className="flex items-center gap-3">
-          <Logo />
-          <span className="font-display font-semibold">MUR Coaching</span>
-          <span className="tabular text-[11px] font-semibold text-muted">© 2026</span>
+    <footer className="border-t border-line">
+      <div className={clsx(CONTAINER, 'flex h-14 items-center justify-between gap-4')}>
+        <div className="flex items-baseline gap-3">
+          <Wordmark />
+          <span className="font-mono text-micro text-faint">© 2026</span>
         </div>
         <nav aria-label="Footer" className="flex items-center gap-6">
-          <a href="#how-it-works" className={LINK}>
-            How It Works
+          <a href="#loop" className={LINK}>
+            How it works
           </a>
           <a href="#demo" className={LINK}>
-            Live Demo
+            Demo
           </a>
           <Link href="/login" className={LINK}>
-            Sign In
+            Sign in
           </Link>
         </nav>
       </div>
