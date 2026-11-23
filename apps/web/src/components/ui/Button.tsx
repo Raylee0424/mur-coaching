@@ -1,19 +1,26 @@
 import clsx from 'clsx';
 import type { ComponentProps } from 'react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-primary-ink hover:bg-primary-soft disabled:bg-primary/30 disabled:text-primary-ink/60',
-  secondary: 'bg-transparent text-ink ring-1 ring-inset ring-line-strong hover:bg-raised disabled:text-muted/50',
-  danger: 'bg-danger text-primary-ink hover:bg-danger/80 disabled:bg-danger/30',
+  primary: 'bg-primary text-primary-ink hover:bg-primary-soft disabled:bg-raised disabled:text-faint',
+  secondary: 'border border-line-strong bg-transparent text-ink hover:border-faint hover:bg-raised disabled:text-faint',
+  ghost: 'text-muted hover:bg-raised hover:text-ink disabled:text-faint',
+  danger: 'border border-danger/50 text-danger hover:bg-danger-bg disabled:text-faint',
 };
 
-export function buttonClass(variant: ButtonVariant = 'primary', className?: string): string {
+const SIZES: Record<ButtonSize, string> = {
+  sm: 'h-8 gap-1.5 px-2.5 text-ui',
+  md: 'h-9 gap-2 px-3.5 text-ui',
+  lg: 'h-11 gap-2 px-4 text-body',
+};
+
+export function buttonClass(variant: ButtonVariant = 'primary', className?: string, size: ButtonSize = 'md'): string {
   return clsx(
-    'inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold transition-colors',
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-    'disabled:cursor-not-allowed',
+    'inline-flex items-center justify-center whitespace-nowrap rounded font-medium transition-colors disabled:cursor-not-allowed',
+    SIZES[size],
     VARIANTS[variant],
     className,
   );
@@ -21,8 +28,9 @@ export function buttonClass(variant: ButtonVariant = 'primary', className?: stri
 
 interface ButtonProps extends ComponentProps<'button'> {
   variant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
-export function Button({ variant, className, type = 'button', ...rest }: ButtonProps) {
-  return <button type={type} className={buttonClass(variant, className)} {...rest} />;
+export function Button({ variant, size, className, type = 'button', ...rest }: ButtonProps) {
+  return <button type={type} className={buttonClass(variant, className, size)} {...rest} />;
 }

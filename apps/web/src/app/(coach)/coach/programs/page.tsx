@@ -1,12 +1,13 @@
 import clsx from 'clsx';
+import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Role } from '@coaching/shared';
-import type { ProgramSummaryDto } from '@coaching/shared';
 import { Badge } from '@/components/ui/Badge';
 import { buttonClass } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
 import { programsApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
@@ -32,87 +33,74 @@ export default async function ProgramsPage({ searchParams }: { searchParams: Sea
     <>
       <PageHeader
         title="Programs"
-        subtitle="Build a weekly split once, save it as a template and assign it to clients."
         actions={
-          <Link href="/coach/programs/new" className={buttonClass('primary')}>
+          <Link href="/coach/programs/new" className={buttonClass('primary', undefined, 'sm')}>
+            <Icon icon={Plus} />
             New program
           </Link>
         }
       />
-      <nav aria-label="Program lists" className="mb-6 flex gap-1 border-b border-line">
+      <nav aria-label="Program lists" className="mb-6 flex h-10 gap-1 border-b border-line">
         {tabs.map((t) => (
           <Link
             key={t.key}
             href={t.href}
             aria-current={t.key === tab ? 'page' : undefined}
             className={clsx(
-              '-mb-px inline-flex min-h-11 items-center gap-2 border-b-2 px-4 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
-              t.key === tab ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink',
+              'inline-flex items-center gap-1.5 px-3 text-ui focus-visible:-outline-offset-2',
+              t.key === tab ? 'text-ink shadow-[inset_0_-2px_0_theme(colors.ink)]' : 'text-muted hover:text-ink',
             )}
           >
             {t.label}
-            <span className="tabular-nums text-muted">({t.count})</span>
+            <span className="font-mono text-micro text-faint">{t.count}</span>
           </Link>
         ))}
       </nav>
       {shown.length === 0 ? (
         tab === 'templates' ? (
-          <EmptyState title="No templates yet">
-            Save a program as a template to reuse the weekly split for faster client onboarding.{' '}
-            <Link href="/coach/programs/new" className="font-semibold text-primary-soft underline">
-              Create a program
-            </Link>
-            .
+          <EmptyState title="No templates yet" action={<Link href="/coach/programs/new" className={buttonClass('secondary', undefined, 'sm')}>Create a program</Link>}>
+            Save a program as a template to reuse the weekly split for faster client onboarding.
           </EmptyState>
         ) : (
-          <EmptyState title="No programs yet">
-            Build your first program: weeks, training days and prescriptions.{' '}
-            <Link href="/coach/programs/new" className="font-semibold text-primary-soft underline">
-              Create one
-            </Link>
-            .
+          <EmptyState title="No programs yet" action={<Link href="/coach/programs/new" className={buttonClass('secondary', undefined, 'sm')}>Create one</Link>}>
+            Build your first program: weeks, training days and prescriptions.
           </EmptyState>
         )
       ) : (
-        <ul className="grid gap-4 md:grid-cols-2">
-          {shown.map((p) => (
-            <ProgramCard key={p.id} program={p} />
-          ))}
-        </ul>
+        <div className="overflow-x-auto rounded-md border border-line bg-card">
+          <table className={clsx(TABLE, 'min-w-[44rem]')}>
+            <caption className="sr-only">{tab === 'templates' ? 'Templates' : 'Programs'}</caption>
+            <thead className={THEAD}>
+              <tr>
+                <th scope="col" className={TH}>Name</th>
+                <th scope="col" className={TH_NUM}>Weeks</th>
+                <th scope="col" className={TH_NUM}>Days / week</th>
+                <th scope="col" className={TH_NUM}>Clients</th>
+                <th scope="col" className={TH}>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((p) => (
+                <tr key={p.id} className={TR}>
+                  <td className={TD}>
+                    <span className="flex items-center gap-2">
+                      <Link href={`/coach/programs/${p.id}`} className="font-medium hover:underline">
+                        {p.name}
+                      </Link>
+                      {p.isTemplate ? <Badge tone="neutral">Template</Badge> : null}
+                    </span>
+                    {p.description ? <span className="line-clamp-1 block text-meta text-faint">{p.description}</span> : null}
+                  </td>
+                  <td className={TD_NUM}>{p.durationWeeks}</td>
+                  <td className={TD_NUM}>{p.daysPerWeek}</td>
+                  <td className={clsx(TD_NUM, p.activeAssignments === 0 && 'text-faint')}>{p.activeAssignments}</td>
+                  <td className={clsx(TD, 'font-mono text-muted')}>{formatDate(p.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
-  );
-}
-
-function ProgramCard({ program: p }: { program: ProgramSummaryDto }) {
-  return (
-    <li>
-      <Link href={`/coach/programs/${p.id}`} className="block rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-        <Card className="h-full space-y-2 transition-colors hover:border-line-strong">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-display text-lg font-bold">{p.name}</h2>
-            {p.isTemplate ? <Badge tone="indigo">Template</Badge> : null}
-          </div>
-          {p.description ? <p className="line-clamp-2 text-sm text-muted">{p.description}</p> : null}
-          <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-            <div>
-              <dt className="sr-only">Length</dt>
-              <dd>{p.durationWeeks} weeks</dd>
-            </div>
-            <div>
-              <dt className="sr-only">Days per week</dt>
-              <dd>{p.daysPerWeek} days / week</dd>
-            </div>
-            <div>
-              <dt className="sr-only">Active clients</dt>
-              <dd>
-                {p.activeAssignments} active {p.activeAssignments === 1 ? 'client' : 'clients'}
-              </dd>
-            </div>
-          </dl>
-          <p className="text-xs text-muted">Updated {formatDate(p.updatedAt)}</p>
-        </Card>
-      </Link>
-    </li>
   );
 }

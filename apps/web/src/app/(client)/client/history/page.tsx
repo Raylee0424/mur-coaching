@@ -1,10 +1,15 @@
-import clsx from 'clsx';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Role } from '@coaching/shared';
 import { TrendChart } from '@/components/workout-logs/TrendChart';
 import { HistorySessions } from '@/components/workout-logs/HistorySessions';
 import { buttonClass } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Panel } from '@/components/ui/Card';
+import { Segmented } from '@/components/ui/Segmented';
+import { ToastOnMount } from '@/components/ui/ToastOnMount';
 import { progressionApi, workoutLogsApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam } from '@/lib/form';
@@ -17,20 +22,6 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const MAX_LIFTS = 8;
 const MAX_POINTS = 12;
 
-function Tabs({ tab }: { tab: 'sessions' | 'charts' }) {
-  const base = 'flex min-h-10 items-center justify-center rounded-full text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
-  return (
-    <nav aria-label="History views" className="grid grid-cols-2 gap-1 rounded-full border border-line bg-card p-1">
-      <Link href="/client/history" aria-current={tab === 'sessions' ? 'page' : undefined} className={clsx(base, tab === 'sessions' ? 'bg-raised text-ink' : 'text-muted hover:text-ink')}>
-        Sessions
-      </Link>
-      <Link href="/client/history?tab=charts" aria-current={tab === 'charts' ? 'page' : undefined} className={clsx(base, tab === 'charts' ? 'bg-raised text-ink' : 'text-muted hover:text-ink')}>
-        Per-Lift Charts
-      </Link>
-    </nav>
-  );
-}
-
 export default async function HistoryPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser(Role.CLIENT);
   const params = await searchParams;
@@ -39,18 +30,23 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
   const unit = user.weightUnit;
 
   return (
-    <div className="mx-auto max-w-xl space-y-5">
-      <header className="space-y-3 border-b border-line pb-4">
-        <h1 className="font-display text-2xl font-extrabold">Training History</h1>
-        <Tabs tab={tab} />
-      </header>
-
-      {tab === 'sessions' ? (
-        <SessionsTab userId={user.id} unit={unit} cursor={cursor} logged={firstParam(params.logged) === '1'} />
-      ) : (
-        <ChartsTab userId={user.id} unit={unit} />
-      )}
-    </div>
+    <>
+      <PageHeader title="History" />
+      <div className="max-w-xl space-y-5">
+        <Segmented
+          label="History views"
+          items={[
+            { href: '/client/history', label: 'Sessions', current: tab === 'sessions' },
+            { href: '/client/history?tab=charts', label: 'Per-lift charts', current: tab === 'charts' },
+          ]}
+        />
+        {tab === 'sessions' ? (
+          <SessionsTab userId={user.id} unit={unit} cursor={cursor} logged={firstParam(params.logged) === '1'} />
+        ) : (
+          <ChartsTab userId={user.id} unit={unit} />
+        )}
+      </div>
+    </>
   );
 }
 
@@ -58,20 +54,16 @@ async function SessionsTab({ userId, unit, cursor, logged }: { userId: string; u
   const page = await workoutLogsApi.listForClient(userId, { limit: 20, ...(cursor ? { cursor } : {}) });
   return (
     <>
-      {logged ? (
-        <p role="status" className="rounded-md border border-emerald bg-emerald-bg px-3 py-2 text-sm font-medium text-emerald">
-          Session logged. Your targets were updated.
-        </p>
-      ) : null}
+      {logged ? <ToastOnMount message="Session logged. Your targets were updated." tone="ok" /> : null}
       <HistorySessions logs={page.items} unit={unit} editable />
       <div className="flex flex-wrap gap-3">
         {cursor ? (
-          <Link href="/client/history" className={buttonClass('secondary', 'min-h-12')}>
+          <Link href="/client/history" className={buttonClass('secondary', undefined, 'lg')}>
             Newest
           </Link>
         ) : null}
         {page.nextCursor ? (
-          <Link href={`/client/history?cursor=${encodeURIComponent(page.nextCursor)}`} className={buttonClass('secondary', 'min-h-12')}>
+          <Link href={`/client/history?cursor=${encodeURIComponent(page.nextCursor)}`} className={buttonClass('secondary', undefined, 'lg')}>
             Older sessions
           </Link>
         ) : null}
@@ -108,27 +100,26 @@ async function ChartsTab({ userId, unit }: { userId: string; unit: 'KG' | 'LB' }
         return (
           <section key={id} aria-labelledby={`lift-${id}`} className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <h2 id={`lift-${id}`} className="text-lg font-bold">
+              <h2 id={`lift-${id}`} className="font-sans text-ui font-semibold" style={{ fontStretch: '100%', letterSpacing: 0 }}>
                 {name}
               </h2>
-              <Link href={`/client/lifts/${id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline">
-                Lift Detail →
+              <Link href={`/client/lifts/${id}`} className={buttonClass('ghost', undefined, 'sm')}>
+                Lift detail
+                <Icon icon={ArrowRight} />
               </Link>
             </div>
-            <article className="space-y-3 rounded-lg border border-line bg-card p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Top-set weight ({unitLabel(unit)})</span>
-                <span className="text-sm font-semibold text-primary tabular">{latest ? formatWeight(latest.topWeightKg, unit) : ''}</span>
+            <Panel title={`Top-set weight · ${unitLabel(unit)}`} meta={latest ? formatWeight(latest.topWeightKg, unit) : undefined}>
+              <div className="p-4">
+                <TrendChart points={weights} title={`${name} top-set weight over time`} unit={unitLabel(unit)} decimals={2} />
               </div>
-              <TrendChart points={weights} title={`${name} top-set weight over time`} unit={unitLabel(unit)} decimals={2} />
-            </article>
-            <article className="space-y-3 rounded-lg border border-line bg-card p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">Session RPE trend</span>
-                <span className="text-sm font-semibold text-sky tabular">{avgRpe === null ? 'No RPE logged' : `Avg ${formatStepValue('rpe', avgRpe)}`}</span>
-              </div>
-              {rpes.length > 0 ? <TrendChart points={rpes} title={`${name} average RPE over time`} unit="RPE" tone="sky" /> : null}
-            </article>
+            </Panel>
+            <Panel title="Session RPE" meta={avgRpe === null ? 'No RPE logged' : `avg ${formatStepValue('rpe', avgRpe)}`}>
+              {rpes.length > 0 ? (
+                <div className="p-4">
+                  <TrendChart points={rpes} title={`${name} average RPE over time`} unit="RPE" tone="sky" />
+                </div>
+              ) : null}
+            </Panel>
           </section>
         );
       })}

@@ -1,12 +1,15 @@
 'use client';
 
+import { Pencil } from 'lucide-react';
 import { useId, useState, useTransition } from 'react';
 import { RecommendationStatus } from '@coaching/shared';
 import type { RecommendationDto, WeightUnit } from '@coaching/shared';
 import { overrideRecommendation, recommendationAction } from '@/actions/progression';
 import { Button } from '@/components/ui/Button';
 import { FieldError, FormError, Input, Label } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
+import { useToast } from '@/components/ui/Toast';
 import { formatTarget } from '@/lib/format';
 import { unitLabel, unitStep } from '@/lib/units';
 import { ActionBadge } from './ActionBadge';
@@ -30,7 +33,8 @@ export function EditTargetButton({ recommendation, exerciseName, unit }: Props) 
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="secondary" className="min-h-9 py-1" onClick={() => setOpen(true)}>
+      <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        <Icon icon={Pencil} />
         Edit target
       </Button>
       {open ? (
@@ -43,6 +47,7 @@ export function EditTargetButton({ recommendation, exerciseName, unit }: Props) 
 /** Mount it only while open: it resets its draft from `subject` on mount. */
 export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTargetSubject; unit: WeightUnit; onClose: () => void }) {
   const id = useId();
+  const toast = useToast();
   const [draft, setDraft] = useState<Draft>(() => initialDraft(subject, unit));
   const [errors, setErrors] = useState<DraftErrors>({});
   const [formError, setFormError] = useState<string>();
@@ -69,8 +74,10 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
     if (Object.keys(errs).length > 0) return;
     startTransition(async () => {
       const result = await overrideRecommendation(subject.clientId, subject.recommendationId, body);
-      if (result.ok) onClose();
-      else setFormError(result.error);
+      if (result.ok) {
+        toast.show({ message: `Saved target for ${subject.exerciseName}`, tone: 'ok' });
+        onClose();
+      } else setFormError(result.error);
     });
   }
 
@@ -82,8 +89,10 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
     fd.set('intent', 'ACCEPTED');
     startTransition(async () => {
       const result = await recommendationAction(null, fd);
-      if (result.ok) onClose();
-      else setFormError(result.error);
+      if (result.ok) {
+        toast.show({ message: `Accepted ${subject.exerciseName}`, tone: 'ok' });
+        onClose();
+      } else setFormError(result.error);
     });
   }
 
@@ -100,27 +109,48 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
         onChange={set(key)}
         aria-invalid={errors[key] ? true : undefined}
         aria-describedby={errors[key] ? `${id}-${key}-error` : undefined}
-        className="tabular-nums"
+        className="font-mono"
       />
       <FieldError id={`${id}-${key}-error`}>{errors[key]}</FieldError>
     </div>
   );
 
   return (
-    <Sheet open onClose={onClose} title={subject.exerciseName} description="Override the engine's next-session prescription.">
+    <Sheet
+      open
+      onClose={onClose}
+      title={subject.exerciseName}
+      description="Override the engine's next-session prescription."
+      footer={
+        <>
+          {pendingRec ? (
+            <Button variant="ghost" onClick={acceptEngineTarget} disabled={pending}>
+              Use engine target
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={onClose} disabled={pending}>
+              Cancel
+            </Button>
+          )}
+          <Button onClick={save} disabled={pending}>
+            {pending ? 'Saving…' : 'Save override'}
+          </Button>
+        </>
+      }
+    >
       <div className="space-y-5">
-        <section className="space-y-2 rounded-md border border-line bg-canvas-low p-4">
+        <section className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted">Engine original call</span>
+            <span className="font-mono text-micro uppercase text-muted">Engine proposed</span>
             <ActionBadge action={subject.action} />
           </div>
           {engineTarget ? (
-            <p className="font-display text-lg font-bold tabular-nums">
+            <p className="font-mono text-metric">
               {engineTarget}
-              {subject.rpeCap !== null ? <span className="ml-2 text-sm font-semibold text-muted">@ RPE {subject.rpeCap}</span> : null}
+              {subject.rpeCap !== null ? <span className="ml-2 text-ui text-muted">@ RPE {subject.rpeCap}</span> : null}
             </p>
           ) : null}
-          <p className="text-sm text-muted">{subject.reason}</p>
+          <p className="text-meta text-muted">{subject.reason}</p>
         </section>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -139,32 +169,16 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
             value={draft.note}
             onChange={set('note')}
             placeholder="Why you changed it, in plain words"
-            className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink placeholder:text-muted/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 text-ui text-ink placeholder:text-faint hover:border-faint"
           />
           <FieldError>{errors.note}</FieldError>
         </div>
 
-        <p className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-primary-container px-3 py-2 text-xs">
-          <span className="font-semibold uppercase tracking-wider text-primary">Overridden by coach</span>
-          <span className="text-primary-soft">Visible to the client on Today and Lift detail</span>
+        <p className="border-l-2 border-l-ink bg-raised px-3 py-2 text-meta text-muted">
+          Visible to the client on Today and Lift detail as a coach override.
         </p>
 
         <FormError>{formError}</FormError>
-
-        <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
-          {pendingRec ? (
-            <Button variant="secondary" onClick={acceptEngineTarget} disabled={pending}>
-              Use engine target
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={onClose} disabled={pending}>
-              Cancel
-            </Button>
-          )}
-          <Button onClick={save} disabled={pending}>
-            {pending ? 'Saving…' : 'Save override'}
-          </Button>
-        </footer>
       </div>
     </Sheet>
   );

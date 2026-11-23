@@ -1,8 +1,10 @@
 'use client';
 
 import clsx from 'clsx';
+import { ArrowDown, ArrowUp, Copy, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input, Label, Select } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import type { BuilderErrors, DraftDay, DraftRx } from './builder-model';
 
 type RxField = 'sets' | 'repsMin' | 'repsMax' | 'rpe' | 'rest';
@@ -24,6 +26,7 @@ interface Props {
   onPatch: (patch: { name?: string; dayNumber?: number }) => void;
   onDuplicate: () => void;
   onRemove: () => void;
+  onAddExercise: () => void;
   onPatchRx: (rxKey: string, patch: Partial<Pick<DraftRx, RxField>>) => void;
   onMoveRx: (rxKey: string, delta: -1 | 1) => void;
   onRemoveRx: (rxKey: string) => void;
@@ -37,19 +40,12 @@ export function DayCard(p: Props) {
       aria-label={`Day ${day.dayNumber}: ${day.name || 'untitled'}`}
       onFocusCapture={p.onSelect}
       onClick={p.onSelect}
-      className={clsx(
-        'space-y-4 rounded-lg border bg-card p-4 transition-colors',
-        p.active ? 'border-primary ring-1 ring-primary/40' : 'border-line',
-      )}
+      className={clsx('rounded-md border bg-card transition-colors', p.active ? 'border-line-strong shadow-[inset_2px_0_0_theme(colors.ink)]' : 'border-line')}
     >
-      <div className="flex flex-wrap items-end gap-2">
+      <header className="flex flex-wrap items-end gap-2 border-b border-line p-4">
         <div className="w-24">
           <Label htmlFor={`${day.key}-num`}>Day</Label>
-          <Select
-            id={`${day.key}-num`}
-            value={day.dayNumber}
-            onChange={(e) => p.onPatch({ dayNumber: Number(e.target.value) })}
-          >
+          <Select id={`${day.key}-num`} value={day.dayNumber} onChange={(e) => p.onPatch({ dayNumber: Number(e.target.value) })}>
             {p.dayOptions.map((n) => (
               <option key={n} value={n}>
                 Day {n}
@@ -67,55 +63,51 @@ export function DayCard(p: Props) {
             aria-invalid={nameError ? true : undefined}
           />
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" className="min-h-11 py-1" onClick={p.onDuplicate} disabled={!p.canDuplicate} title={p.canDuplicate ? undefined : 'No free day left this week'}>
-            Duplicate day
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            className="w-9 px-0"
+            aria-label={`Duplicate day ${day.dayNumber}`}
+            onClick={p.onDuplicate}
+            disabled={!p.canDuplicate}
+            title={p.canDuplicate ? 'Duplicate day' : 'No free day left this week'}
+          >
+            <Icon icon={Copy} />
           </Button>
-          <Button variant="secondary" className="min-h-11 py-1" aria-label={`Remove day ${day.dayNumber}`} onClick={p.onRemove}>
-            Remove
+          <Button variant="ghost" className="w-9 px-0" aria-label={`Remove day ${day.dayNumber}`} title="Remove day" onClick={p.onRemove}>
+            <Icon icon={Trash2} />
           </Button>
         </div>
-      </div>
-      {nameError ? <p className="text-sm text-danger">{nameError}</p> : null}
+      </header>
+      {nameError ? <p className="px-4 pt-2 text-meta text-danger">{nameError}</p> : null}
 
       {day.exercises.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line-strong p-4 text-center text-sm text-muted">
-          {p.active ? 'Pick exercises from the library.' : 'Select this day, then pick exercises from the library.'}
-        </p>
+        <p className="px-4 py-6 text-ui text-muted">No exercises yet.</p>
       ) : (
-        <ol className="space-y-3">
+        <ol className="divide-y divide-line">
           {day.exercises.map((rx, i) => (
-            <li key={rx.key} className="rounded-md border border-line bg-canvas-low p-3">
+            <li key={rx.key} className="px-4 py-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold">
-                  {i + 1}. {rx.exerciseName}
+                <span className="flex items-baseline gap-3 text-ui">
+                  <span className="font-mono text-faint">{i + 1}</span>
+                  <span className="font-medium">{rx.exerciseName}</span>
                 </span>
-                <span className="flex gap-1">
-                  <Button
-                    variant="secondary"
-                    className="size-11 px-0"
-                    aria-label={`Move ${rx.exerciseName} up`}
-                    disabled={i === 0}
-                    onClick={() => p.onMoveRx(rx.key, -1)}
-                  >
-                    ↑
+                <span className="flex gap-0.5">
+                  <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Move ${rx.exerciseName} up`} disabled={i === 0} onClick={() => p.onMoveRx(rx.key, -1)}>
+                    <Icon icon={ArrowUp} />
                   </Button>
                   <Button
-                    variant="secondary"
-                    className="size-11 px-0"
+                    variant="ghost"
+                    size="sm"
+                    className="w-8 px-0"
                     aria-label={`Move ${rx.exerciseName} down`}
                     disabled={i === day.exercises.length - 1}
                     onClick={() => p.onMoveRx(rx.key, 1)}
                   >
-                    ↓
+                    <Icon icon={ArrowDown} />
                   </Button>
-                  <Button
-                    variant="secondary"
-                    className="size-11 px-0"
-                    aria-label={`Remove ${rx.exerciseName}`}
-                    onClick={() => p.onRemoveRx(rx.key)}
-                  >
-                    ✕
+                  <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Remove ${rx.exerciseName}`} onClick={() => p.onRemoveRx(rx.key)}>
+                    <Icon icon={X} />
                   </Button>
                 </span>
               </div>
@@ -124,20 +116,20 @@ export function DayCard(p: Props) {
                   const err = errors[`rx.${rx.key}.${field}`];
                   return (
                     <div key={field}>
-                      <label htmlFor={`${rx.key}-${field}`} className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted">
+                      <label htmlFor={`${rx.key}-${field}`} className="mb-1 block font-mono text-micro uppercase text-muted">
                         {label}
                       </label>
                       <Input
                         id={`${rx.key}-${field}`}
                         inputMode={mode}
                         value={rx[field]}
-                        className="px-2"
+                        className="h-8 px-2 font-mono"
                         aria-invalid={err ? true : undefined}
                         aria-describedby={err ? `${rx.key}-${field}-err` : undefined}
                         onChange={(e) => p.onPatchRx(rx.key, { [field]: e.target.value })}
                       />
                       {err ? (
-                        <p id={`${rx.key}-${field}-err`} className="mt-0.5 text-[11px] text-danger">
+                        <p id={`${rx.key}-${field}-err`} className="mt-0.5 text-meta text-danger">
                           {err}
                         </p>
                       ) : null}
@@ -149,6 +141,12 @@ export function DayCard(p: Props) {
           ))}
         </ol>
       )}
+      <footer className="border-t border-line px-2 py-1.5">
+        <Button variant="ghost" size="sm" onClick={p.onAddExercise}>
+          <Icon icon={Plus} />
+          Add exercise
+        </Button>
+      </footer>
     </section>
   );
 }

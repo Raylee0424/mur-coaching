@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowLeft, Mail } from 'lucide-react';
 import { useActionState, useEffect, useState, useTransition } from 'react';
 import { forgotPassword } from '@/actions/auth';
 import type { ActionResult } from '@/lib/action-result';
 import { buttonClass } from '@/components/ui/Button';
 import { FormError, Input, Label } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { AuthHeading, StatusIcon } from './AuthHeading';
 
@@ -31,10 +33,7 @@ export function ForgotForm() {
   if (sent) {
     return (
       <div className="space-y-6">
-        <StatusIcon tone="primary">
-          <rect x="3" y="5" width="18" height="14" rx="2" />
-          <path d="m3 7 9 6 9-6" />
-        </StatusIcon>
+        <StatusIcon tone="primary" icon={Mail} />
         <AuthHeading title="Check your inbox" subtitle={<>If an account exists for <span className="font-semibold text-ink">{sent}</span>, we sent a reset link. It works once and expires in 1 hour.</>} />
         <FormError>{resendError}</FormError>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -52,7 +51,7 @@ export function ForgotForm() {
               {seconds > 0 ? `Resend in ${seconds}s` : 'Resend reset link'}
             </SubmitButton>
           </form>
-          <Link href="/login" className={buttonClass('primary')}>
+          <Link href="/login" className={buttonClass('primary', undefined, 'lg')}>
             Back to sign in
           </Link>
         </div>
@@ -66,15 +65,16 @@ export function ForgotForm() {
       <form action={action} className="space-y-5">
         <div>
           <Label htmlFor="forgot-email">Email</Label>
-          <Input id="forgot-email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" />
+          <Input size="lg" id="forgot-email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" />
         </div>
         <FormError>{state?.ok === false ? state.error : undefined}</FormError>
-        <SubmitButton className="w-full" pendingLabel="Sending…">
+        <SubmitButton size="lg" className="w-full" pendingLabel="Sending…">
           Send reset link
         </SubmitButton>
       </form>
-      <Link href="/login" className="inline-block text-sm font-semibold text-muted hover:text-ink">
-        ← Back to sign in
+      <Link href="/login" className={buttonClass('ghost', undefined, 'lg')}>
+        <Icon icon={ArrowLeft} />
+        Back to sign in
       </Link>
     </div>
   );

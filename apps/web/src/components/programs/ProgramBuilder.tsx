@@ -1,17 +1,19 @@
 'use client';
 
 import clsx from 'clsx';
+import { Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { PROGRAM_LIMITS } from '@coaching/shared';
 import type { ExerciseDto, ProgramDto } from '@coaching/shared';
 import { deleteProgram, saveAsTemplate, saveProgram } from '@/actions/programs';
-import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Card, Panel } from '@/components/ui/Card';
 import { FieldError, FormError, Input, Label } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
+import { useToast } from '@/components/ui/Toast';
 import { AssignProgramButton, type AssignableClient } from './AssignProgramButton';
 import {
   addDay,
@@ -44,6 +46,8 @@ interface Props {
 
 export function ProgramBuilder({ program, library, clients }: Props) {
   const router = useRouter();
+  const toast = useToast();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saved, setSaved] = useState<ProgramDto | null>(program);
   const [draft, setDraft] = useState<ProgramDraft>(() => (program ? fromProgram(program) : emptyProgram()));
   const [baseline, setBaseline] = useState(() => fingerprint(program ? fromProgram(program) : emptyProgram()));
@@ -51,9 +55,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
   const [activeDay, setActiveDay] = useState<string | null>(() => (program ? daysOfWeek(fromProgram(program), 1)[0]?.key ?? null : null));
   const [errors, setErrors] = useState<BuilderErrors>({});
   const [formError, setFormError] = useState<string>();
-  const [notice, setNotice] = useState<string>();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [copied, setCopied] = useState<{ id: string; name: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   const dirty = fingerprint(draft) !== baseline;
@@ -70,7 +72,6 @@ export function ProgramBuilder({ program, library, clients }: Props) {
 
   const update = (next: ProgramDraft) => {
     setDraft(next);
-    setNotice(undefined);
   };
 
   function selectWeek(w: number): void {
@@ -99,7 +100,7 @@ export function ProgramBuilder({ program, library, clients }: Props) {
       setDraft(next);
       setBaseline(fingerprint(next));
       setActiveDay(daysOfWeek(next, week)[0]?.key ?? null);
-      setNotice(asTemplate ? 'Saved as a template.' : 'Saved.');
+      toast.show({ message: asTemplate ? 'Saved as a template' : 'Program saved', tone: 'ok' });
       if (!saved) router.replace(`/coach/programs/${result.data.id}`);
     });
   }
@@ -113,7 +114,11 @@ export function ProgramBuilder({ program, library, clients }: Props) {
         setFormError(result.error);
         return;
       }
-      setCopied({ id: result.data.id, name: result.data.name });
+      toast.show({
+        message: `Saved a template copy: ${result.data.name}`,
+        tone: 'ok',
+        action: { label: 'Open', onAction: () => router.push(`/coach/programs/${result.data.id}`) },
+      });
     });
   }
 
@@ -130,126 +135,121 @@ export function ProgramBuilder({ program, library, clients }: Props) {
 
   const assignBlocked = !saved ? 'Save the program first' : dirty ? 'Save your changes first' : null;
 
+  const addedNames = new Set(active?.exercises.map((e) => e.exerciseName) ?? []);
+
   return (
     <div className="space-y-6">
-      <Card className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-[1fr_8rem]">
-          <div>
-            <Label htmlFor="program-name">Program name</Label>
-            <Input
-              id="program-name"
-              value={draft.name}
-              maxLength={100}
-              placeholder="e.g. 4-Day Powerbuilding"
-              onChange={(e) => update({ ...draft, name: e.target.value })}
-              aria-invalid={errors.name ? true : undefined}
-            />
-            <FieldError>{errors.name}</FieldError>
-          </div>
-          <div>
-            <Label htmlFor="program-weeks">Weeks</Label>
-            <Input
-              id="program-weeks"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={PROGRAM_LIMITS.maxWeeks}
-              value={draft.durationWeeks}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isFinite(n) || n < 1) return;
-                const next = setDuration(draft, n);
-                update(next);
-                if (week > next.durationWeeks) selectWeek(next.durationWeeks);
-              }}
-            />
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="program-desc">Description (optional)</Label>
-          <textarea
-            id="program-desc"
-            rows={2}
-            maxLength={1000}
-            value={draft.description}
-            onChange={(e) => update({ ...draft, description: e.target.value })}
-            className="block w-full rounded-md border border-line bg-canvas-low px-3 py-2 text-base text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => save()} disabled={pending || (!dirty && saved !== null)}>
-            {pending ? 'Saving…' : saved ? 'Save changes' : 'Save program'}
-          </Button>
-          {!saved ? (
-            <Button variant="secondary" onClick={() => save(true)} disabled={pending}>
-              Save as template
+      <Panel
+        title="Program"
+        meta={saved ? (dirty ? 'Unsaved changes' : `${saved.activeClientIds.length} active clients`) : dirty ? 'Unsaved changes' : undefined}
+        actions={
+          <>
+            {saved?.isTemplate ? <Badge tone="neutral">Template</Badge> : null}
+            {saved ? (
+              <AssignProgramButton programId={saved.id} programName={saved.name} clients={clients} disabledReason={assignBlocked} />
+            ) : null}
+            {!saved ? (
+              <Button variant="secondary" size="sm" onClick={() => save(true)} disabled={pending}>
+                Save as template
+              </Button>
+            ) : !saved.isTemplate ? (
+              <Button variant="secondary" size="sm" onClick={copyAsTemplate} disabled={pending || dirty} title={dirty ? 'Save your changes first' : undefined}>
+                Save as template
+              </Button>
+            ) : null}
+            {saved && saved.activeClientIds.length === 0 ? (
+              <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)} disabled={pending}>
+                <Icon icon={Trash2} />
+                Delete
+              </Button>
+            ) : null}
+            <Button size="sm" onClick={() => save()} disabled={pending || (!dirty && saved !== null)}>
+              {pending ? 'Saving…' : saved ? 'Save changes' : 'Save program'}
             </Button>
-          ) : !saved.isTemplate ? (
-            <Button variant="secondary" onClick={copyAsTemplate} disabled={pending || dirty} title={dirty ? 'Save your changes first' : undefined}>
-              Save as template
-            </Button>
-          ) : null}
-          {saved?.isTemplate ? <Badge tone="indigo">Template</Badge> : null}
-          {saved ? (
-            <AssignProgramButton
-              programId={saved.id}
-              programName={saved.name}
-              clients={clients}
-              disabledReason={assignBlocked}
-            />
-          ) : null}
-          {saved && saved.activeClientIds.length === 0 ? (
-            <Button variant="secondary" onClick={() => setConfirmDelete(true)} disabled={pending}>
-              Delete
-            </Button>
-          ) : null}
-          <span role="status" className="text-sm text-muted">
-            {notice ?? (dirty ? 'Unsaved changes' : saved ? `${saved.activeClientIds.length} active clients` : '')}
-          </span>
-        </div>
-        <FormError>{formError}</FormError>
-        {copied ? (
-          <p role="status" className="rounded-md border border-emerald/40 bg-emerald-bg px-3 py-2 text-sm text-emerald">
-            Saved a template copy: “{copied.name}”.{' '}
-            <Link href={`/coach/programs/${copied.id}`} className="font-semibold underline">
-              Open it
-            </Link>
-          </p>
-        ) : null}
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div role="tablist" aria-label="Weeks" className="flex max-w-full gap-1 overflow-x-auto pb-1">
-              {weeks.map((w) => (
-                <button
-                  key={w}
-                  role="tab"
-                  type="button"
-                  aria-selected={w === week}
-                  onClick={() => selectWeek(w)}
-                  className={clsx(
-                    'min-h-11 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
-                    w === week ? 'bg-primary text-primary-ink' : 'text-muted ring-1 ring-inset ring-line-strong hover:text-ink',
-                  )}
-                >
-                  Week {w}
-                  <span className="ml-1 text-xs opacity-70">({daysOfWeek(draft, w).length})</span>
-                </button>
-              ))}
+          </>
+        }
+      >
+        <div className="space-y-4 p-4">
+          <div className="grid gap-4 lg:grid-cols-[1fr_8rem_1.5fr]">
+            <div>
+              <Label htmlFor="program-name">Program name</Label>
+              <Input
+                id="program-name"
+                value={draft.name}
+                maxLength={100}
+                placeholder="e.g. 4-day powerbuilding"
+                onChange={(e) => update({ ...draft, name: e.target.value })}
+                aria-invalid={errors.name ? true : undefined}
+              />
+              <FieldError>{errors.name}</FieldError>
             </div>
+            <div>
+              <Label htmlFor="program-weeks">Weeks</Label>
+              <Input
+                id="program-weeks"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={PROGRAM_LIMITS.maxWeeks}
+                value={draft.durationWeeks}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (!Number.isFinite(n) || n < 1) return;
+                  const next = setDuration(draft, n);
+                  update(next);
+                  if (week > next.durationWeeks) selectWeek(next.durationWeeks);
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="program-desc">Description (optional)</Label>
+              <Input id="program-desc" maxLength={1000} value={draft.description} onChange={(e) => update({ ...draft, description: e.target.value })} />
+            </div>
+          </div>
+          <FormError>{formError}</FormError>
+        </div>
+      </Panel>
+
+      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <div>
+          <div role="tablist" aria-label="Weeks" aria-orientation="vertical" className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+            {weeks.map((w) => (
+              <button
+                key={w}
+                role="tab"
+                type="button"
+                aria-selected={w === week}
+                onClick={() => selectWeek(w)}
+                className={clsx(
+                  'relative flex h-9 shrink-0 items-center justify-between gap-3 rounded px-3 font-mono text-ui transition-colors',
+                  w === week ? 'bg-raised text-ink' : 'text-muted hover:bg-raised/60 hover:text-ink',
+                )}
+              >
+                {w === week ? <span aria-hidden="true" className="absolute inset-y-2 left-0 hidden w-0.5 rounded-full bg-signal lg:block" /> : null}
+                <span>W{w}</span>
+                <span className="text-micro text-faint">{daysOfWeek(draft, w).length} d</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
+              Week {week}
+            </h2>
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                className="min-h-11 py-1"
+                size="sm"
                 disabled={draft.durationWeeks < 2 || weekDays.length === 0}
                 onClick={() => update(copyWeekToAll(draft, week))}
               >
                 Copy week {week} to all weeks
               </Button>
               <Button
-                className="min-h-11 py-1"
+                variant="secondary"
+                size="sm"
                 disabled={freeDayNumbers(draft, week).length === 0}
                 onClick={() => {
                   const r = addDay(draft, week);
@@ -257,13 +257,14 @@ export function ProgramBuilder({ program, library, clients }: Props) {
                   setActiveDay(r.dayKey);
                 }}
               >
-                + Add day
+                <Icon icon={Plus} />
+                Add day
               </Button>
             </div>
           </div>
 
           {weekDays.length === 0 ? (
-            <Card className="text-center text-sm text-muted">Week {week} has no training days yet. Add a day to start.</Card>
+            <Card className="p-4 text-ui text-muted">Week {week} has no training days yet. Add a day to start.</Card>
           ) : (
             weekDays.map((day) => (
               <DayCard
@@ -284,6 +285,10 @@ export function ProgramBuilder({ program, library, clients }: Props) {
                   update(removeDay(draft, day.key));
                   if (activeDay === day.key) setActiveDay(null);
                 }}
+                onAddExercise={() => {
+                  setActiveDay(day.key);
+                  setPickerOpen(true);
+                }}
                 onPatchRx={(rxKey, patch) => update(patchExercise(draft, day.key, rxKey, patch))}
                 onMoveRx={(rxKey, delta) => update(moveExercise(draft, day.key, rxKey, delta))}
                 onRemoveRx={(rxKey) => update(removeExercise(draft, day.key, rxKey))}
@@ -291,27 +296,34 @@ export function ProgramBuilder({ program, library, clients }: Props) {
             ))
           )}
         </div>
-        <ExercisePicker
-          library={library}
-          targetLabel={active ? `Week ${active.weekNumber} · ${active.name || `Day ${active.dayNumber}`}` : null}
-          onPick={(ex) => active && update(addExercise(draft, active.key, ex))}
-        />
       </div>
+
+      <ExercisePicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        library={library}
+        targetLabel={active ? `Week ${active.weekNumber} · ${active.name || `Day ${active.dayNumber}`}` : null}
+        addedNames={addedNames}
+        onPick={(ex) => active && update(addExercise(draft, active.key, ex))}
+      />
 
       <Sheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         title="Delete this program?"
         description="No client uses it. This cannot be undone."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={remove} disabled={pending}>
+              {pending ? 'Deleting…' : 'Delete program'}
+            </Button>
+          </>
+        }
       >
-        <footer className="flex justify-between gap-2">
-          <Button variant="secondary" onClick={() => setConfirmDelete(false)} disabled={pending}>
-            Cancel
-          </Button>
-          <Button variant="danger" onClick={remove} disabled={pending}>
-            {pending ? 'Deleting…' : 'Delete program'}
-          </Button>
-        </footer>
+        <p className="text-ui text-muted">The program and its prescriptions are removed.</p>
       </Sheet>
     </div>
   );

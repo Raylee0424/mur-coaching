@@ -1,16 +1,19 @@
 'use client';
 
 import clsx from 'clsx';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { Button, type ButtonVariant } from './Button';
+import { X } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import { Button, buttonClass, type ButtonVariant } from './Button';
+import { Icon } from './Icon';
 
 export type SheetVariant = 'modal' | 'drawer' | 'bottom';
 
 const PLACEMENT: Record<SheetVariant, string> = {
   // Bottom sheet on mobile; centred modal on md+.
   modal: 'm-auto mb-0 w-full max-w-lg rounded-t-lg md:mb-auto md:rounded-lg',
-  // Bottom sheet on mobile; right-hand drawer on md+.
-  drawer: 'm-auto mb-0 w-full rounded-t-lg md:my-0 md:ml-auto md:mr-0 md:h-dvh md:max-h-dvh md:w-[560px] md:max-w-[560px] md:rounded-none md:rounded-l-lg',
+  // Bottom sheet on mobile; right-hand drawer on md+, flush to the viewport edge.
+  drawer:
+    'm-auto mb-0 w-full rounded-t-lg md:my-0 md:ml-auto md:mr-0 md:h-dvh md:max-h-dvh md:w-drawer md:max-w-drawer md:rounded-none md:border-y-0 md:border-r-0',
   bottom: 'm-auto mb-0 w-full max-w-lg rounded-t-lg',
 };
 
@@ -18,13 +21,19 @@ interface SheetProps {
   open: boolean;
   onClose: () => void;
   title: string;
-  description?: string;
+  description?: ReactNode;
   variant?: SheetVariant;
+  /** Pinned under the title (e.g. a verdict strip). */
+  headerExtra?: ReactNode;
+  /** Pinned footer row. */
+  footer?: ReactNode;
+  /** Wraps body and footer in one <form> so SubmitButton's useFormStatus sees it. */
+  form?: Omit<ComponentProps<'form'>, 'children'>;
   children: ReactNode;
 }
 
 /** Native <dialog>: focus trap, Esc and inert background come from the browser. */
-export function Sheet({ open, onClose, title, description, variant = 'modal', children }: SheetProps) {
+export function Sheet({ open, onClose, title, description, variant = 'modal', headerExtra, footer, form, children }: SheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -35,6 +44,15 @@ export function Sheet({ open, onClose, title, description, variant = 'modal', ch
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  const body = (
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
+      {footer ? (
+        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-line bg-canvas-low px-5 py-3">{footer}</footer>
+      ) : null}
+    </>
+  );
+
   return (
     <dialog
       ref={ref}
@@ -44,29 +62,30 @@ export function Sheet({ open, onClose, title, description, variant = 'modal', ch
         if (e.target === ref.current) onClose();
       }}
       className={clsx(
-        'max-h-[90dvh] overflow-y-auto border border-line bg-card p-0 text-ink backdrop:bg-canvas/80 backdrop:backdrop-blur-sm',
+        // `open:flex`, never plain `flex`: plain display would override the UA rule that hides closed dialogs.
+        'max-h-[90dvh] overflow-hidden border border-line bg-card p-0 text-ink backdrop:bg-black/70 open:flex open:flex-col',
         PLACEMENT[variant],
       )}
     >
-      <div className="space-y-4 p-5 md:p-6">
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <h2 id={titleId} className="font-display text-xl font-bold">
-              {title}
-            </h2>
-            {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
-          </div>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-raised hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            ✕
-          </button>
-        </header>
-        {children}
-      </div>
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-5 py-4">
+        <div className="min-w-0">
+          <h2 id={titleId} className="font-display text-title font-semibold">
+            {title}
+          </h2>
+          {description ? <p className="mt-0.5 text-meta text-muted">{description}</p> : null}
+          {headerExtra}
+        </div>
+        <button type="button" aria-label="Close" onClick={onClose} className={buttonClass('ghost', 'w-8 shrink-0 px-0', 'sm')}>
+          <Icon icon={X} />
+        </button>
+      </header>
+      {form ? (
+        <form {...form} className={clsx('flex min-h-0 flex-1 flex-col', form.className)}>
+          {body}
+        </form>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col">{body}</div>
+      )}
     </dialog>
   );
 }

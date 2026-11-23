@@ -8,6 +8,7 @@ import { RosterTable } from '@/components/clients/RosterTable';
 import { parseRosterFilter, rosterQuery } from '@/components/clients/roster-model';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { StatStrip, type StatItem } from '@/components/ui/StatStrip';
 import { clientsApi, programsApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam } from '@/lib/form';
@@ -31,38 +32,30 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
 
   return (
     <>
-      <PageHeader
-        title="Roster overview"
-        subtitle="Your clients, their adherence and what the engine wants you to review."
-        actions={<InviteClientModal templates={templates} />}
-      />
+      <PageHeader title="Roster" meta={`${counts.ACTIVE} active`} actions={<InviteClientModal templates={templates} />} />
       <div className="space-y-6">
         {nobody ? (
-          <section className="rounded-lg border border-dashed border-line bg-card px-6 py-14 text-center">
-            <h2 className="font-display text-xl font-bold">No clients on your roster yet</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-              Invite your first athlete to assign a training split and let the progression engine track their last 3 sessions.
-            </p>
-            <div className="mt-5 flex justify-center">
-              <InviteClientModal templates={templates} />
-            </div>
-          </section>
+          <EmptyState title="No clients yet" action={<InviteClientModal templates={templates} />}>
+            Invite an athlete, assign a program, and the engine starts after their first logged sessions.
+          </EmptyState>
         ) : (
           <>
-            <KpiRow kpis={kpis} />
-            <RosterFilters counts={counts} filter={filter} q={q} />
+            <StatStrip label="Roster summary" items={kpiItems(kpis)} />
             {items.length === 0 ? (
-              <EmptyState title="No clients match">
-                {q || filter !== 'all' ? (
-                  <Link href="/coach/clients" className="font-semibold text-primary-soft underline">
-                    Clear filters
-                  </Link>
-                ) : (
-                  'Invite a client to get started.'
-                )}
-              </EmptyState>
+              <>
+                <RosterFilters counts={counts} filter={filter} q={q} />
+                <EmptyState title="No clients match">
+                  {q || filter !== 'all' ? (
+                    <Link href="/coach/clients" className="text-ink underline">
+                      Clear filters
+                    </Link>
+                  ) : (
+                    'Invite a client to get started.'
+                  )}
+                </EmptyState>
+              </>
             ) : (
-              <RosterTable clients={items} total={total} />
+              <RosterTable clients={items} total={total} toolbar={<RosterFilters counts={counts} filter={filter} q={q} />} />
             )}
           </>
         )}
@@ -72,26 +65,20 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
   );
 }
 
-function KpiRow({ kpis }: { kpis: RosterKpis }) {
-  const cards = [
-    { label: 'Active clients', value: kpis.activeClients, note: 'On your roster' },
+function kpiItems(kpis: RosterKpis): StatItem[] {
+  return [
+    { label: 'Active clients', value: String(kpis.activeClients) },
     {
-      label: 'Pending recommendations',
-      value: kpis.pendingRecommendations,
-      note: `Across ${kpis.pendingLifters} ${kpis.pendingLifters === 1 ? 'lifter' : 'lifters'}`,
+      label: 'Pending calls',
+      value: String(kpis.pendingRecommendations),
+      emphasis: kpis.pendingRecommendations > 0,
+      note: `across ${kpis.pendingLifters} ${kpis.pendingLifters === 1 ? 'lifter' : 'lifters'}`,
     },
-    { label: 'Sessions logged (7d)', value: kpis.sessionsLogged7d, note: 'Last 7 days' },
-    { label: 'Deloads flagged', value: kpis.deloadsFlagged, note: 'Awaiting your call' },
+    { label: 'Sessions logged · 7d', value: String(kpis.sessionsLogged7d) },
+    {
+      label: 'Deloads flagged',
+      value: String(kpis.deloadsFlagged),
+      delta: kpis.deloadsFlagged > 0 ? { text: 'awaiting review', tone: 'bad' } : null,
+    },
   ];
-  return (
-    <section aria-label="Roster summary" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {cards.map((c) => (
-        <article key={c.label} className="rounded-lg border border-line bg-card p-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">{c.label}</h2>
-          <p className="mt-2 font-display text-3xl font-extrabold tabular-nums">{c.value}</p>
-          <p className="mt-1 text-xs text-muted">{c.note}</p>
-        </article>
-      ))}
-    </section>
-  );
 }

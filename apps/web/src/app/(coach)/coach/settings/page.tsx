@@ -24,10 +24,7 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Engine rules"
-        subtitle="Your defaults for every client. Per-client overrides live in each client's settings."
-      />
+      <PageHeader title="Engine rules" />
       <EngineRulesEditor initial={rules} previewTargets={previewTargets} unit={user.weightUnit} />
     </>
   );

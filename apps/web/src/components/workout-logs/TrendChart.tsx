@@ -13,13 +13,13 @@ export function TrendChart({
   points,
   title,
   unit,
-  tone = 'primary',
+  tone = 'neutral',
   decimals = 1,
 }: {
   points: TrendPoint[];
   title: string;
   unit: string;
-  tone?: 'primary' | 'sky';
+  tone?: 'neutral' | 'sky';
   decimals?: number;
 }) {
   if (points.length === 0) return null;
@@ -30,8 +30,8 @@ export function TrendChart({
   const x = (i: number) => (points.length === 1 ? W / 2 : PAD_X + (i * (W - 2 * PAD_X)) / (points.length - 1));
   const y = (v: number) => (span === 0 ? H / 2 : PAD_Y + ((max - v) / span) * (H - 2 * PAD_Y));
   const fmt = (v: number) => (Math.round(v * 10 ** decimals) / 10 ** decimals).toString();
-  const stroke = tone === 'sky' ? 'stroke-sky' : 'stroke-primary';
-  const fill = tone === 'sky' ? 'fill-sky' : 'fill-primary';
+  const stroke = tone === 'sky' ? 'stroke-sky' : 'stroke-ink';
+  const fill = tone === 'sky' ? 'fill-sky' : 'fill-ink';
   const first = points[0];
   const last = points[points.length - 1];
 
@@ -49,19 +49,20 @@ export function TrendChart({
           <polyline
             fill="none"
             className={stroke}
-            strokeWidth="2.5"
+            strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
             points={points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')}
           />
         ) : null}
         {points.map((p, i) => (
-          <circle key={`${p.label}-${i}`} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? 4.5 : 3.5} className={fill}>
+          <circle key={`${p.label}-${i}`} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? 3 : 2} className={fill}>
             <title>{`${p.label}: ${fmt(p.value)} ${unit}`}</title>
           </circle>
         ))}
       </svg>
-      <div className="mt-1 flex justify-between text-[11px] text-muted tabular">
+      <div className="mt-1 flex justify-between font-mono text-micro text-faint">
         <span>{first?.label}</span>
         {points.length > 1 ? <span>{last?.label}</span> : null}
       </div>

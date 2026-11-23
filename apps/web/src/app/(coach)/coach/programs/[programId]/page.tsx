@@ -19,7 +19,7 @@ export default async function EditProgramPage({ params }: { params: Promise<{ pr
   ]);
   return (
     <>
-      <PageHeader title={program.name} subtitle="Edits keep logged history linked to each prescription." />
+      <PageHeader title={program.name} />
       <ProgramBuilder key={program.id} program={program} library={data.library} clients={data.clients} />
     </>
   );

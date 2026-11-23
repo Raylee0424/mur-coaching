@@ -6,6 +6,8 @@ import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExerciseDto, ListExercisesQuery, UpdateExerciseDto } from './dto/exercises.dto';
 import { ACCESSIBLE_LINK_STATUSES, isAccessibleLink } from '../clients/link-status';
+import { sortSafestFirst } from '../limitations/conflict';
+import { LimitationsService } from '../limitations/limitations.service';
 
 const toDto = (e: Exercise, overrideClientCount = 0): ExerciseDto => ({
   id: e.id,
@@ -36,7 +38,10 @@ function resolveReps(
 
 @Injectable()
 export class ExercisesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly limitations: LimitationsService,
+  ) {}
 
   /**
    * Global library plus the viewer's coach's custom exercises (a coach sees their own). Archived rows are hidden.
@@ -161,10 +166,9 @@ export class ExercisesService {
       include: { sets: { where: { isWarmup: false, reps: { gt: 0 } } }, workoutLog: { select: { performedAt: true } } },
     });
     const latest = new Map(logs.map((l) => [l.exerciseId, l]));
+    const flags = await this.limitations.flagsFor(user.id, alts, new Date().toISOString().slice(0, 10));
 
-    return {
-      exercise: { id: source.id, name: source.name, muscleGroup: source.muscleGroup },
-      alternatives: alts.map((a) => {
+    const options = alts.map((a) => {
         const log = latest.get(a.id);
         const top = log?.sets.reduce<(typeof log.sets)[number] | null>((best, s) => {
           if (!best) return s;
@@ -186,8 +190,13 @@ export class ExercisesService {
                   performedAt: log.workoutLog.performedAt.toISOString(),
                 }
               : null,
+          limitation: flags.get(a.id) ?? null,
         };
-      }),
+    });
+    return {
+      exercise: { id: source.id, name: source.name, muscleGroup: source.muscleGroup },
+      // Safe swaps first: unflagged, then CAUTION, then AVOID.
+      alternatives: sortSafestFirst(options),
     };
   }
 

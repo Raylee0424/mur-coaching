@@ -18,7 +18,7 @@ export function SubmitButton({ children, pendingLabel, disabled, ...rest }: Subm
         <>
           <span
             aria-hidden="true"
-            className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+            className="size-3.5 animate-spin rounded-full border-[1.5px] border-current border-t-transparent"
           />
           {pendingLabel ?? children}
         </>

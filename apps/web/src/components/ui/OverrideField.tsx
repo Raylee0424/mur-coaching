@@ -1,14 +1,16 @@
 'use client';
 
+import { PenLine } from 'lucide-react';
 import { useId } from 'react';
+import { Badge } from './Badge';
 import { FieldError, Input, Label } from './Field';
 
-/** Lime tag shown wherever a value differs from what would otherwise apply. */
+/** Tag shown wherever a value differs from what would otherwise apply. */
 export function OverriddenTag() {
   return (
-    <span className="inline-flex items-center rounded-full bg-primary-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary ring-1 ring-inset ring-primary/30">
+    <Badge tone="neutral" icon={PenLine}>
       Overridden
-    </span>
+    </Badge>
   );
 }
 
@@ -42,7 +44,7 @@ export function OverrideField({ label, value, onChange, defaultLabel, min, max, 
             <OverriddenTag />
             <button
               type="button"
-              className="text-xs font-semibold text-primary-soft underline hover:text-primary"
+              className="text-meta font-medium text-muted underline hover:text-ink"
               onClick={() => onChange('')}
             >
               Reset
@@ -63,7 +65,7 @@ export function OverrideField({ label, value, onChange, defaultLabel, min, max, 
         aria-describedby={`${id}-help${error ? ` ${id}-error` : ''}`}
         onChange={(e) => onChange(e.target.value)}
       />
-      <p id={`${id}-help`} className="mt-1 text-xs text-muted">
+      <p id={`${id}-help`} className="mt-1 text-meta text-muted">
         {defaultLabel}
       </p>
       <FieldError id={`${id}-error`}>{error}</FieldError>

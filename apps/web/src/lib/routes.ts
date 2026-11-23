@@ -20,26 +20,28 @@ export function safeNext(next: string | null | undefined, role: Role): string | 
   return next === area || next.startsWith(`${area}/`) ? next : null;
 }
 
+/** String key so server layouts can pass nav to client components; `shell/nav-icons.ts` maps it to an icon. */
+export type NavIconKey = 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'user';
+
 export interface NavItem {
   href: string;
   label: string;
+  icon: NavIconKey;
   /** Match the exact path only (otherwise prefix match). */
   exact?: boolean;
-  /** Feature not built yet: shown with a "Soon" tag. */
-  soon?: boolean;
 }
 
 export const COACH_NAV: readonly NavItem[] = [
-  { href: '/coach/clients', label: 'Clients' },
-  { href: '/coach/progression', label: 'Progression' },
-  { href: '/coach/exercises', label: 'Exercises' },
-  { href: '/coach/programs', label: 'Programs' },
-  { href: '/coach/settings', label: 'Settings' },
+  { href: '/coach/clients', label: 'Roster', icon: 'users' },
+  { href: '/coach/progression', label: 'Progression queue', icon: 'queue' },
+  { href: '/coach/exercises', label: 'Exercise library', icon: 'dumbbell' },
+  { href: '/coach/programs', label: 'Programs', icon: 'calendar-range' },
+  { href: '/coach/settings', label: 'Engine rules', icon: 'sliders' },
 ];
 
 /** Phone bottom tab bar (and desktop sidebar). Lift detail pages count as History. */
 export const CLIENT_NAV: readonly NavItem[] = [
-  { href: '/client', label: 'Today', exact: true },
-  { href: '/client/history', label: 'History' },
-  { href: '/client/profile', label: 'Profile' },
+  { href: '/client', label: 'Today', exact: true, icon: 'today' },
+  { href: '/client/history', label: 'History', icon: 'history' },
+  { href: '/client/profile', label: 'Profile', icon: 'user' },
 ];

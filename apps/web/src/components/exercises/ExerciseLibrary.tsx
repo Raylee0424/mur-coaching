@@ -1,6 +1,8 @@
 'use client';
 
-import { useId, useState, useTransition } from 'react';
+import clsx from 'clsx';
+import { Archive, Copy, Pencil, Plus } from 'lucide-react';
+import { useId, useState, useTransition, type ReactNode } from 'react';
 import { ENGINE_LIMITS, MUSCLE_GROUP_LABELS, MuscleGroup } from '@coaching/shared';
 import type { ExerciseDto } from '@coaching/shared';
 import { archiveExercise, duplicateExercise, saveExercise } from '@/actions/exercises';
@@ -8,23 +10,36 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FieldError, FormError, Input, Label, Select } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Sheet } from '@/components/ui/Sheet';
+import { TABLE, TD, TD_NUM, TH, THEAD, TR } from '@/components/ui/table';
+import { useToast } from '@/components/ui/Toast';
 import { toNumber } from '@/lib/format';
 import { EMPTY_DRAFT, draftFromExercise, formatOverrides, formatRepRange, validateExercise, type ExerciseDraft, type ExerciseErrors } from './exercise-model';
 
 type Editing = { mode: 'new' } | { mode: 'edit'; exercise: ExerciseDto };
 
-export function ExerciseLibrary({ exercises, coachId, filtered }: { exercises: ExerciseDto[]; coachId: string; filtered: boolean }) {
+export function ExerciseLibrary({
+  exercises,
+  coachId,
+  filtered,
+  filters,
+}: {
+  exercises: ExerciseDto[];
+  coachId: string;
+  filtered: boolean;
+  filters?: ReactNode;
+}) {
+  const toast = useToast();
   const [editing, setEditing] = useState<Editing | null>(null);
   const [deleting, setDeleting] = useState<ExerciseDto | null>(null);
-  const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function duplicate(e: ExerciseDto): void {
-    setNotice(null);
     startTransition(async () => {
       const r = await duplicateExercise(e.id);
-      setNotice(r.ok ? { kind: 'ok', text: `Created “${r.data.name}”. Edit it to set its rules.` } : { kind: 'error', text: r.error });
+      toast.show(r.ok ? { message: `Duplicated as ${r.data.name}`, tone: 'ok' } : { message: r.error, tone: 'error' });
     });
   }
 
@@ -34,123 +49,122 @@ export function ExerciseLibrary({ exercises, coachId, filtered }: { exercises: E
     startTransition(async () => {
       const r = await archiveExercise(target.id);
       setDeleting(null);
-      setNotice(r.ok ? { kind: 'ok', text: `Deleted “${target.name}”. Logs and programs that use it are unchanged.` } : { kind: 'error', text: r.error });
+      toast.show(r.ok ? { message: `Archived ${target.name}`, tone: 'ok' } : { message: r.error, tone: 'error' });
     });
   }
 
+  const iconBtn = 'w-8 px-0';
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">Configure progression increments, RPE caps and target rep ranges per movement.</p>
-        <Button onClick={() => setEditing({ mode: 'new' })}>
-          <svg aria-hidden="true" viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M10 4v12M4 10h12" />
-          </svg>
-          New exercise
-        </Button>
+    <>
+      <PageHeader
+        title="Exercise library"
+        meta={`${exercises.length} ${exercises.length === 1 ? 'exercise' : 'exercises'}`}
+        actions={
+          <Button size="sm" onClick={() => setEditing({ mode: 'new' })}>
+            <Icon icon={Plus} />
+            New exercise
+          </Button>
+        }
+      />
+      <div className="space-y-4">
+        {filters}
+        {exercises.length === 0 ? (
+          <EmptyState title={filtered ? 'No exercises match' : 'No exercises yet'}>
+            {filtered ? 'Try clearing the filters.' : 'Add your first exercise to start building programs.'}
+          </EmptyState>
+        ) : (
+          <div className="overflow-x-auto rounded-md border border-line bg-card">
+            <table className={clsx(TABLE, 'min-w-[56rem]')}>
+              <caption className="sr-only">Exercise library</caption>
+              <thead className={THEAD}>
+                <tr>
+                  <th scope="col" className={TH}>Name</th>
+                  <th scope="col" className={TH}>Muscle</th>
+                  <th scope="col" className={TH}>Equipment</th>
+                  <th scope="col" className={clsx(TH, 'text-right')}>Increment</th>
+                  <th scope="col" className={clsx(TH, 'text-right')}>RPE cap</th>
+                  <th scope="col" className={clsx(TH, 'text-right')}>Rep range</th>
+                  <th scope="col" className={clsx(TH, 'text-right')}>Overrides</th>
+                  <th scope="col" className={TH}>
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {exercises.map((e) => {
+                  const own = e.coachId === coachId;
+                  return (
+                    <tr key={e.id} className={TR}>
+                      <td className={TD}>
+                        <span className="flex items-center gap-2">
+                          <span className="font-medium">{e.name}</span>
+                          {!own ? <Badge tone="slate">Global</Badge> : null}
+                        </span>
+                      </td>
+                      <td className={TD}>{MUSCLE_GROUP_LABELS[e.muscleGroup]}</td>
+                      <td className={clsx(TD, 'text-muted')}>{e.equipment || <span className="text-faint">—</span>}</td>
+                      <td className={TD_NUM}>+{toNumber(e.loadIncrementKg)} kg</td>
+                      <td className={clsx(TD_NUM, e.rpeCap === null && 'text-faint')} title={e.rpeCap === null ? 'Inherits engine rule' : undefined}>
+                        {e.rpeCap === null ? '—' : toNumber(e.rpeCap)}
+                      </td>
+                      <td className={clsx(TD_NUM, formatRepRange(e) === '—' && 'text-faint')}>{formatRepRange(e)}</td>
+                      <td className={clsx(TD_NUM, e.overrideClientCount === 0 && 'text-faint')}>{e.overrideClientCount}</td>
+                      <td className={TD}>
+                        <div className="flex justify-end gap-1">
+                          {own ? (
+                            <Button variant="ghost" size="sm" className={iconBtn} aria-label={`Edit ${e.name}`} onClick={() => setEditing({ mode: 'edit', exercise: e })}>
+                              <Icon icon={Pencil} />
+                            </Button>
+                          ) : null}
+                          <Button variant="ghost" size="sm" className={iconBtn} aria-label={`Duplicate ${e.name}`} disabled={pending} onClick={() => duplicate(e)}>
+                            <Icon icon={Copy} />
+                          </Button>
+                          {own ? (
+                            <Button variant="ghost" size="sm" className={iconBtn} aria-label={`Archive ${e.name}`} onClick={() => setDeleting(e)}>
+                              <Icon icon={Archive} />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {editing ? <ExerciseDrawer editing={editing} onClose={() => setEditing(null)} /> : null}
+
+        {deleting ? (
+          <Sheet
+            open
+            onClose={() => setDeleting(null)}
+            title="Archive exercise?"
+            description={`Archiving “${deleting.name}” removes it from the library and archives its progression rules. Historical client logs remain intact.`}
+            footer={
+              <>
+                <Button variant="ghost" onClick={() => setDeleting(null)} disabled={pending}>
+                  Cancel
+                </Button>
+                <Button variant="danger" onClick={remove} disabled={pending}>
+                  {pending ? 'Archiving…' : 'Archive'}
+                </Button>
+              </>
+            }
+          >
+            <p className="text-ui text-muted">This cannot be undone from here.</p>
+          </Sheet>
+        ) : null}
       </div>
-
-      <p role="status" aria-live="polite" className={notice?.kind === 'error' ? 'min-h-5 text-sm font-medium text-danger' : 'min-h-5 text-sm font-medium text-emerald'}>
-        {notice?.text}
-      </p>
-
-      {exercises.length === 0 ? (
-        <EmptyState title={filtered ? 'No exercises match' : 'No exercises yet'}>
-          {filtered ? 'Try clearing the filters.' : 'Add your first exercise to start building programs.'}
-        </EmptyState>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-line bg-card">
-          <table className="w-full min-w-[56rem] text-left text-sm">
-            <caption className="sr-only">Exercise library</caption>
-            <thead className="border-b border-line bg-raised text-xs uppercase tracking-wide text-muted">
-              <tr>
-                <th scope="col" className="px-4 py-3 font-semibold">Exercise name</th>
-                <th scope="col" className="px-3 py-3 font-semibold">Muscle group</th>
-                <th scope="col" className="px-3 py-3 font-semibold">Equipment</th>
-                <th scope="col" className="px-3 py-3 font-semibold">Increment</th>
-                <th scope="col" className="px-3 py-3 font-semibold">RPE cap</th>
-                <th scope="col" className="px-3 py-3 font-semibold">Rep range</th>
-                <th scope="col" className="px-3 py-3 font-semibold">Overrides</th>
-                <th scope="col" className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="tabular-nums">
-              {exercises.map((e) => {
-                const own = e.coachId === coachId;
-                return (
-                  <tr key={e.id} className="border-b border-line last:border-0 hover:bg-raised/40">
-                    <td className="px-4 py-3">
-                      <span className="font-semibold">{e.name}</span>
-                      {!own ? (
-                        <span className="mt-1 block whitespace-nowrap">
-                          <Badge tone="slate">Global</Badge>
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-3">{MUSCLE_GROUP_LABELS[e.muscleGroup]}</td>
-                    <td className="px-3 py-3">{e.equipment || '—'}</td>
-                    <td className="px-3 py-3">+{toNumber(e.loadIncrementKg)} kg</td>
-                    <td className="px-3 py-3">{e.rpeCap === null ? <span className="text-muted">—</span> : toNumber(e.rpeCap)}</td>
-                    <td className="px-3 py-3">{formatRepRange(e)}</td>
-                    <td className="px-3 py-3">
-                      {e.overrideClientCount > 0 ? (
-                        <span className="whitespace-nowrap">
-                          <Badge tone="indigo">{formatOverrides(e.overrideClientCount)}</Badge>
-                        </span>
-                      ) : (
-                        <span className="text-muted">0</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="secondary" className="min-h-9 py-1" aria-label={`Duplicate ${e.name}`} disabled={pending} onClick={() => duplicate(e)}>
-                          Duplicate
-                        </Button>
-                        {own ? (
-                          <>
-                            <Button variant="secondary" className="min-h-9 py-1" aria-label={`Edit ${e.name}`} onClick={() => setEditing({ mode: 'edit', exercise: e })}>
-                              Edit
-                            </Button>
-                            <Button variant="secondary" className="min-h-9 py-1 text-danger" aria-label={`Delete ${e.name}`} onClick={() => setDeleting(e)}>
-                              Delete
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {editing ? <ExerciseDrawer editing={editing} onClose={() => setEditing(null)} onSaved={(text) => setNotice({ kind: 'ok', text })} /> : null}
-
-      {deleting ? (
-        <Sheet
-          open
-          onClose={() => setDeleting(null)}
-          title="Delete exercise?"
-          description={`Removing “${deleting.name}” from the library archives its progression rules. Historical client logs remain intact.`}
-        >
-          <footer className="flex justify-between gap-2">
-            <Button variant="secondary" onClick={() => setDeleting(null)} disabled={pending}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={remove} disabled={pending}>
-              {pending ? 'Deleting…' : 'Delete'}
-            </Button>
-          </footer>
-        </Sheet>
-      ) : null}
-    </div>
+    </>
   );
 }
 
-function ExerciseDrawer({ editing, onClose, onSaved }: { editing: Editing; onClose: () => void; onSaved: (text: string) => void }) {
+function ExerciseDrawer({ editing, onClose }: { editing: Editing; onClose: () => void }) {
   const id = useId();
+  const toast = useToast();
   const exercise = editing.mode === 'edit' ? editing.exercise : null;
   const [draft, setDraft] = useState<ExerciseDraft>(() => (exercise ? draftFromExercise(exercise) : EMPTY_DRAFT));
   const [errors, setErrors] = useState<ExerciseErrors>({});
@@ -178,7 +192,7 @@ function ExerciseDrawer({ editing, onClose, onSaved }: { editing: Editing; onClo
     startTransition(async () => {
       const r = await saveExercise(exercise?.id ?? null, v.body);
       if (r.ok) {
-        onSaved(exercise ? `Saved “${r.data.name}”.` : `Added “${r.data.name}”.`);
+        toast.show({ message: exercise ? `Saved ${r.data.name}` : `Added ${r.data.name}`, tone: 'ok' });
         onClose();
       } else setFormError(r.error);
     });
@@ -187,15 +201,31 @@ function ExerciseDrawer({ editing, onClose, onSaved }: { editing: Editing; onClo
   const err = (key: keyof ExerciseDraft) => <FieldError id={`${id}-${key}-error`}>{errors[key]}</FieldError>;
 
   return (
-    <Sheet open variant="drawer" onClose={onClose} title={exercise ? 'Edit exercise' : 'New exercise'} description="Empty rule fields inherit your engine rules.">
-      <form
-        className="space-y-5"
-        onSubmit={(e) => {
+    <Sheet
+      open
+      variant="drawer"
+      onClose={onClose}
+      title={exercise ? 'Edit exercise' : 'New exercise'}
+      description="Empty rule fields inherit your engine rules."
+      form={{
+        noValidate: true,
+        onSubmit: (e) => {
           e.preventDefault();
           save();
-        }}
-        noValidate
-      >
+        },
+      }}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={pending}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {pending ? 'Saving…' : 'Save exercise'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
         <div>
           <Label htmlFor={`${id}-name`}>Exercise name</Label>
           <Input {...bind('name')} maxLength={80} autoComplete="off" />
@@ -234,7 +264,7 @@ function ExerciseDrawer({ editing, onClose, onSaved }: { editing: Editing; onClo
           </div>
         </div>
         <fieldset className="grid gap-4 sm:grid-cols-2">
-          <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">Target rep range</legend>
+          <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Target rep range</legend>
           <div>
             <Label htmlFor={`${id}-repsMin`} className="sr-only">Reps min</Label>
             <Input {...bind('repsMin')} type="number" inputMode="numeric" min={1} max={50} step={1} placeholder="Min" />
@@ -247,20 +277,12 @@ function ExerciseDrawer({ editing, onClose, onSaved }: { editing: Editing; onClo
           </div>
         </fieldset>
         {exercise && exercise.overrideClientCount > 0 ? (
-          <p className="rounded-md bg-raised px-3 py-2 text-xs text-muted">
+          <p className="border-l-2 border-l-ink bg-raised px-3 py-2 text-meta text-muted">
             {formatOverrides(exercise.overrideClientCount)} have their own engine overrides, which take precedence over these rules.
           </p>
         ) : null}
         <FormError>{formError}</FormError>
-        <footer className="flex justify-between gap-2 border-t border-line pt-4">
-          <Button variant="secondary" onClick={onClose} disabled={pending}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Saving…' : 'Save exercise'}
-          </Button>
-        </footer>
-      </form>
+      </div>
     </Sheet>
   );
 }

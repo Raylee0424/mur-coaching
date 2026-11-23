@@ -1,5 +1,6 @@
 import type { MuscleGroup } from './enums';
 import type { DecimalString, IsoDateString } from './common';
+import type { LimitationFlag } from './limitations';
 
 export interface ExerciseDto {
   id: string;
@@ -44,6 +45,8 @@ export interface ExerciseAlternativeDto {
   equipment: string | null;
   /** From the client's own latest top set of this exercise; null if never logged. */
   suggested: { weightKg: DecimalString; reps: number; rpe: DecimalString | null; performedAt: IsoDateString } | null;
+  /** Active limitation that covers this exercise; AVOID options sort last. */
+  limitation: LimitationFlag | null;
 }
 
 export interface ExerciseAlternativesDto {

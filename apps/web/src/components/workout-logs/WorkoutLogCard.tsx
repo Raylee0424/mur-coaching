@@ -7,21 +7,21 @@ import { SetLine, SetText } from './SetLine';
 /** `editable`: the client's own history, where each set opens the edit sheet. */
 export function WorkoutLogCard({ log, unit, editable = false }: { log: WorkoutLogDto; unit: WeightUnit; editable?: boolean }) {
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-3 p-4">
       <header>
-        <h3 className="font-semibold">{formatDate(log.performedAt)}</h3>
-        {log.notes ? <p className="mt-0.5 text-sm text-muted">{log.notes}</p> : null}
+        <h3 className="font-mono text-ui">{formatDate(log.performedAt)}</h3>
+        {log.notes ? <p className="mt-0.5 text-meta text-muted">{log.notes}</p> : null}
       </header>
       {log.exerciseLogs.map((exerciseLog) => (
         <section key={exerciseLog.id}>
-          <h4 className="text-sm font-semibold">{exerciseLog.exercise.name}</h4>
+          <h4 className="text-ui font-medium">{exerciseLog.exercise.name}</h4>
           {exerciseLog.swappedFrom ? (
-            <p className="text-xs text-amber">
+            <p className="text-meta text-amber">
               Swapped from {exerciseLog.swappedFrom.name}
               {exerciseLog.swapReason ? ` · ${exerciseLog.swapReason}` : ''}
             </p>
           ) : null}
-          <ul className="mt-1 space-y-0.5">
+          <ul className="mt-1">
             {exerciseLog.sets.map((set) =>
               editable ? (
                 <EditSetButton key={set.id} log={log} set={set} exerciseName={exerciseLog.exercise.name} unit={unit}>
@@ -34,7 +34,7 @@ export function WorkoutLogCard({ log, unit, editable = false }: { log: WorkoutLo
           </ul>
         </section>
       ))}
-      {editable ? <p className="text-xs text-muted">Tap a set to fix it.</p> : null}
+      {editable ? <p className="text-meta text-faint">Tap a set to fix it.</p> : null}
     </Card>
   );
 }

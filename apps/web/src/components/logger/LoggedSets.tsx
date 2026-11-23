@@ -1,4 +1,6 @@
+import clsx from 'clsx';
 import type { WeightUnit } from '@coaching/shared';
+import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
 import { unitLabel } from '@/lib/units';
 import { formatStepValue, setValuesOf, type DraftSet } from './logger-model';
 
@@ -6,33 +8,51 @@ import { formatStepValue, setValuesOf, type DraftSet } from './logger-model';
 export function LoggedSets({ sets, unit, onEdit }: { sets: DraftSet[]; unit: WeightUnit; onEdit: (setKey: string) => void }) {
   if (sets.length === 0) return null;
   return (
-    <section aria-labelledby="logged-sets" className="space-y-2.5">
-      <h2 id="logged-sets" className="font-sans text-[11px] font-semibold uppercase tracking-wider text-muted">
+    <section aria-labelledby="logged-sets">
+      <h2 id="logged-sets" className="mb-2 font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
         Logged sets
       </h2>
-      <ul className="space-y-2.5 tabular">
-        {sets.map((set, i) => {
-          const v = setValuesOf(set);
-          return (
-            <li key={set.key}>
-              <button
-                type="button"
-                onClick={() => onEdit(set.key)}
-                aria-label={`Edit set ${i + 1}: ${formatStepValue('weight', v.weight)} ${unitLabel(unit)} for ${v.reps} reps at RPE ${formatStepValue('rpe', v.rpe)}`}
-                className="flex min-h-12 w-full items-center justify-between gap-3 rounded-md border border-line bg-card px-4 py-3 text-left hover:bg-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-              >
-                <span className="flex items-center gap-2.5 text-sm font-semibold">
-                  <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5 shrink-0 text-primary" fill="currentColor">
-                    <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1.2 14.4-4-4 1.4-1.4 2.6 2.6 5-5 1.4 1.4-6.4 6.4z" />
-                  </svg>
-                  Set {i + 1} · {formatStepValue('weight', v.weight)} {unitLabel(unit)} × {v.reps}
-                </span>
-                <span className="text-xs text-muted">RPE {formatStepValue('rpe', v.rpe)} · Tap to edit</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="overflow-hidden rounded-md border border-line">
+        <table className={TABLE}>
+          <caption className="sr-only">Sets logged for this exercise. Select a row to edit it.</caption>
+          <thead className={THEAD}>
+            <tr>
+              <th scope="col" className={TH}>Set</th>
+              <th scope="col" className={TH_NUM}>Load</th>
+              <th scope="col" className={TH_NUM}>Reps</th>
+              <th scope="col" className={TH_NUM}>RPE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sets.map((set, i) => {
+              const v = setValuesOf(set);
+              return (
+                <tr
+                  key={set.key}
+                  className={clsx(TR, 'cursor-pointer')}
+                  onClick={() => onEdit(set.key)}
+                >
+                  <td className={clsx(TD, 'h-12 font-mono text-faint')}>
+                    <button
+                      type="button"
+                      aria-label={`Edit set ${i + 1}: ${formatStepValue('weight', v.weight)} ${unitLabel(unit)} for ${v.reps} reps at RPE ${formatStepValue('rpe', v.rpe)}`}
+                      className="-mx-2 px-2 py-2 text-left"
+                    >
+                      {i + 1}
+                    </button>
+                  </td>
+                  <td className={clsx(TD_NUM, 'h-12')}>
+                    {formatStepValue('weight', v.weight)}
+                    <span className="ml-1 text-faint">{unitLabel(unit)}</span>
+                  </td>
+                  <td className={clsx(TD_NUM, 'h-12')}>{v.reps}</td>
+                  <td className={clsx(TD_NUM, 'h-12')}>{formatStepValue('rpe', v.rpe)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

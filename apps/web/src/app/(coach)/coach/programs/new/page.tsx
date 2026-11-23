@@ -9,7 +9,7 @@ export default async function NewProgramPage() {
   const { library, clients } = await loadBuilderData();
   return (
     <>
-      <PageHeader title="New program" subtitle="Lay out the training days, then save it as a template." />
+      <PageHeader title="New program" />
       <ProgramBuilder program={null} library={library} clients={clients} />
     </>
   );

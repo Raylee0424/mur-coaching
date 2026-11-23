@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { Wordmark } from '@/components/shell/Wordmark';
 import { getCurrentUser } from '@/lib/auth';
 
 /** No app shell: onboarding is a focused, full-screen flow. Auth is enforced by middleware and getCurrentUser. */
@@ -7,12 +8,11 @@ export default async function OnboardingLayout({ children }: { children: ReactNo
   const user = await getCurrentUser();
   if (!user.emailVerified) redirect('/verify');
   return (
-    <div className="min-h-dvh bg-canvas px-4 py-8 md:py-14">
-      <p className="mx-auto mb-8 flex max-w-lg items-center gap-2 font-display text-lg font-extrabold tracking-tight">
-        <span aria-hidden="true" className="size-2.5 rounded-full bg-primary" />
-        MUR Coaching
-      </p>
-      <main>{children}</main>
+    <div className="min-h-dvh bg-canvas">
+      <header className="flex h-topbar items-center border-b border-line px-4 sm:px-6">
+        <Wordmark />
+      </header>
+      <main className="mx-auto max-w-2xl px-4 py-10">{children}</main>
     </div>
   );
 }
