@@ -3,7 +3,18 @@
 import clsx from 'clsx';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useId, useMemo, useState, useTransition } from 'react';
-import { LIMITATION_SEVERITY_LABELS, LimitationSeverity, LimitationTarget, MUSCLE_GROUP_LABELS, MuscleGroup } from '@coaching/shared';
+import {
+  JOINT_LABELS,
+  Joint,
+  LIMITATION_SEVERITY_LABELS,
+  LIMITATION_TARGET_LABELS,
+  LimitationSeverity,
+  LimitationTarget,
+  MOVEMENT_PATTERN_LABELS,
+  MUSCLE_GROUP_LABELS,
+  MovementPattern,
+  MuscleGroup,
+} from '@coaching/shared';
 import type { LimitationDto } from '@coaching/shared';
 import { createLimitation, deleteLimitation, updateLimitation } from '@/actions/limitations';
 import { Badge } from '@/components/ui/Badge';
@@ -20,6 +31,7 @@ import { LimitationBadge } from './LimitationBadge';
 import {
   draftFrom,
   emptyDraft,
+  patternImpact,
   sortLimitations,
   statusOf,
   targetLabel,
@@ -105,6 +117,7 @@ export function LimitationsPanel({ clientId, limitations, exercises, today, larg
                           <span className={status === 'active' ? 'font-medium text-ink' : ''}>{targetLabel(l)}</span>
                           {status !== 'active' ? <Badge tone="slate">{status === 'ended' ? 'Ended' : 'Upcoming'}</Badge> : null}
                         </span>
+                        {patternImpact(l) ? <span className="block text-meta text-muted">Pattern impact: {patternImpact(l)}</span> : null}
                         {l.note ? <span className="block text-meta text-muted">{l.note}</span> : null}
                       </td>
                       <td className={TD}>
@@ -245,16 +258,16 @@ function LimitationSheet({
           <>
             <fieldset>
               <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Affects</legend>
-              <div className="flex gap-0.5 rounded border border-line bg-canvas-low p-0.5">
-                {([LimitationTarget.MUSCLE, LimitationTarget.EXERCISE] as const).map((t) => (
+              <div className="grid grid-cols-2 gap-0.5 rounded border border-line bg-canvas-low p-0.5 sm:grid-cols-4">
+                {Object.values(LimitationTarget).map((t) => (
                   <button
                     key={t}
                     type="button"
                     aria-pressed={draft.target === t}
                     onClick={() => patch({ target: t })}
-                    className={clsx('h-9 flex-1 rounded-sm text-ui', draft.target === t ? 'bg-raised text-ink' : 'text-muted hover:text-ink')}
+                    className={clsx('min-h-9 rounded-sm px-2 text-ui', draft.target === t ? 'bg-raised text-ink' : 'text-muted hover:text-ink')}
                   >
-                    {t === LimitationTarget.MUSCLE ? 'Muscle group' : 'One exercise'}
+                    {LIMITATION_TARGET_LABELS[t]}
                   </button>
                 ))}
               </div>
@@ -273,6 +286,39 @@ function LimitationSheet({
                   ))}
                 </Select>
                 <FieldError>{errors.muscleGroup}</FieldError>
+              </div>
+            ) : draft.target === LimitationTarget.JOINT ? (
+              <div>
+                <Label htmlFor={`${id}-joint`}>Joint or area</Label>
+                <Select id={`${id}-joint`} size={control} value={draft.joint} aria-invalid={errors.joint ? true : undefined} onChange={(e) => patch({ joint: e.target.value as Joint })}>
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {Object.values(Joint).map((j) => (
+                    <option key={j} value={j}>
+                      {JOINT_LABELS[j]}
+                    </option>
+                  ))}
+                </Select>
+                <FieldError>{errors.joint}</FieldError>
+                {draft.joint ? (
+                  <p className="mt-1 text-meta text-muted">Flags exercises tagged: {patternImpact({ target: LimitationTarget.JOINT, joint: draft.joint, pattern: null })}.</p>
+                ) : null}
+              </div>
+            ) : draft.target === LimitationTarget.PATTERN ? (
+              <div>
+                <Label htmlFor={`${id}-pattern`}>Movement pattern</Label>
+                <Select id={`${id}-pattern`} size={control} value={draft.pattern} aria-invalid={errors.pattern ? true : undefined} onChange={(e) => patch({ pattern: e.target.value as MovementPattern })}>
+                  <option value="" disabled>
+                    Choose…
+                  </option>
+                  {Object.values(MovementPattern).map((p) => (
+                    <option key={p} value={p}>
+                      {MOVEMENT_PATTERN_LABELS[p]}
+                    </option>
+                  ))}
+                </Select>
+                <FieldError>{errors.pattern}</FieldError>
               </div>
             ) : (
               <div>

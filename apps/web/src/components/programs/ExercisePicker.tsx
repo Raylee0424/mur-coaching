@@ -2,7 +2,8 @@
 
 import { Check } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { MUSCLE_GROUP_LABELS, MuscleGroup } from '@coaching/shared';
+import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS, MuscleGroup } from '@coaching/shared';
+import type { Equipment } from '@coaching/shared';
 import type { ExerciseDto } from '@coaching/shared';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Field';
@@ -30,7 +31,7 @@ export function ExercisePicker({
 }) {
   const [q, setQ] = useState('');
   const [group, setGroup] = useState<MuscleGroup | ''>('');
-  const [equipment, setEquipment] = useState('');
+  const [equipment, setEquipment] = useState<Equipment | ''>('');
   const results = useMemo(() => filterExercises(library, { q, group, equipment }), [library, q, group, equipment]);
   const groups = useMemo(() => groupCounts(library, Object.values(MuscleGroup)), [library]);
   const equipments = useMemo(() => equipmentOptions(library), [library]);
@@ -75,11 +76,11 @@ export function ExercisePicker({
               <label htmlFor="picker-equipment" className="sr-only">
                 Equipment
               </label>
-              <Select id="picker-equipment" value={equipment} onChange={(e) => setEquipment(e.target.value)}>
+              <Select id="picker-equipment" value={equipment} onChange={(e) => setEquipment(e.target.value as Equipment | '')}>
                 <option value="">Any equipment</option>
                 {equipments.map((e) => (
                   <option key={e} value={e}>
-                    {e}
+                    {EQUIPMENT_LABELS[e]}
                   </option>
                 ))}
               </Select>
@@ -106,7 +107,7 @@ export function ExercisePicker({
                 </span>
                 <span className="font-mono text-micro uppercase text-faint">
                   {MUSCLE_GROUP_LABELS[e.muscleGroup]}
-                  {e.equipment ? ` · ${e.equipment}` : ''}
+                  {e.equipment ? ` · ${EQUIPMENT_LABELS[e.equipment]}` : ''}
                 </span>
                 <span className="sr-only">Add {e.name}</span>
               </button>

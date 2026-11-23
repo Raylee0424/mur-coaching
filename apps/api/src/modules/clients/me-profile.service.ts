@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type { ClientProfileInputDto } from './dto/client-settings.dto';
 import type { BaselineInputDto } from './dto/me-profile.dto';
 import { isAccessibleLink } from './link-status';
+import { exerciseScope } from '../exercises/exercise-visibility';
 
 const PROFILE_KEYS = [
   'goals',
@@ -64,7 +65,7 @@ export class MeProfileService {
     return this.get(clientId);
   }
 
-  /** Upserts the submitted lifts. Exercises must be in this client's library (global or their coach's). */
+  /** Upserts the submitted lifts. Exercises must be in this client's library (global, their coach's or their own). */
   async setBaselines(clientId: string, rows: BaselineInputDto[]): Promise<MeProfileDto> {
     const ids = [...new Set(rows.map((r) => r.exerciseId))];
     if (ids.length !== rows.length) throw new BadRequestException('Each exercise once');
@@ -76,7 +77,7 @@ export class MeProfileService {
     const link = await this.prisma.coachClient.findUnique({ where: { clientId } });
     const coachId = link && isAccessibleLink(link.status) ? link.coachId : null;
     const visible = await this.prisma.exercise.count({
-      where: { id: { in: ids }, OR: [{ coachId: null }, ...(coachId ? [{ coachId }] : [])] },
+      where: { id: { in: ids }, ...exerciseScope({ coachId, ownerId: clientId }) },
     });
     if (visible !== ids.length) throw new BadRequestException('Unknown exercise');
 

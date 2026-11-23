@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ProgressionService } from '../progression/progression.service';
 import { formatSwapReason } from '@coaching/shared';
 import { isAccessibleLink } from '../clients/link-status';
+import { exerciseScope } from '../exercises/exercise-visibility';
 import {
   CreateWorkoutLogDto,
   ExerciseLogDto,
@@ -148,6 +149,7 @@ export class WorkoutLogsService {
     return logs.map((l, i) => ({
       order: i + 1,
       exercise: { connect: { id: l.exerciseId } },
+      notes: l.notes?.trim() || null,
       ...(l.workoutExerciseId ? { workoutExercise: { connect: { id: l.workoutExerciseId } } } : {}),
       ...(l.swappedFromExerciseId && l.swapReason
         ? {
@@ -162,6 +164,9 @@ export class WorkoutLogsService {
           weightKg: s.weightKg,
           rpe: s.rpe ?? null,
           isWarmup: s.isWarmup ?? false,
+          rir: s.rir ?? null,
+          tempo: s.tempo ?? null,
+          restSeconds: s.restSeconds ?? null,
         })),
       },
     }));
@@ -213,7 +218,7 @@ export class WorkoutLogsService {
       ]),
     ];
     const exercises = await this.prisma.exercise.findMany({
-      where: { id: { in: exerciseIds }, OR: [{ coachId: null }, ...(coachId ? [{ coachId }] : [])] },
+      where: { id: { in: exerciseIds }, ...exerciseScope({ coachId, ownerId: clientId }) },
       select: { id: true },
     });
     if (exercises.length !== exerciseIds.length) throw new BadRequestException('Unknown exercise');

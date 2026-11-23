@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { LimitationDto } from '@coaching/shared';
-import { emptyDraft, sortLimitations, statusOf, targetLabel, validateDraft } from './limitations-model';
+import { emptyDraft, patternImpact, sortLimitations, statusOf, targetLabel, validateDraft } from './limitations-model';
 
 const TODAY = '2026-11-24';
 const dto = (over: Partial<LimitationDto>): LimitationDto => ({
-  id: 'l', clientId: 'c', target: 'MUSCLE', muscleGroup: 'SHOULDERS', exerciseId: null, exerciseName: null,
+  id: 'l', clientId: 'c', target: 'MUSCLE', muscleGroup: 'SHOULDERS', exerciseId: null, exerciseName: null, joint: null, pattern: null,
   severity: 'CAUTION', note: null, startsOn: '2026-11-01', endsOn: null, createdAt: '2026-11-01T00:00:00Z', ...over,
 });
 
@@ -49,5 +49,24 @@ describe('targetLabel', () => {
   it('uses the muscle label or the exercise name', () => {
     expect(targetLabel(dto({}))).toBe('Shoulders');
     expect(targetLabel(dto({ target: 'EXERCISE', muscleGroup: null, exerciseName: 'Bench press' }))).toBe('Bench press');
+  });
+});
+
+describe('joint and pattern targets', () => {
+  it('validates and sends only the matching target field', () => {
+    const d = emptyDraft(TODAY);
+    expect(validateDraft({ ...d, target: 'JOINT' })).toMatchObject({ ok: false, errors: { joint: expect.any(String) } });
+    expect(validateDraft({ ...d, target: 'PATTERN' })).toMatchObject({ ok: false, errors: { pattern: expect.any(String) } });
+    const r = validateDraft({ ...d, target: 'JOINT', joint: 'LOWER_BACK', muscleGroup: 'BACK' });
+    expect(r.ok && r.request).toMatchObject({ target: 'JOINT', joint: 'LOWER_BACK' });
+    expect(r.ok && r.request).not.toHaveProperty('muscleGroup');
+  });
+
+  it('labels them and lists the pattern impact', () => {
+    const joint = dto({ target: 'JOINT', muscleGroup: null, joint: 'LOWER_BACK' });
+    expect(targetLabel(joint)).toBe('Lower back (joint)');
+    expect(patternImpact(joint)).toBe('Hinge, Squat, Carry');
+    expect(targetLabel(dto({ target: 'PATTERN', muscleGroup: null, pattern: 'VERTICAL_PUSH' }))).toBe('Vertical push (pattern)');
+    expect(patternImpact(dto({}))).toBeNull();
   });
 });

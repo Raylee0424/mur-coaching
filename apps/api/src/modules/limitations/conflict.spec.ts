@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isActiveOn, limitationFlag, sortSafestFirst, type LimitationRow } from './conflict';
+import { isActiveOn, limitationFlag, programConflicts, sortSafestFirst, type LimitationRow } from './conflict';
 
-const base = { note: null, startsOn: '2026-11-01', endsOn: null };
+const base = { note: null, startsOn: '2026-11-01', endsOn: null, joint: null, pattern: null };
 const shoulder: LimitationRow = { ...base, id: 'm1', target: 'MUSCLE', muscleGroup: 'SHOULDERS', exerciseId: null, severity: 'CAUTION' };
 const bench: LimitationRow = { ...base, id: 'e1', target: 'EXERCISE', muscleGroup: null, exerciseId: 'bench', severity: 'AVOID', note: 'Left pec strain' };
 const press = { id: 'ohp', muscleGroup: 'SHOULDERS' } as const;
@@ -46,5 +46,46 @@ describe('sortSafestFirst', () => {
       { n: 'd', limitation: null },
     ];
     expect(sortSafestFirst(items).map((i) => i.n)).toEqual(['b', 'd', 'c', 'a']);
+  });
+});
+
+describe('limitationFlag: secondary muscles, joints and patterns', () => {
+  const triceps: LimitationRow = { ...base, id: 'm2', target: 'MUSCLE', muscleGroup: 'TRICEPS', exerciseId: null, severity: 'CAUTION' };
+  const lowBack: LimitationRow = { ...base, id: 'j1', target: 'JOINT', muscleGroup: null, exerciseId: null, joint: 'LOWER_BACK', severity: 'AVOID' };
+  const overhead: LimitationRow = { ...base, id: 'p1', target: 'PATTERN', muscleGroup: null, exerciseId: null, pattern: 'VERTICAL_PUSH', severity: 'CAUTION' };
+  const benchFull = { id: 'bench', muscleGroup: 'CHEST', muscles: [{ muscle: 'CHEST' }, { muscle: 'TRICEPS' }], pattern: 'HORIZONTAL_PUSH' } as const;
+  const rdl = { id: 'rdl', muscleGroup: 'HAMSTRINGS', muscles: [{ muscle: 'HAMSTRINGS' }], pattern: 'HINGE' } as const;
+  const ohp = { id: 'ohp', muscleGroup: 'SHOULDERS', muscles: [{ muscle: 'SHOULDERS' }], pattern: 'VERTICAL_PUSH' } as const;
+  const curl = { id: 'curl', muscleGroup: 'BICEPS', muscles: [{ muscle: 'BICEPS' }], pattern: 'ARM_ISOLATION' } as const;
+
+  it('matches a muscle limitation on a secondary muscle', () => {
+    expect(limitationFlag([triceps], benchFull, DAY)?.limitationId).toBe('m2');
+  });
+
+  it('matches a joint limitation through JOINT_PATTERNS', () => {
+    expect(limitationFlag([lowBack], rdl, DAY)).toEqual({ limitationId: 'j1', severity: 'AVOID', note: null });
+    expect(limitationFlag([lowBack], ohp, DAY)).toBeNull();
+  });
+
+  it('matches a pattern limitation on the exact pattern only', () => {
+    expect(limitationFlag([overhead], ohp, DAY)?.limitationId).toBe('p1');
+    expect(limitationFlag([overhead], benchFull, DAY)).toBeNull();
+  });
+
+  it('never flags an untagged exercise by joint or pattern', () => {
+    expect(limitationFlag([lowBack, overhead], { id: 'x', muscleGroup: 'CORE' }, DAY)).toBeNull();
+  });
+
+  it('lists program conflicts in order and skips clear prescriptions', () => {
+    const workouts = [
+      { id: 'w1', weekNumber: 1, dayNumber: 1, name: 'Upper', exercises: [{ exercise: { ...benchFull, name: 'Bench' } }, { exercise: { ...curl, name: 'Curl' } }, { exercise: { ...ohp, name: 'OHP' } }] },
+      { id: 'w2', weekNumber: 1, dayNumber: 2, name: 'Lower', exercises: [{ exercise: { ...rdl, name: 'RDL' } }] },
+    ];
+    const out = programConflicts([overhead, lowBack], workouts, DAY);
+    expect(out.map((c) => [c.workoutId, c.exerciseName, c.limitation.severity])).toEqual([
+      ['w1', 'OHP', 'CAUTION'],
+      ['w2', 'RDL', 'AVOID'],
+    ]);
+    expect(programConflicts([{ ...lowBack, endsOn: '2026-11-02' }], workouts, DAY)).toEqual([]);
   });
 });

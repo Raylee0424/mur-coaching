@@ -51,9 +51,69 @@ enum MuscleGroup {
   FULL_BODY
 }
 
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  CABLE
+  MACHINE
+  SMITH_MACHINE
+  BODYWEIGHT
+  KETTLEBELL
+  BAND
+  SPECIALTY_BAR
+  OTHER
+}
+
+enum MuscleRole {
+  PRIMARY
+  SECONDARY
+}
+
+/// Where in the range of motion the exercise loads the muscle hardest.
+enum ResistanceProfile {
+  LENGTHENED
+  MID_RANGE
+  SHORTENED
+}
+
+enum ExercisePosition {
+  STANDING
+  SEATED
+  SUPPORTED // prone or chest-supported
+  LYING // supine
+}
+
+/// Movement-pattern tag. Joint limitations map to patterns through JOINT_PATTERNS in @coaching/shared.
+enum MovementPattern {
+  SQUAT
+  HINGE
+  LUNGE
+  HORIZONTAL_PUSH
+  VERTICAL_PUSH
+  HORIZONTAL_PULL
+  VERTICAL_PULL
+  CARRY
+  CORE
+  ARM_ISOLATION
+  LEG_ISOLATION
+}
+
+enum Joint {
+  NECK
+  SHOULDER
+  ELBOW
+  WRIST
+  LOWER_BACK
+  HIP
+  KNEE
+  ANKLE
+}
+
 enum LimitationTarget {
   MUSCLE
   EXERCISE
+  JOINT
+  PATTERN
 }
 
 enum LimitationSeverity {
@@ -98,17 +158,21 @@ model User {
   // COACH side
   coachedClients CoachClient[]     @relation("CoachSide")
   programs       Program[]
-  exercises      Exercise[] // coach-owned custom exercises
+  exercises      Exercise[]        @relation("CoachExercises") // coach-owned custom exercises
   engineRules    CoachEngineRules?
 
   // CLIENT side
-  coachLink       CoachClient?                @relation("ClientSide")
-  assignments     ProgramAssignment[]
-  workoutLogs     WorkoutLog[]
-  recommendations ProgressionRecommendation[]
-  clientProfile   ClientProfile?
-  baselines       ClientBaseline[]
-  limitations     Limitation[]
+  coachLink        CoachClient?                @relation("ClientSide")
+  assignments      ProgramAssignment[]
+  workoutLogs      WorkoutLog[]
+  recommendations  ProgressionRecommendation[]
+  clientProfile    ClientProfile?
+  baselines        ClientBaseline[]
+  limitations      Limitation[]
+  templateFolders  TemplateFolder[]
+  workoutTemplates WorkoutTemplate[]
+  exerciseNotes    ExerciseNote[]
+  ownedExercises   Exercise[]                  @relation("OwnedExercises") // athlete's own custom exercises
 
   authTokens AuthToken[]
   invites    Invite[]
@@ -188,33 +252,56 @@ model CoachClient {
 
 // ─────────────── Exercise Catalog ───────────────
 
-/// coachId null = global library; set = coach's custom exercise.
+/// Global when coachId and ownerId are both null; coachId = coach's custom exercise; ownerId = an athlete's own
+/// custom exercise. Never both (CHECK in migration).
 model Exercise {
-  id              String      @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
+  /// Main primary muscle: the engine, swaps and filters key on it. Also stored as a PRIMARY row in `muscles`.
   muscleGroup     MuscleGroup
-  equipment       String?
+  equipment       Equipment?
+  pattern         MovementPattern?
+  profile         ResistanceProfile?
+  position        ExercisePosition?
   /// Smallest load jump used by the engine (e.g. 2.5 upper, 5.0 lower).
-  loadIncrementKg Decimal     @default(2.5) @db.Decimal(5, 2)
+  loadIncrementKg Decimal            @default(2.5) @db.Decimal(5, 2)
   /// Exercise-level engine rules (null = inherit). Layer between client override and prescription.
-  rpeCap          Decimal?    @db.Decimal(3, 1)
+  rpeCap          Decimal?           @db.Decimal(3, 1)
   repsMin         Int?
   repsMax         Int?
   /// Soft delete: hidden from lists and pickers, history stays intact.
   archivedAt      DateTime?
   coachId         String?
-  createdAt       DateTime    @default(now())
+  ownerId         String?
+  createdAt       DateTime           @default(now())
 
-  coach            User?                       @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  workoutExercises WorkoutExercise[]
-  exerciseLogs     ExerciseLog[]
-  recommendations  ProgressionRecommendation[]
-  swappedFromLogs  ExerciseLog[]               @relation("SwappedFrom")
-  baselines        ClientBaseline[]
-  limitations      Limitation[]
+  coach             User?                       @relation("CoachExercises", fields: [coachId], references: [id], onDelete: Cascade)
+  owner             User?                       @relation("OwnedExercises", fields: [ownerId], references: [id], onDelete: Cascade)
+  muscles           ExerciseMuscle[]
+  workoutExercises  WorkoutExercise[]
+  exerciseLogs      ExerciseLog[]
+  recommendations   ProgressionRecommendation[]
+  swappedFromLogs   ExerciseLog[]               @relation("SwappedFrom")
+  baselines         ClientBaseline[]
+  limitations       Limitation[]
+  templateExercises WorkoutTemplateExercise[]
+  exerciseNotes     ExerciseNote[]
 
   @@unique([coachId, name])
+  @@unique([ownerId, name])
   @@index([muscleGroup])
+}
+
+/// Every muscle an exercise trains. The exercise's own `muscleGroup` is always one of the PRIMARY rows.
+model ExerciseMuscle {
+  exerciseId String
+  muscle     MuscleGroup
+  role       MuscleRole
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, muscle])
+  @@index([muscle])
 }
 
 // ─────────────── Program Templates ───────────────
@@ -321,6 +408,8 @@ model ExerciseLog {
   /// Set when the client swapped away from the prescribed exercise.
   swappedFromExerciseId String?
   swapReason            String?
+  /// Free-text note on this lift in this session.
+  notes                 String?
 
   workoutLog      WorkoutLog       @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
   exercise        Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
@@ -340,6 +429,12 @@ model SetLog {
   weightKg      Decimal  @db.Decimal(6, 2)
   rpe           Decimal? @db.Decimal(3, 1) // CHECK (rpe BETWEEN 1 AND 10) in migration
   isWarmup      Boolean  @default(false)
+  /// Reps in reserve; CHECK (rir BETWEEN 0 AND 10) in migration.
+  rir           Int?
+  /// Free text such as `3-1-1-0`; shape validated by the API.
+  tempo         String?  @db.VarChar(16)
+  /// Rest taken before this set; CHECK (restSeconds BETWEEN 0 AND 3600) in migration.
+  restSeconds   Int?
 
   exerciseLog ExerciseLog @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
 
@@ -433,13 +528,15 @@ model CoachEngineRules {
 }
 
 /// A client's injury or limitation. Advisory only: it flags prescriptions and sorts swaps, it never blocks logging.
-/// `muscleGroup` is set when target = MUSCLE, `exerciseId` when target = EXERCISE (enforced by a CHECK).
+/// Exactly one target column is set, matching `target` (enforced by a CHECK): muscleGroup, exerciseId, joint or pattern.
 model Limitation {
   id          String             @id @default(cuid())
   clientId    String
   target      LimitationTarget
   muscleGroup MuscleGroup?
   exerciseId  String?
+  joint       Joint?
+  pattern     MovementPattern?
   severity    LimitationSeverity
   note        String?
   startsOn    DateTime           @db.Date
@@ -451,4 +548,68 @@ model Limitation {
   exercise Exercise? @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@index([clientId, endsOn])
+}
+
+// ─────────────── Templates and notes ───────────────
+
+/// A client's folder of workout templates. Names are unique per client.
+model TemplateFolder {
+  id        String   @id @default(cuid())
+  clientId  String
+  name      String
+  createdAt DateTime @default(now())
+
+  client    User              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  templates WorkoutTemplate[]
+
+  @@unique([clientId, name])
+}
+
+/// A reusable freeform workout the client starts from the logger. Deleting a folder keeps its templates.
+model WorkoutTemplate {
+  id        String   @id @default(cuid())
+  clientId  String
+  folderId  String?
+  name      String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client    User                      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  folder    TemplateFolder?           @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  exercises WorkoutTemplateExercise[]
+
+  @@index([clientId, folderId])
+}
+
+model WorkoutTemplateExercise {
+  id          String  @id @default(cuid())
+  templateId  String
+  exerciseId  String
+  order       Int
+  targetSets  Int
+  repsMin     Int?
+  repsMax     Int?
+  restSeconds Int?
+  tempo       String? @db.VarChar(16)
+
+  template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@unique([templateId, order])
+}
+
+/// A persistent note on one exercise (cues, setup, what to fix). Shown every time the client logs it.
+model ExerciseNote {
+  id         String   @id @default(cuid())
+  clientId   String
+  exerciseId String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  client   User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, exerciseId])
 }

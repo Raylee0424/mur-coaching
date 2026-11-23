@@ -21,7 +21,7 @@ export function safeNext(next: string | null | undefined, role: Role): string | 
 }
 
 /** String key so server layouts can pass nav to client components; `shell/nav-icons.ts` maps it to an icon. */
-export type NavIconKey = 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'user';
+export type NavIconKey = 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'tools' | 'user';
 
 export interface NavItem {
   href: string;
@@ -43,5 +43,7 @@ export const COACH_NAV: readonly NavItem[] = [
 export const CLIENT_NAV: readonly NavItem[] = [
   { href: '/client', label: 'Today', exact: true, icon: 'today' },
   { href: '/client/history', label: 'History', icon: 'history' },
+  { href: '/client/exercises', label: 'Exercises', icon: 'dumbbell' },
+  { href: '/client/tools', label: 'Tools', icon: 'tools' },
   { href: '/client/profile', label: 'Profile', icon: 'user' },
 ];

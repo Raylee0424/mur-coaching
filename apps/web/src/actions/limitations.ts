@@ -12,6 +12,7 @@ function refresh(clientId: string): void {
   revalidatePath('/client');
   revalidatePath('/client/profile');
   revalidatePath('/client/log');
+  revalidatePath('/client/exercises');
 }
 
 export async function createLimitation(clientId: string, body: CreateLimitationRequest): Promise<ActionResult<LimitationDto>> {
