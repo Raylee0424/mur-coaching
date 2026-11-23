@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Limitation, Prisma } from '@prisma/client';
 import { LimitationTarget } from '@coaching/shared';
-import type { LimitationDto, LimitationFlag, MuscleGroup } from '@coaching/shared';
+import type { Joint, LimitationDto, LimitationFlag, MovementPattern, MuscleGroup } from '@coaching/shared';
 import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ClientAccessService } from '../clients/client-access.service';
-import { limitationFlag, type LimitationRow } from './conflict';
+import { clientExerciseScope } from '../exercises/exercise-visibility';
+import { limitationFlag, type ConflictExercise, type LimitationRow } from './conflict';
 import type { CreateLimitationDto, UpdateLimitationDto } from './dto/limitations.dto';
 
 const dayOf = (d: Date): string => d.toISOString().slice(0, 10);
@@ -22,6 +23,8 @@ const toRow = (l: Limitation): LimitationRow => ({
   target: l.target,
   muscleGroup: l.muscleGroup,
   exerciseId: l.exerciseId,
+  joint: l.joint,
+  pattern: l.pattern,
   severity: l.severity,
   note: l.note,
   startsOn: dayOf(l.startsOn),
@@ -68,6 +71,8 @@ export class LimitationsService {
         target: dto.target,
         muscleGroup: dto.target === LimitationTarget.MUSCLE ? (dto.muscleGroup as MuscleGroup) : null,
         exerciseId: dto.target === LimitationTarget.EXERCISE ? (dto.exerciseId as string) : null,
+        joint: dto.target === LimitationTarget.JOINT ? (dto.joint as Joint) : null,
+        pattern: dto.target === LimitationTarget.PATTERN ? (dto.pattern as MovementPattern) : null,
         severity: dto.severity,
         note: dto.note || null,
         startsOn: asDate(startsOn),
@@ -109,8 +114,8 @@ export class LimitationsService {
     return rows.map(toRow);
   }
 
-  /** One flag (or null) per exercise id. */
-  async flagsFor(clientId: string, exercises: readonly { id: string; muscleGroup: MuscleGroup }[], day: string): Promise<Map<string, LimitationFlag | null>> {
+  /** One flag (or null) per exercise id. Load exercises with CONFLICT_EXERCISE_SELECT so muscles and pattern count. */
+  async flagsFor(clientId: string, exercises: readonly ConflictExercise[], day: string): Promise<Map<string, LimitationFlag | null>> {
     const rows = await this.activeRows(clientId, day);
     return new Map(exercises.map((e) => [e.id, limitationFlag(rows, e, day)]));
   }
@@ -126,11 +131,10 @@ export class LimitationsService {
     return row;
   }
 
-  /** Global exercises, or those owned by the client's coach. */
+  /** Global exercises, those owned by the client's coach, or the client's own. */
   private async assertExerciseVisible(clientId: string, exerciseId: string): Promise<void> {
-    const link = await this.prisma.coachClient.findUnique({ where: { clientId }, select: { coachId: true } });
     const ok = await this.prisma.exercise.findFirst({
-      where: { id: exerciseId, OR: [{ coachId: null }, ...(link ? [{ coachId: link.coachId }] : [])] },
+      where: { id: exerciseId, ...(await clientExerciseScope(this.prisma, clientId)) },
       select: { id: true },
     });
     if (!ok) throw new BadRequestException('Unknown exercise');

@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import { Role } from '@coaching/shared';
-import type { AssignmentDto, ProgramDto, ProgramSummaryDto } from '@coaching/shared';
+import type { AssignmentDto, ClientProgramConflictsDto, ProgramDto, ProgramSummaryDto } from '@coaching/shared';
 import { CurrentUser, RequestUser, Roles } from '../../common';
 import { ClientAccessService } from '../clients/client-access.service';
-import { CreateAssignmentDto, DuplicateProgramDto, ListProgramsQuery, ProgramTreeDto } from './dto/program.dto';
+import { CreateAssignmentDto, DuplicateProgramDto, ListProgramsQuery, ProgramConflictsQuery, ProgramTreeDto } from './dto/program.dto';
 import { ProgramsService } from './programs.service';
 
 @Controller('programs')
@@ -20,6 +20,17 @@ export class ProgramsController {
   @Post()
   create(@CurrentUser() user: RequestUser, @Body() dto: ProgramTreeDto): Promise<ProgramDto> {
     return this.programs.create(user.id, dto);
+  }
+
+  /**
+   * Advisory warnings: prescriptions flagged by clients' active limitations. `?clientIds=a,b` checks those clients
+   * (e.g. before assigning); otherwise every client actively assigned to the program. Ids outside the coach's
+   * accessible roster are dropped, never reported.
+   */
+  @Roles(Role.COACH)
+  @Get(':id/conflicts')
+  conflicts(@CurrentUser() user: RequestUser, @Param('id') id: string, @Query() query: ProgramConflictsQuery): Promise<ClientProgramConflictsDto[]> {
+    return this.programs.conflicts(user.id, id, query.clientIds);
   }
 
   /** Owning coach, or a client assigned to it. */

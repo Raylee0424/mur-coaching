@@ -51,9 +51,69 @@ enum MuscleGroup {
   FULL_BODY
 }
 
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  CABLE
+  MACHINE
+  SMITH_MACHINE
+  BODYWEIGHT
+  KETTLEBELL
+  BAND
+  SPECIALTY_BAR
+  OTHER
+}
+
+enum MuscleRole {
+  PRIMARY
+  SECONDARY
+}
+
+/// Where in the range of motion the exercise loads the muscle hardest.
+enum ResistanceProfile {
+  LENGTHENED
+  MID_RANGE
+  SHORTENED
+}
+
+enum ExercisePosition {
+  STANDING
+  SEATED
+  SUPPORTED // prone or chest-supported
+  LYING // supine
+}
+
+/// Movement-pattern tag. Joint limitations map to patterns through JOINT_PATTERNS in @coaching/shared.
+enum MovementPattern {
+  SQUAT
+  HINGE
+  LUNGE
+  HORIZONTAL_PUSH
+  VERTICAL_PUSH
+  HORIZONTAL_PULL
+  VERTICAL_PULL
+  CARRY
+  CORE
+  ARM_ISOLATION
+  LEG_ISOLATION
+}
+
+enum Joint {
+  NECK
+  SHOULDER
+  ELBOW
+  WRIST
+  LOWER_BACK
+  HIP
+  KNEE
+  ANKLE
+}
+
 enum LimitationTarget {
   MUSCLE
   EXERCISE
+  JOINT
+  PATTERN
 }
 
 enum LimitationSeverity {
@@ -98,7 +158,7 @@ model User {
   // COACH side
   coachedClients CoachClient[]     @relation("CoachSide")
   programs       Program[]
-  exercises      Exercise[] // coach-owned custom exercises
+  exercises      Exercise[]        @relation("CoachExercises") // coach-owned custom exercises
   engineRules    CoachEngineRules?
 
   // CLIENT side
@@ -112,6 +172,7 @@ model User {
   templateFolders  TemplateFolder[]
   workoutTemplates WorkoutTemplate[]
   exerciseNotes    ExerciseNote[]
+  ownedExercises   Exercise[]                  @relation("OwnedExercises") // athlete's own custom exercises
 
   authTokens AuthToken[]
   invites    Invite[]
@@ -191,24 +252,32 @@ model CoachClient {
 
 // ─────────────── Exercise Catalog ───────────────
 
-/// coachId null = global library; set = coach's custom exercise.
+/// Global when coachId and ownerId are both null; coachId = coach's custom exercise; ownerId = an athlete's own
+/// custom exercise. Never both (CHECK in migration).
 model Exercise {
-  id              String      @id @default(cuid())
+  id              String             @id @default(cuid())
   name            String
+  /// Main primary muscle: the engine, swaps and filters key on it. Also stored as a PRIMARY row in `muscles`.
   muscleGroup     MuscleGroup
-  equipment       String?
+  equipment       Equipment?
+  pattern         MovementPattern?
+  profile         ResistanceProfile?
+  position        ExercisePosition?
   /// Smallest load jump used by the engine (e.g. 2.5 upper, 5.0 lower).
-  loadIncrementKg Decimal     @default(2.5) @db.Decimal(5, 2)
+  loadIncrementKg Decimal            @default(2.5) @db.Decimal(5, 2)
   /// Exercise-level engine rules (null = inherit). Layer between client override and prescription.
-  rpeCap          Decimal?    @db.Decimal(3, 1)
+  rpeCap          Decimal?           @db.Decimal(3, 1)
   repsMin         Int?
   repsMax         Int?
   /// Soft delete: hidden from lists and pickers, history stays intact.
   archivedAt      DateTime?
   coachId         String?
-  createdAt       DateTime    @default(now())
+  ownerId         String?
+  createdAt       DateTime           @default(now())
 
-  coach             User?                       @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coach             User?                       @relation("CoachExercises", fields: [coachId], references: [id], onDelete: Cascade)
+  owner             User?                       @relation("OwnedExercises", fields: [ownerId], references: [id], onDelete: Cascade)
+  muscles           ExerciseMuscle[]
   workoutExercises  WorkoutExercise[]
   exerciseLogs      ExerciseLog[]
   recommendations   ProgressionRecommendation[]
@@ -219,7 +288,20 @@ model Exercise {
   exerciseNotes     ExerciseNote[]
 
   @@unique([coachId, name])
+  @@unique([ownerId, name])
   @@index([muscleGroup])
+}
+
+/// Every muscle an exercise trains. The exercise's own `muscleGroup` is always one of the PRIMARY rows.
+model ExerciseMuscle {
+  exerciseId String
+  muscle     MuscleGroup
+  role       MuscleRole
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, muscle])
+  @@index([muscle])
 }
 
 // ─────────────── Program Templates ───────────────
@@ -446,13 +528,15 @@ model CoachEngineRules {
 }
 
 /// A client's injury or limitation. Advisory only: it flags prescriptions and sorts swaps, it never blocks logging.
-/// `muscleGroup` is set when target = MUSCLE, `exerciseId` when target = EXERCISE (enforced by a CHECK).
+/// Exactly one target column is set, matching `target` (enforced by a CHECK): muscleGroup, exerciseId, joint or pattern.
 model Limitation {
   id          String             @id @default(cuid())
   clientId    String
   target      LimitationTarget
   muscleGroup MuscleGroup?
   exerciseId  String?
+  joint       Joint?
+  pattern     MovementPattern?
   severity    LimitationSeverity
   note        String?
   startsOn    DateTime           @db.Date

@@ -4,6 +4,7 @@ import type { MuscleGroup, SessionMetrics, TodayDto, TodayExercise, TodayTarget 
 import { PrismaService } from '../../prisma/prisma.service';
 import { currentProgramWeek, dayKey } from '../clients/analytics';
 import { isAccessibleLink } from '../clients/link-status';
+import { CONFLICT_EXERCISE_SELECT } from '../limitations/conflict';
 import { LimitationsService } from '../limitations/limitations.service';
 
 const BANNER_DAYS = 3;
@@ -29,7 +30,7 @@ export class TodayService {
             include: {
               workouts: {
                 orderBy: [{ weekNumber: 'asc' }, { dayNumber: 'asc' }],
-                include: { exercises: { orderBy: { order: 'asc' }, include: { exercise: { select: { id: true, name: true, muscleGroup: true } } } } },
+                include: { exercises: { orderBy: { order: 'asc' }, include: { exercise: { select: { ...CONFLICT_EXERCISE_SELECT, name: true } } } } },
               },
             },
           },
@@ -86,13 +87,13 @@ export class TodayService {
    */
   private async exercises(
     clientId: string,
-    prescriptions: Prisma.WorkoutExerciseGetPayload<{ include: { exercise: { select: { id: true; name: true; muscleGroup: true } } } }>[],
+    prescriptions: Prisma.WorkoutExerciseGetPayload<{ include: { exercise: { select: typeof CONFLICT_EXERCISE_SELECT & { name: true } } } }>[],
     day: string,
   ): Promise<TodayExercise[]> {
     const exerciseIds = prescriptions.map((p) => p.exerciseId);
     const flags = await this.limitations.flagsFor(
       clientId,
-      prescriptions.map((p) => ({ id: p.exerciseId, muscleGroup: p.exercise.muscleGroup as MuscleGroup })),
+      prescriptions.map((p) => p.exercise),
       day,
     );
     const [recs, lastLogs, baselines] = await Promise.all([

@@ -3,7 +3,7 @@
 import clsx from 'clsx';
 import { ArrowLeftRight, Check } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
-import { SWAP_REASON_LABELS, SwapReason } from '@coaching/shared';
+import { EQUIPMENT_LABELS, SWAP_REASON_LABELS, SwapReason } from '@coaching/shared';
 import type { ExerciseAlternativeDto, WeightUnit } from '@coaching/shared';
 import { loadAlternatives } from '@/actions/client-sheets';
 import { Button } from '@/components/ui/Button';
@@ -159,7 +159,7 @@ function SwapSheet({
                       <span className="block font-mono text-meta text-muted">
                         {s
                           ? `Suggested: ${formatTargetLine({ weightKg: toNumber(s.weightKg), repsMin: s.reps, repsMax: s.reps, rpe: s.rpe === null ? null : toNumber(s.rpe) }, unit)}`
-                          : `${a.equipment ?? 'No equipment listed'} · not logged yet`}
+                          : `${a.equipment ? EQUIPMENT_LABELS[a.equipment] : 'No equipment listed'} · not logged yet`}
                       </span>
                     </span>
                     <span className="w-5 shrink-0 text-ink">{selected ? <Icon icon={Check} size={20} /> : null}</span>

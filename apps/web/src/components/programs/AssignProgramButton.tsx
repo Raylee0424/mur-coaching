@@ -1,12 +1,14 @@
 'use client';
 
 import { Check, UserPlus, X } from 'lucide-react';
-import { useId, useState, useTransition } from 'react';
-import { assignProgram, type AssignOutcome } from '@/actions/programs';
+import { useEffect, useId, useState, useTransition } from 'react';
+import type { ClientProgramConflictsDto } from '@coaching/shared';
+import { assignProgram, programConflicts, type AssignOutcome } from '@/actions/programs';
 import { Button } from '@/components/ui/Button';
 import { FormError, Input, Label } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
+import { ProgramConflicts } from './ProgramConflicts';
 
 export interface AssignableClient {
   id: string;
@@ -41,6 +43,23 @@ export function AssignProgramButton({
   const [error, setError] = useState<string>();
   const [outcomes, setOutcomes] = useState<AssignOutcome[] | null>(null);
   const [pending, startTransition] = useTransition();
+  const [conflicts, setConflicts] = useState<ClientProgramConflictsDto[]>([]);
+
+  // Advisory check against the selected clients' active limitations. Stale responses are dropped.
+  const selectedKey = selected.join(',');
+  useEffect(() => {
+    if (!open || outcomes || selectedKey === '') {
+      setConflicts([]);
+      return;
+    }
+    let live = true;
+    void programConflicts(programId, selectedKey.split(',')).then((r) => {
+      if (live) setConflicts(r.ok ? r.data : []);
+    });
+    return () => {
+      live = false;
+    };
+  }, [open, outcomes, programId, selectedKey]);
 
   const losing = clients.filter((c) => selected.includes(c.id) && c.currentProgram && c.currentProgram.id !== programId);
 
@@ -133,6 +152,7 @@ export function AssignProgramButton({
                 {losing.map((c) => c.currentProgram?.name).join(', ')}). Their logged history stays.
               </p>
             ) : null}
+            <ProgramConflicts conflicts={conflicts} note="You can still assign. Flags show on the client's Today and logger, and swaps sort safest first." />
             <FormError>{error}</FormError>
           </div>
         )}

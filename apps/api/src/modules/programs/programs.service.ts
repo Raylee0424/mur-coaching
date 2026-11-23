@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { AssignmentStatus, Prisma, Role } from '@prisma/client';
 import type {
   AssignmentDto,
+  ClientProgramConflictsDto,
   DuplicateProgramRequest,
   ProgramDto,
   ProgramSummaryDto,
@@ -9,6 +10,10 @@ import type {
 } from '@coaching/shared';
 import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ACCESSIBLE_LINK_STATUSES } from '../clients/link-status';
+import { exerciseScope } from '../exercises/exercise-visibility';
+import { CONFLICT_EXERCISE_SELECT, programConflicts } from '../limitations/conflict';
+import { LimitationsService } from '../limitations/limitations.service';
 import { planTreeSync, referencedExerciseIds, type TreePlan } from './tree-diff';
 
 const treeInclude = {
@@ -29,7 +34,10 @@ type ProgramRow = Prisma.ProgramGetPayload<{ include: typeof treeInclude }>;
 /** Program templates. Coaches own them; clients may read programs they are (or were) assigned. */
 @Injectable()
 export class ProgramsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly limitations: LimitationsService,
+  ) {}
 
   /** `template`: true = templates only, false = regular programs only, undefined = all. */
   async list(coachId: string, template?: boolean): Promise<ProgramSummaryDto[]> {
@@ -176,6 +184,41 @@ export class ProgramsService {
     return { id: row.id, programId: row.programId, clientId: row.clientId, startDate: row.startDate.toISOString(), status: row.status };
   }
 
+  /**
+   * Advisory limitation conflicts for one of the coach's programs, using limitations active on `day`.
+   * With `clientIds`: those clients, e.g. before assigning. Without: every client on an ACTIVE assignment of it.
+   * Tenancy: only clients with an accessible link to this coach are considered; other ids are silently dropped.
+   * Only clients with at least one conflict are returned.
+   */
+  async conflicts(coachId: string, programId: string, clientIds?: readonly string[], day = new Date().toISOString().slice(0, 10)): Promise<ClientProgramConflictsDto[]> {
+    const program = await this.prisma.program.findFirst({
+      where: { id: programId, coachId },
+      include: {
+        workouts: {
+          orderBy: [{ weekNumber: 'asc' }, { dayNumber: 'asc' }],
+          include: { exercises: { orderBy: { order: 'asc' }, include: { exercise: { select: { ...CONFLICT_EXERCISE_SELECT, name: true } } } } },
+        },
+        assignments: { where: { status: AssignmentStatus.ACTIVE }, select: { clientId: true } },
+      },
+    });
+    if (!program) throw new NotFoundException('Program not found');
+
+    const candidateIds = clientIds ? [...clientIds] : program.assignments.map((a) => a.clientId);
+    const clients = await this.prisma.user.findMany({
+      where: { id: { in: candidateIds }, coachLink: { coachId, status: { in: [...ACCESSIBLE_LINK_STATUSES] } } },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+    const out: ClientProgramConflictsDto[] = [];
+    for (const c of clients) {
+      const rows = await this.limitations.activeRows(c.id, day);
+      if (rows.length === 0) continue;
+      const conflicts = programConflicts(rows, program.workouts, day);
+      if (conflicts.length > 0) out.push({ clientId: c.id, clientName: c.name, conflicts });
+    }
+    return out;
+  }
+
   private plan(existing: Parameters<typeof planTreeSync>[0], input: ProgramTreeInput): TreePlan {
     const result = planTreeSync(existing, input);
     if (!result.ok) throw new BadRequestException(result.error);
@@ -185,7 +228,7 @@ export class ProgramsService {
   private async assertExercisesVisible(coachId: string, input: ProgramTreeInput): Promise<void> {
     const ids = referencedExerciseIds(input);
     if (ids.length === 0) return;
-    const found = await this.prisma.exercise.count({ where: { id: { in: ids }, OR: [{ coachId: null }, { coachId }] } });
+    const found = await this.prisma.exercise.count({ where: { id: { in: ids }, ...exerciseScope({ coachId }) } });
     if (found !== ids.length) throw new BadRequestException('Unknown exercise');
   }
 
