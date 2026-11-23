@@ -1,4 +1,5 @@
 import {
+  Calculator,
   CalendarCheck,
   CalendarRange,
   Dumbbell,
@@ -19,5 +20,6 @@ export const NAV_ICONS: Record<NavIconKey, LucideIcon> = {
   sliders: SlidersHorizontal,
   today: CalendarCheck,
   history: History,
+  tools: Calculator,
   user: UserRound,
 };

@@ -11,11 +11,13 @@ import { ProgramsModule } from './modules/programs/programs.module';
 import { MailModule } from './modules/mail/mail.module';
 import { InvitesModule } from './modules/invites/invites.module';
 import { LimitationsModule } from './modules/limitations/limitations.module';
+import { TemplatesModule } from './modules/templates/templates.module';
+import { ExerciseNotesModule } from './modules/exercise-notes/exercise-notes.module';
 import { TodayModule } from './modules/today/today.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TodayModule],
+  imports: [ConfigModule, PrismaModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule],
   providers: [
     // Order matters: authenticate first, then authorize by role.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

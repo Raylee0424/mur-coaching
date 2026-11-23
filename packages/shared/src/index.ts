@@ -13,3 +13,6 @@ export * from './roster';
 export * from './overview';
 export * from './today';
 export * from './limitations';
+export * from './templates';
+export * from './exercise-notes';
+export * from './calculators';

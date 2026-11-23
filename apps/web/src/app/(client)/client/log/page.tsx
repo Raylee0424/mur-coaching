@@ -1,6 +1,6 @@
 import { Role } from '@coaching/shared';
 import { WorkoutLogger } from '@/components/logger/WorkoutLogger';
-import { exercisesApi, meApi, workoutLogsApi } from '@/lib/api/endpoints';
+import { exerciseNotesApi, exercisesApi, meApi, workoutLogsApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam } from '@/lib/form';
 import { toNumber } from '@/lib/format';
@@ -16,12 +16,15 @@ export default async function LogPage({ searchParams }: { searchParams: SearchPa
   const params = await searchParams;
   const repeat = firstParam(params.repeat) === '1';
 
-  const [exercises, today, latest, me] = await Promise.all([
+  const [exercises, today, latest, me, notes] = await Promise.all([
     exercisesApi.list(),
     meApi.today(),
     workoutLogsApi.listForClient(user.id, { limit: 1 }),
     meApi.profile(),
+    exerciseNotesApi.list(),
   ]);
+  const savedNotes: Record<string, string[]> = {};
+  for (const n of notes) (savedNotes[n.exerciseId] ??= []).push(n.body);
   const lastLog = latest.items[0] ?? null;
   const baselines = Object.fromEntries(
     me.baselines.flatMap((b) => (b.weightKg === null ? [] : [[b.exerciseId, { weightKg: b.weightKg, reps: b.reps }]])),
@@ -41,6 +44,7 @@ export default async function LogPage({ searchParams }: { searchParams: SearchPa
       library={exercises.map((e) => ({ id: e.id, name: e.name, muscleGroup: e.muscleGroup, loadIncrementKg: toNumber(e.loadIncrementKg) }))}
       unit={user.weightUnit}
       baselines={baselines}
+      savedNotes={savedNotes}
     />
   );
 }

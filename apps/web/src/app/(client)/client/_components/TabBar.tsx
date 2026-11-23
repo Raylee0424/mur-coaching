@@ -20,7 +20,7 @@ export function TabBar({ items }: { items: readonly NavItem[] }) {
   return (
     <nav
       aria-label="Client navigation"
-      className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-3 items-center border-t border-line bg-canvas-low px-4 pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-4 items-center border-t border-line bg-canvas-low px-4 pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       {items.map((item) => {
         const active = isActive(item, pathname);

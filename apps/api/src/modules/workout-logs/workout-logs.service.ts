@@ -148,6 +148,7 @@ export class WorkoutLogsService {
     return logs.map((l, i) => ({
       order: i + 1,
       exercise: { connect: { id: l.exerciseId } },
+      notes: l.notes?.trim() || null,
       ...(l.workoutExerciseId ? { workoutExercise: { connect: { id: l.workoutExerciseId } } } : {}),
       ...(l.swappedFromExerciseId && l.swapReason
         ? {
@@ -162,6 +163,9 @@ export class WorkoutLogsService {
           weightKg: s.weightKg,
           rpe: s.rpe ?? null,
           isWarmup: s.isWarmup ?? false,
+          rir: s.rir ?? null,
+          tempo: s.tempo ?? null,
+          restSeconds: s.restSeconds ?? null,
         })),
       },
     }));

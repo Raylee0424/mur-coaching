@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { SwapReason } from '@coaching/shared';
+import { SwapReason, TEMPO_PATTERN } from '@coaching/shared';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -11,6 +11,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -37,6 +38,22 @@ export class SetLogDto {
   @IsOptional()
   @IsBoolean()
   isWarmup?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  rir?: number;
+
+  @IsOptional()
+  @Matches(TEMPO_PATTERN, { message: 'tempo must look like 3-1-1-0' })
+  tempo?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3600)
+  restSeconds?: number;
 }
 
 export class ExerciseLogDto {
@@ -61,6 +78,11 @@ export class ExerciseLogDto {
   @IsString()
   @MaxLength(200)
   swapNote?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
 
   @IsArray()
   @ArrayMinSize(1)

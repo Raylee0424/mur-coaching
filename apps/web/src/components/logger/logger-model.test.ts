@@ -33,9 +33,10 @@ const lastLog: WorkoutLogDto = {
       swappedFromExerciseId: null,
       swapReason: null,
       swappedFrom: null,
+      notes: null,
       sets: [
-        { id: 's1', exerciseLogId: 'e1', setNumber: 1, reps: 8, weightKg: '100.00', rpe: '8.5', isWarmup: false },
-        { id: 's2', exerciseLogId: 'e1', setNumber: 2, reps: 5, weightKg: '60.00', rpe: null, isWarmup: true },
+        { id: 's1', exerciseLogId: 'e1', setNumber: 1, reps: 8, weightKg: '100.00', rpe: '8.5', isWarmup: false, rir: null, tempo: null, restSeconds: null },
+        { id: 's2', exerciseLogId: 'e1', setNumber: 2, reps: 5, weightKg: '60.00', rpe: null, isWarmup: true, rir: null, tempo: null, restSeconds: null },
       ],
     },
   ],
@@ -170,6 +171,7 @@ describe('baseline prefill', () => {
 
 import {
   commitSet,
+  setExerciseNote,
   dropEmptyExercises,
   editSetValues,
   eyebrow,
@@ -376,5 +378,46 @@ describe('rpeGuideRows', () => {
   });
   it('adds a half-point target so it can be marked', () => {
     expect(rpeGuideRows(8.5).map((r) => r.rpe)).toEqual([10, 9, 8.5, 8, 7, 6]);
+  });
+});
+
+describe('tempo and exercise notes', () => {
+  const base = () => {
+    const blank = emptyDraft(NOW_LOCAL, 'KG');
+    let d = setExerciseId(blank, blank.exercises[0]!.key, 'squat');
+    const key = d.exercises[0]!.key;
+    d = { ...d, exercises: [{ ...d.exercises[0]!, sets: [] }] };
+    d = commitSet(d, key, { weight: 100, reps: 5, rpe: 8 }, ' 3-1-x-0 ');
+    return { d, key };
+  };
+
+  it('sends a tempo (upper-cased) and a trimmed exercise note', () => {
+    const { d, key } = base();
+    const r = validateDraft(setExerciseNote(d, key, '  felt heavy  '), NOW);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.request.exerciseLogs[0]?.notes).toBe('felt heavy');
+      expect(r.request.exerciseLogs[0]?.sets[0]?.tempo).toBe('3-1-X-0');
+    }
+  });
+
+  it('omits blank tempo and notes', () => {
+    const { d, key } = base();
+    const cleared = patchSet(d, key, d.exercises[0]!.sets[0]!.key, { tempo: '' });
+    const r = validateDraft(setExerciseNote(cleared, key, '   '), NOW);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.request.exerciseLogs[0]?.notes).toBeUndefined();
+      expect(r.request.exerciseLogs[0]?.sets[0]).not.toHaveProperty('tempo');
+    }
+  });
+
+  it('rejects a malformed tempo and an over-long note', () => {
+    const { d, key } = base();
+    const bad = patchSet(d, key, d.exercises[0]!.sets[0]!.key, { tempo: '3-1-1' });
+    const r1 = validateDraft(bad, NOW);
+    expect(r1.ok).toBe(false);
+    const r2 = validateDraft(setExerciseNote(d, key, 'x'.repeat(1001)), NOW);
+    expect(r2.ok).toBe(false);
   });
 });
