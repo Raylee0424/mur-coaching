@@ -53,3 +53,44 @@ export function bulkMessage(status: ResolvableStatus, r: Pick<BulkResolveRespons
   const base = `${verb} ${r.updated} ${r.updated === 1 ? 'recommendation' : 'recommendations'}.`;
   return r.skipped > 0 ? `${base} ${r.skipped} already resolved or replaced.` : base;
 }
+
+/** A resolve that has been shown to the coach but not yet sent to the API (the Undo window). */
+export interface ScheduledCommit {
+  ids: readonly string[];
+  status: ResolvableStatus;
+}
+
+export type ScheduledMap = Readonly<Record<string, ScheduledCommit>>;
+
+export function schedule(map: ScheduledMap, token: string, ids: readonly string[], status: ResolvableStatus): ScheduledMap {
+  return { ...map, [token]: { ids, status } };
+}
+
+/** Removes a scheduled commit; `cancelled` is what was dropped (undefined if the token was unknown). */
+export function cancel(map: ScheduledMap, token: string): { next: ScheduledMap; cancelled: ScheduledCommit | undefined } {
+  const cancelled = map[token];
+  if (!cancelled) return { next: map, cancelled };
+  const next = Object.fromEntries(Object.entries(map).filter(([k]) => k !== token));
+  return { next, cancelled };
+}
+
+/** Everything still waiting, for unmount / pagehide. */
+export function flushAll(map: ScheduledMap): { next: ScheduledMap; commits: ScheduledCommit[] } {
+  return { next: {}, commits: Object.values(map) };
+}
+
+export function scheduledIds(map: ScheduledMap): Set<string> {
+  return new Set(Object.values(map).flatMap((c) => c.ids));
+}
+
+/** Rows not hidden by a pending (undoable) resolve. */
+export function visibleItems<T extends { id: string }>(items: readonly T[], hidden: ReadonlySet<string>): T[] {
+  return items.filter((i) => !hidden.has(i.id));
+}
+
+export function undoMessage(status: ResolvableStatus, items: readonly { clientName: string; exerciseName: string }[]): string {
+  const verb = status === 'ACCEPTED' ? 'Accepted' : 'Dismissed';
+  const [only] = items;
+  if (items.length === 1 && only) return `${verb} ${only.clientName} · ${only.exerciseName}`;
+  return `${verb} ${items.length} ${items.length === 1 ? 'call' : 'calls'}`;
+}

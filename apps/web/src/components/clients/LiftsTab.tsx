@@ -31,16 +31,16 @@ export function LiftsTab({
 
   return (
     <div className="space-y-6">
-      <section aria-label="Next session" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-card p-4">
+      <section aria-label="Next session" className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+          <p className="font-mono text-micro uppercase text-muted">
             {next ? `Next session · ${shortDate(next.date)}` : 'Next session'}
           </p>
-          <p className="font-display text-lg font-bold">{next?.workoutName ?? 'Nothing scheduled this month'}</p>
+          <p className="text-title font-semibold">{next?.workoutName ?? 'Nothing scheduled this month'}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {programId ? (
-            <Link href={`/coach/programs/${programId}`} className={buttonClass('secondary')}>
+            <Link href={`/coach/programs/${programId}`} className={buttonClass('secondary', undefined, 'sm')}>
               Edit program
             </Link>
           ) : null}
@@ -55,8 +55,8 @@ export function LiftsTab({
       )}
 
       {resolved.length > 0 ? (
-        <details className="rounded-lg border border-line bg-card p-4">
-          <summary className="cursor-pointer text-sm font-semibold">Resolved ({resolved.length})</summary>
+        <details className="rounded-md border border-line bg-card p-4">
+          <summary className="cursor-pointer text-ui font-medium">Resolved <span className="font-mono text-faint">{resolved.length}</span></summary>
           <div className="mt-4 space-y-4">{resolved.map(card)}</div>
         </details>
       ) : null}

@@ -1,6 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
+import { ArrowRight, ArrowUpRight, CircleCheck, CircleDashed, Minus, PenLine } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useId, useState, useTransition } from 'react';
 import { ENGINE_LIMITS, RecommendationStatus } from '@coaching/shared';
@@ -15,9 +16,12 @@ import type {
 } from '@coaching/shared';
 import { loadEngineRules, previewEngineRules } from '@/actions/engine-rules';
 import { explainRecommendation, overrideRecommendation, recommendationAction } from '@/actions/progression';
-import { Button } from '@/components/ui/Button';
+import { Button, buttonClass } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
+import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
+import { useToast } from '@/components/ui/Toast';
 import { formatDate, formatRpe, formatTarget, toNumber } from '@/lib/format';
 import { formatWeight } from '@/lib/units';
 import { ACTION_META, ActionBadge } from './ActionBadge';
@@ -46,7 +50,19 @@ function targetText(t: QueueTarget, unit: WeightUnit): string {
 }
 
 /** 560px right drawer (bottom sheet on phones): verdict, inputs, rule trace, settings used, what-if, call history. */
-export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationId: string; unit: WeightUnit; onClose: () => void }) {
+export function WhyDrawer({
+  recommendationId,
+  unit,
+  onClose,
+  onResolve,
+}: {
+  recommendationId: string;
+  unit: WeightUnit;
+  onClose: () => void;
+  /** From the queue: resolve through its undoable path instead of calling the action directly. */
+  onResolve?: (status: 'ACCEPTED' | 'DISMISSED') => void;
+}) {
+  const toast = useToast();
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [editing, setEditing] = useState(false);
   const [actionError, setActionError] = useState<string>();
@@ -71,6 +87,10 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
 
   function resolve(intent: 'ACCEPTED' | 'DISMISSED'): void {
     if (!data) return;
+    if (onResolve) {
+      onResolve(intent);
+      return;
+    }
     setActionError(undefined);
     const fd = new FormData();
     fd.set('clientId', data.client.id);
@@ -79,8 +99,10 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
     fd.set('intent', intent);
     startTransition(async () => {
       const r = await recommendationAction(null, fd);
-      if (r.ok) onClose();
-      else setActionError(r.error);
+      if (r.ok) {
+        toast.show({ message: `${intent === 'ACCEPTED' ? 'Accepted' : 'Dismissed'} ${data.exercise.name}`, tone: 'ok' });
+        onClose();
+      } else setActionError(r.error);
     });
   }
 
@@ -99,6 +121,10 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
   const canResolve = data?.status === RecommendationStatus.PENDING;
   const canEdit = data !== null && (data.status === RecommendationStatus.PENDING || data.status === RecommendationStatus.ACCEPTED);
 
+
+  const callAt = data?.history.find((h) => h.type === 'CALL')?.at;
+  const lastSession = data?.sessions[data.sessions.length - 1];
+
   return (
     <>
       <Sheet
@@ -107,13 +133,67 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
         onClose={onClose}
         title={data ? data.exercise.name : 'Why this call'}
         {...(data
-          ? { description: `${data.client.name} · ${data.history.find((h) => h.type === 'CALL') ? `Computed ${formatDate(data.history.find((h) => h.type === 'CALL')!.at)} from ` : 'Based on '}${formatSessions(data.sessions.length)}.` }
+          ? {
+              description: (
+                <>
+                  {data.client.name} · {callAt ? 'computed ' : 'based on '}
+                  {callAt ? <span className="font-mono">{formatDate(callAt)}</span> : null}
+                  {callAt ? ' from ' : ''}
+                  <span className="font-mono">{formatSessions(data.sessions.length)}</span>
+                </>
+              ),
+              headerExtra: (
+                <div className="mt-3 flex items-end justify-between gap-3 border-t border-line pt-3">
+                  <ActionBadge action={data.action} />
+                  <span className="flex items-center gap-2 font-mono text-ui text-muted">
+                    {lastSession ? (
+                      <>
+                        {formatWeight(lastSession.topWeightKg, unit)}
+                        <span className="text-faint">
+                          <Icon icon={ArrowRight} />
+                        </span>
+                      </>
+                    ) : null}
+                    <span className={clsx('text-metric', ACTION_META[data.action].text)}>
+                      {data.proposed.weightKg !== null ? formatWeight(data.proposed.weightKg, unit) : targetText(data.proposed, unit)}
+                    </span>
+                  </span>
+                </div>
+              ),
+            }
+          : {})}
+        {...(canResolve || canEdit
+          ? {
+              footer: (
+                <>
+                  {canResolve ? (
+                    <Button variant="ghost" onClick={() => resolve('DISMISSED')} disabled={pending}>
+                      Dismiss
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                  <div className="flex gap-2">
+                    {canEdit ? (
+                      <Button variant="secondary" onClick={() => setEditing(true)} disabled={pending}>
+                        Edit target
+                      </Button>
+                    ) : null}
+                    {canResolve ? (
+                      <Button onClick={() => resolve('ACCEPTED')} disabled={pending}>
+                        {pending ? 'Saving…' : 'Accept'}
+                      </Button>
+                    ) : null}
+                  </div>
+                </>
+              ),
+            }
           : {})}
       >
         {load.status === 'loading' ? (
           <div role="status" aria-busy="true" aria-label="Loading explanation" className="space-y-4">
             {[28, 40, 24].map((h) => (
-              <div key={h} style={{ height: `${h * 4}px` }} className="animate-pulse rounded-lg bg-raised" />
+              <div key={h} style={{ height: `${h * 4}px` }} className="animate-pulse rounded-md bg-raised" />
             ))}
           </div>
         ) : load.status === 'error' ? (
@@ -124,16 +204,19 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
             </Button>
           </div>
         ) : data ? (
-          <div className="space-y-6">
-            <ActionBadge action={data.action} />
-
+          <div className="space-y-8">
             {state === 'overridden' && data.override ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary-container px-4 py-3">
-                <p className="text-sm text-primary-soft">
-                  {data.override.byName ?? 'You'} overrode the engine
-                  {data.override.at ? ` on ${formatDate(data.override.at)}` : ''} ({targetText(data.override, unit)}).
+              <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-l-ink bg-raised px-3 py-2 text-ui">
+                <p className="flex items-center gap-2">
+                  <Icon icon={PenLine} />
+                  <span>
+                    {data.override.byName ?? 'You'} overrode the engine
+                    {data.override.at ? ' on ' : ''}
+                    {data.override.at ? <span className="font-mono">{formatDate(data.override.at)}</span> : null} (
+                    <span className="font-mono">{targetText(data.override, unit)}</span>).
+                  </span>
                 </p>
-                <Button variant="secondary" className="min-h-9 py-1" onClick={resetOverride} disabled={pending || data.proposed.weightKg === null}>
+                <Button variant="ghost" size="sm" onClick={resetOverride} disabled={pending || data.proposed.weightKg === null}>
                   Reset to engine
                 </Button>
               </div>
@@ -142,10 +225,12 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
             <Verdict data={data} unit={unit} />
 
             {state === 'insufficient' ? (
-              <section className="rounded-lg border border-dashed border-line px-5 py-8 text-center">
-                <p className="font-display text-3xl font-extrabold tabular-nums text-muted">{data.sessions.length}/3</p>
-                <h3 className="mt-2 font-display text-lg font-bold">Not enough data yet</h3>
-                <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+              <section className="rounded-md border border-dashed border-line-strong px-5 py-8">
+                <p className="font-mono text-metric text-muted">{data.sessions.length}/3</p>
+                <h3 className="mt-2 font-sans text-ui font-semibold" style={{ fontStretch: '100%', letterSpacing: 0 }}>
+                  Not enough data yet
+                </h3>
+                <p className="mt-1 max-w-sm text-meta text-muted">
                   The progression engine needs at least 2 logged sessions of this movement before recommending a load change ({data.sessions.length} logged). This call holds the current load.
                 </p>
               </section>
@@ -163,30 +248,6 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
             <History events={data.history} unit={unit} />
 
             <FormError>{actionError}</FormError>
-
-            {canResolve || canEdit ? (
-              <footer className="sticky bottom-0 -mx-5 flex flex-wrap items-center justify-between gap-2 border-t border-line bg-card px-5 py-4 md:-mx-6 md:px-6">
-                {canResolve ? (
-                  <Button variant="secondary" onClick={() => resolve('DISMISSED')} disabled={pending}>
-                    Dismiss
-                  </Button>
-                ) : (
-                  <span />
-                )}
-                <div className="flex gap-2">
-                  {canEdit ? (
-                    <Button variant="secondary" onClick={() => setEditing(true)} disabled={pending}>
-                      Edit target
-                    </Button>
-                  ) : null}
-                  {canResolve ? (
-                    <Button onClick={() => resolve('ACCEPTED')} disabled={pending}>
-                      {pending ? 'Saving…' : 'Accept'}
-                    </Button>
-                  ) : null}
-                </div>
-              </footer>
-            ) : null}
           </div>
         ) : null}
       </Sheet>
@@ -204,29 +265,23 @@ export function WhyDrawer({ recommendationId, unit, onClose }: { recommendationI
   );
 }
 
-function SectionTitle({ n, children }: { n: number; children: string }) {
+function SectionTitle({ children, action }: { children: string; action?: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
-      {n}. {children}
-    </h3>
+    <div className="mb-3 flex items-center justify-between gap-2 border-b border-line pb-2">
+      <h3 className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
+        {children}
+      </h3>
+      {action}
+    </div>
   );
 }
 
-function Verdict({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
-  const last = data.sessions[data.sessions.length - 1];
-  const proposed = targetText(data.proposed, unit);
+function Verdict({ data }: { data: ExplainDto; unit: WeightUnit }) {
   return (
-    <section className="space-y-2 rounded-lg border border-line bg-canvas-low p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <SectionTitle n={1}>Engine verdict</SectionTitle>
-        <span className="font-display text-lg font-bold tabular-nums">
-          {last ? <span className="text-muted">{formatWeight(last.topWeightKg, unit)} → </span> : null}
-          <span className="text-primary">{data.proposed.weightKg !== null ? formatWeight(data.proposed.weightKg, unit) : proposed}</span>
-        </span>
-      </div>
-      {proposed ? <p className="text-sm tabular-nums text-muted">{proposed}</p> : null}
-      <p className="text-sm">{data.reason}</p>
-      {data.autoApproved ? <p className="text-xs font-semibold text-emerald">Auto-approved by your rules</p> : null}
+    <section>
+      <SectionTitle>Engine verdict</SectionTitle>
+      <p className="text-ui">{data.reason}</p>
+      {data.autoApproved ? <p className="mt-2 text-meta font-medium text-emerald">Auto-approved by your rules</p> : null}
     </section>
   );
 }
@@ -236,36 +291,36 @@ function Inputs({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
   const rpes = data.sessions.flatMap((s) => (s.avgRpe === null ? [] : [s.avgRpe]));
   const mean = rpes.length ? Math.round((rpes.reduce((a, b) => a + b, 0) / rpes.length) * 10) / 10 : null;
   return (
-    <section className="space-y-2">
-      <SectionTitle n={2}>{`Inputs (last ${data.sessions.length} sessions)`}</SectionTitle>
-      <div className="overflow-x-auto rounded-lg border border-line">
-        <table className="w-full min-w-[22rem] text-left text-sm">
-          <caption className="sr-only">Sessions the engine used, oldest first</caption>
-          <thead className="bg-raised text-xs uppercase tracking-wide text-muted">
+    <section>
+      <SectionTitle>{`Inputs · last ${data.sessions.length} sessions`}</SectionTitle>
+      <div className="overflow-x-auto rounded-md border border-line">
+        <table className={clsx(TABLE, 'min-w-[22rem]')}>
+          <caption className="sr-only">Sessions the engine used, newest first</caption>
+          <thead className={THEAD}>
             <tr>
-              <th scope="col" className="px-3 py-2 font-semibold">Date</th>
-              <th scope="col" className="px-3 py-2 font-semibold">Weight</th>
-              <th scope="col" className="px-3 py-2 font-semibold">Reps{target !== null ? ' / target' : ''}</th>
-              <th scope="col" className="px-3 py-2 font-semibold">RPE</th>
+              <th scope="col" className={TH}>Date</th>
+              <th scope="col" className={TH_NUM}>Weight</th>
+              <th scope="col" className={TH_NUM}>Reps{target !== null ? ' / target' : ''}</th>
+              <th scope="col" className={TH_NUM}>RPE</th>
             </tr>
           </thead>
-          <tbody className="tabular-nums">
+          <tbody>
             {[...data.sessions].reverse().map((s) => (
-              <tr key={s.exerciseLogId} className="border-t border-line">
-                <td className="px-3 py-2">{formatDate(s.performedAt)}</td>
-                <td className="px-3 py-2">{formatWeight(s.topWeightKg, unit)}</td>
-                <td className="px-3 py-2">
+              <tr key={s.exerciseLogId} className={TR}>
+                <td className={clsx(TD, 'font-mono')}>{formatDate(s.performedAt)}</td>
+                <td className={TD_NUM}>{formatWeight(s.topWeightKg, unit)}</td>
+                <td className={TD_NUM}>
                   {s.repsPerSet.length > 0 ? s.repsPerSet.join(', ') : s.topSetReps}
-                  {target !== null ? <span className="text-muted"> / {target}</span> : null}
+                  {target !== null ? <span className="text-faint"> / {target}</span> : null}
                 </td>
-                <td className="px-3 py-2">{s.avgRpe === null ? '—' : formatRpe(s.avgRpe).replace('RPE ', '')}</td>
+                <td className={TD_NUM}>{s.avgRpe === null ? '—' : formatRpe(s.avgRpe).replace('RPE ', '')}</td>
               </tr>
             ))}
           </tbody>
           {mean !== null ? (
             <tfoot>
-              <tr className="border-t border-line bg-canvas-low text-xs text-muted">
-                <td colSpan={4} className="px-3 py-2">
+              <tr className="border-t border-line">
+                <td colSpan={4} className="h-9 px-5 font-mono text-meta text-faint">
                   Computed: average RPE {mean.toFixed(1)} over {formatSessions(rpes.length)}.
                 </td>
               </tr>
@@ -277,35 +332,43 @@ function Inputs({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
   );
 }
 
+const RULE_ICON = { decided: CircleCheck, also: CircleDashed, not: Minus } as const;
+const RULE_ICON_TONE = { decided: 'text-emerald', also: 'text-muted', not: 'text-faint' } as const;
+const RULE_RESULT = { decided: 'Matched', also: 'Also true', not: 'No' } as const;
+
 function RuleTrace({ data }: { data: ExplainDto }) {
   return (
-    <section className="space-y-2">
-      <SectionTitle n={3}>Rule evaluation (in order)</SectionTitle>
+    <section>
+      <SectionTitle>Rule evaluation, in order</SectionTitle>
       {data.rules === null ? (
-        <p className="rounded-md bg-raised p-3 text-sm text-muted">The sessions behind this call were edited or deleted, so the rule trace is no longer available.</p>
+        <p className="text-ui text-muted">The sessions behind this call were edited or deleted, so the rule trace is no longer available.</p>
       ) : (
-        <ol className="space-y-2">
+        <ol className="border-b border-line">
           {data.rules.map((step) => {
             const status = ruleStatus(step);
             return (
               <li
                 key={step.action}
-                className={clsx(
-                  'space-y-1 rounded-md border px-3 py-2 text-sm',
-                  status === 'decided' ? 'border-emerald/40 bg-emerald-bg' : 'border-line bg-canvas-low',
-                )}
+                className={clsx('grid grid-cols-[20px_1fr_auto] gap-3 border-t border-line py-2.5', status === 'decided' && 'bg-emerald-bg/40')}
               >
-                <p className="flex items-start gap-2">
-                  <span aria-hidden="true" className={clsx('w-4 shrink-0 text-center font-bold', status === 'decided' ? 'text-emerald' : 'text-muted')}>
-                    {status === 'decided' ? '✓' : status === 'also' ? '≈' : '–'}
+                <span className={clsx('pt-0.5', RULE_ICON_TONE[status])}>
+                  <Icon icon={RULE_ICON[status]} />
+                </span>
+                <span className="min-w-0 break-words">
+                  <span className="block text-ui font-medium">{ACTION_META[step.action].label}?</span>
+                  <span className="block text-meta text-muted">{step.condition}</span>
+                </span>
+                <span className="text-right">
+                  <span
+                    className={clsx(
+                      'block font-mono text-micro uppercase',
+                      status === 'decided' ? 'text-emerald' : status === 'also' ? 'text-muted' : 'text-faint',
+                    )}
+                  >
+                    {RULE_RESULT[status]}
                   </span>
-                  <span className="min-w-0 break-words">
-                    <span className="font-semibold">{ACTION_META[step.action].label}?</span> <span className="text-muted">{step.condition}</span>
-                  </span>
-                </p>
-                <p className={clsx('break-words pl-6 text-xs font-semibold tabular-nums', status === 'decided' ? 'text-emerald' : 'text-muted')}>
-                  {status === 'decided' ? 'MATCHED' : status === 'also' ? 'Also true, lower precedence' : 'Not triggered'} · {step.observed}
-                </p>
+                  <span className="block font-mono text-meta text-muted">{step.observed}</span>
+                </span>
               </li>
             );
           })}
@@ -327,25 +390,29 @@ function SettingsUsed({ settings }: { settings: ResolvedEngineSettings | null })
       ]
     : [];
   return (
-    <section className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <SectionTitle n={4}>Settings used</SectionTitle>
-        <Link href="/coach/settings" className="text-xs font-semibold text-primary-soft underline-offset-2 hover:underline">
-          Edit rules
-        </Link>
-      </div>
+    <section>
+      <SectionTitle
+        action={
+          <Link href="/coach/settings" className={buttonClass('ghost', undefined, 'sm')}>
+            Edit rules
+            <Icon icon={ArrowUpRight} />
+          </Link>
+        }
+      >
+        Settings used
+      </SectionTitle>
       {settings ? (
-        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <dl className="divide-y divide-line border-b border-line">
           {rows.map((r) => (
-            <div key={r.label} className="rounded-md border border-line bg-canvas-low p-3">
-              <dt className="text-xs uppercase tracking-wider text-muted">{r.label}</dt>
-              <dd className="font-display text-lg font-bold tabular-nums">{r.value}</dd>
-              <dd className="text-xs text-muted">{r.source}</dd>
+            <div key={r.label} className="grid grid-cols-[1fr_auto_auto] items-baseline gap-4 py-2">
+              <dt className="text-meta text-muted">{r.label}</dt>
+              <dd className="font-mono text-ui">{r.value}</dd>
+              <dd className="w-28 text-right font-mono text-micro uppercase text-faint">{r.source}</dd>
             </div>
           ))}
         </dl>
       ) : (
-        <p className="rounded-md bg-raised p-3 text-sm text-muted">Settings were not recorded for this older call.</p>
+        <p className="text-ui text-muted">Settings were not recorded for this older call.</p>
       )}
     </section>
   );
@@ -399,7 +466,7 @@ function WhatIf({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
   let tone = 'text-muted';
   if (sim.status === 'ok') {
     const a = sim.data.action;
-    tone = a === 'INCREASE_LOAD' ? 'text-emerald' : a === 'DELOAD' ? 'text-amber' : 'text-ink';
+    tone = ACTION_META[a].text;
     result = `With cap ${cap.toFixed(1)}${inc !== baseInc ? ` and +${inc} kg` : ''} this would be ${a}`;
     if (a === 'INCREASE_LOAD' && last) result += ` (${formatWeight(simulatedLoad(last.topWeightKg, inc), unit)})`;
     else if (sim.data.recommendedWeightKg !== null) result += ` (${formatWeight(sim.data.recommendedWeightKg, unit)})`;
@@ -407,95 +474,101 @@ function WhatIf({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
   }
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <SectionTitle n={5}>What-if simulator (preview only)</SectionTitle>
-        <button
-          type="button"
-          onClick={() => {
-            setCap(baseCap);
-            setInc(baseInc);
-          }}
-          disabled={!changed}
-          className="text-xs font-semibold text-primary-soft underline-offset-2 hover:underline disabled:text-muted disabled:no-underline"
-        >
-          Reset
-        </button>
+    <section>
+      <SectionTitle
+        action={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setCap(baseCap);
+              setInc(baseInc);
+            }}
+            disabled={!changed}
+          >
+            Reset
+          </Button>
+        }
+      >
+        What-if · preview only
+      </SectionTitle>
+      <div className="space-y-4 rounded-md border border-line p-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label htmlFor={capId} className="block text-ui">
+            <span className="flex justify-between">
+              <span>RPE cap</span>
+              <span className="font-mono">{cap.toFixed(1)}</span>
+            </span>
+            <input
+              id={capId}
+              type="range"
+              min={ENGINE_LIMITS.rpeCap.min}
+              max={ENGINE_LIMITS.rpeCap.max}
+              step={ENGINE_LIMITS.rpeCap.step}
+              value={cap}
+              disabled={capLocked}
+              onChange={(e) => setCap(Number(e.target.value))}
+              className="mt-2 w-full disabled:opacity-40"
+            />
+            {capLocked && settings ? (
+              <span className="mt-1 block text-meta text-muted">Set by {SOURCE_LABEL[settings.rpeCap.source].toLowerCase()}; your rule would not change this call.</span>
+            ) : null}
+          </label>
+          <label htmlFor={incId} className="block text-ui">
+            <span className="flex justify-between">
+              <span>Increment</span>
+              <span className="font-mono">+{inc} kg</span>
+            </span>
+            <input
+              id={incId}
+              type="range"
+              min={Math.min(ENGINE_LIMITS.loadIncrementKg.min, baseInc)}
+              max={Math.max(10, baseInc)}
+              step={ENGINE_LIMITS.loadIncrementKg.step}
+              value={inc}
+              onChange={(e) => setInc(Number(e.target.value))}
+              className="mt-2 w-full"
+            />
+          </label>
+        </div>
+        <p role="status" aria-live="polite" className={clsx('min-h-5 font-mono text-ui', tone)}>
+          {sim.status === 'error' ? sim.error : sim.status === 'ok' ? result : 'Running the engine…'}
+        </p>
       </div>
-      <div className="grid gap-4 rounded-lg border border-line bg-canvas-low p-4 sm:grid-cols-2">
-        <label htmlFor={capId} className="block text-sm">
-          <span className="flex justify-between">
-            <span>RPE cap</span>
-            <strong className="tabular-nums">{cap.toFixed(1)}</strong>
-          </span>
-          <input
-            id={capId}
-            type="range"
-            min={ENGINE_LIMITS.rpeCap.min}
-            max={ENGINE_LIMITS.rpeCap.max}
-            step={ENGINE_LIMITS.rpeCap.step}
-            value={cap}
-            disabled={capLocked}
-            onChange={(e) => setCap(Number(e.target.value))}
-            className="mt-2 w-full accent-primary disabled:opacity-40"
-          />
-          {capLocked && settings ? <span className="mt-1 block text-xs text-muted">Set by {SOURCE_LABEL[settings.rpeCap.source].toLowerCase()}; your rule would not change this call.</span> : null}
-        </label>
-        <label htmlFor={incId} className="block text-sm">
-          <span className="flex justify-between">
-            <span>Increment</span>
-            <strong className="tabular-nums">+{inc} kg</strong>
-          </span>
-          <input
-            id={incId}
-            type="range"
-            min={Math.min(ENGINE_LIMITS.loadIncrementKg.min, baseInc)}
-            max={Math.max(10, baseInc)}
-            step={ENGINE_LIMITS.loadIncrementKg.step}
-            value={inc}
-            onChange={(e) => setInc(Number(e.target.value))}
-            className="mt-2 w-full accent-primary"
-          />
-        </label>
-      </div>
-      <p role="status" aria-live="polite" className={clsx('min-h-5 text-sm font-semibold tabular-nums', tone)}>
-        {sim.status === 'error' ? sim.error : sim.status === 'ok' ? result : 'Running the engine…'}
-      </p>
     </section>
   );
 }
 
 function History({ events, unit }: { events: CallHistoryEvent[]; unit: WeightUnit }) {
   return (
-    <section className="space-y-2">
-      <SectionTitle n={6}>History of this call</SectionTitle>
+    <section>
+      <SectionTitle>History of this call</SectionTitle>
       {events.length === 0 ? (
-        <p className="text-sm text-muted">No earlier calls for this lift.</p>
+        <p className="text-ui text-muted">No earlier calls for this lift.</p>
       ) : (
         <ol className="space-y-3 border-l border-line pl-4">
           {events.map((e, i) => (
             <li key={`${e.type}-${e.recommendationId}-${i}`} className="relative flex flex-wrap items-start justify-between gap-2">
-              <span aria-hidden="true" className={clsx('absolute -left-[1.3rem] top-1.5 size-2 rounded-full', e.type === 'OVERRIDE' ? 'bg-primary' : 'bg-line-strong')} />
+              <span aria-hidden="true" className={clsx('absolute -left-[1.15rem] top-1.5 size-1.5 rounded-full', e.type === 'OVERRIDE' ? 'bg-ink' : 'bg-line-strong')} />
               {e.type === 'CALL' ? (
                 <div>
-                  <p className="text-sm">
+                  <p className="text-ui">
                     Engine proposed {ACTION_META[e.action].label}
-                    {e.weightKg !== null ? ` (${targetText({ weightKg: e.weightKg, repsMin: e.repsMin, repsMax: e.repsMax }, unit)})` : ''}
+                    {e.weightKg !== null ? <span className="font-mono"> ({targetText({ weightKg: e.weightKg, repsMin: e.repsMin, repsMax: e.repsMax }, unit)})</span> : null}
                   </p>
-                  <p className="text-xs text-muted">
-                    {e.autoApproved ? 'Auto-approved' : e.status.charAt(0) + e.status.slice(1).toLowerCase()}
-                  </p>
+                  <p className="text-meta text-muted">{e.autoApproved ? 'Auto-approved' : e.status.charAt(0) + e.status.slice(1).toLowerCase()}</p>
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm">
-                    {e.byName ?? 'Coach'} edited target{e.weightKg !== null ? ` to ${targetText({ weightKg: e.weightKg, repsMin: e.repsMin, repsMax: e.repsMax }, unit)}` : ''}
-                    {e.rpe !== null ? ` @ ${formatRpe(e.rpe)}` : ''}
+                  <p className="text-ui">
+                    {e.byName ?? 'Coach'} edited target
+                    {e.weightKg !== null ? <span className="font-mono"> to {targetText({ weightKg: e.weightKg, repsMin: e.repsMin, repsMax: e.repsMax }, unit)}</span> : null}
+                    {e.rpe !== null ? <span className="font-mono"> @ {formatRpe(e.rpe)}</span> : null}
                   </p>
-                  {e.note ? <p className="text-xs text-muted">{e.note}</p> : null}
+                  {e.note ? <p className="text-meta text-muted">{e.note}</p> : null}
                 </div>
               )}
-              <time dateTime={e.at} className="text-xs tabular-nums text-muted">
+              <time dateTime={e.at} className="font-mono text-meta text-faint">
                 {dateTime(e.at)}
               </time>
             </li>

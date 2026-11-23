@@ -1,7 +1,6 @@
 import { Role } from '@coaching/shared';
 import { ProgressionQueue } from '@/components/progression/ProgressionQueue';
 import { parseActionFilter } from '@/components/progression/queue-model';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { progressionApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam } from '@/lib/form';
@@ -17,12 +16,6 @@ export default async function ProgressionQueuePage({ searchParams }: { searchPar
   const queue = await progressionApi.queue({ ...(action !== 'ALL' ? { action } : {}), ...(q ? { q } : {}) });
 
   return (
-    <>
-      <PageHeader
-        title="Progression queue"
-        meta={`${queue.counts.total} pending`}
-      />
-      <ProgressionQueue queue={queue} action={action} q={q} unit={user.weightUnit} />
-    </>
+    <ProgressionQueue queue={queue} action={action} q={q} unit={user.weightUnit} />
   );
 }

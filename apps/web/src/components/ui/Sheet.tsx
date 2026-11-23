@@ -21,7 +21,7 @@ interface SheetProps {
   open: boolean;
   onClose: () => void;
   title: string;
-  description?: string;
+  description?: ReactNode;
   variant?: SheetVariant;
   /** Pinned under the title (e.g. a verdict strip). */
   headerExtra?: ReactNode;

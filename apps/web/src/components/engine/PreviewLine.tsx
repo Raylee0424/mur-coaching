@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { EnginePreviewResponse, UpdateCoachEngineRulesRequest, WeightUnit } from '@coaching/shared';
 import { previewEngineRules } from '@/actions/engine-rules';
-import { ActionBadge } from '@/components/progression/ActionBadge';
+import { ACTION_META, ActionBadge } from '@/components/progression/ActionBadge';
 import { formatTarget } from '@/lib/format';
 
 export interface PreviewTarget {
@@ -43,7 +43,7 @@ export function PreviewLine({
   }, [target.clientId, target.exerciseId, rulesKey]);
 
   return (
-    <div aria-live="polite" className="rounded-md border border-line bg-canvas-low p-4 text-sm">
+    <div aria-live="polite" className="rounded-md border border-line bg-canvas-low p-3 font-mono text-ui">
       {state.status === 'loading' ? (
         <p className="text-muted">Running the engine…</p>
       ) : state.status === 'error' ? (
@@ -51,17 +51,17 @@ export function PreviewLine({
       ) : (
         <div className="space-y-2">
           <p className="flex flex-wrap items-center gap-2">
-            <span>
+            <span className="font-sans">
               With these rules, {target.clientName.replace(' (Demo)', '')}&rsquo;s {target.exerciseName} would be
             </span>
             <ActionBadge action={state.data.action} />
           </p>
           {state.data.recommendedWeightKg !== null ? (
-            <p className="font-display text-lg font-bold tabular">
+            <p className={`text-metric ${ACTION_META[state.data.action].text}`}>
               {formatTarget({ ...state.data, recommendedWeightKg: String(state.data.recommendedWeightKg) }, unit)}
             </p>
           ) : null}
-          <p className="text-muted">{state.data.reason}</p>
+          <p className="font-sans text-meta text-muted">{state.data.reason}</p>
         </div>
       )}
     </div>

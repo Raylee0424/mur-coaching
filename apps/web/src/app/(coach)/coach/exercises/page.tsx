@@ -1,7 +1,6 @@
 import { Role } from '@coaching/shared';
 import { ExerciseFilters } from '@/components/exercises/ExerciseFilters';
 import { ExerciseLibrary } from '@/components/exercises/ExerciseLibrary';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { exercisesApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam, isMuscleGroup } from '@/lib/form';
@@ -22,10 +21,11 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Se
   });
 
   return (
-    <>
-      <PageHeader title="Exercise library" meta={`${exercises.length} ${exercises.length === 1 ? 'exercise' : 'exercises'}`} />
-      <ExerciseFilters q={q} muscleGroup={muscleGroup ?? ''} />
-      <ExerciseLibrary exercises={exercises} coachId={user.id} filtered={Boolean(q || muscleGroup)} />
-    </>
+    <ExerciseLibrary
+      exercises={exercises}
+      coachId={user.id}
+      filtered={Boolean(q || muscleGroup)}
+      filters={<ExerciseFilters q={q} muscleGroup={muscleGroup ?? ''} />}
+    />
   );
 }

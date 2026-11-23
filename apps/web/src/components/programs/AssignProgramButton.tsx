@@ -1,9 +1,11 @@
 'use client';
 
+import { Check, UserPlus, X } from 'lucide-react';
 import { useId, useState, useTransition } from 'react';
 import { assignProgram, type AssignOutcome } from '@/actions/programs';
 import { Button } from '@/components/ui/Button';
 import { FormError, Input, Label } from '@/components/ui/Field';
+import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 
 export interface AssignableClient {
@@ -61,72 +63,77 @@ export function AssignProgramButton({
 
   const nameOf = (clientId: string) => clients.find((c) => c.id === clientId)?.name ?? clientId;
 
+  const footer = outcomes ? (
+    <>
+      <span />
+      <Button onClick={() => setOpen(false)}>Done</Button>
+    </>
+  ) : (
+    <>
+      <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
+        Cancel
+      </Button>
+      <Button onClick={submit} disabled={pending || selected.length === 0 || !startDate}>
+        {pending ? 'Assigning…' : `Assign to ${selected.length || ''} ${selected.length === 1 ? 'client' : 'clients'}`.replace('  ', ' ')}
+      </Button>
+    </>
+  );
+
   return (
     <>
-      <Button variant="secondary" onClick={openSheet} disabled={disabledReason !== null} title={disabledReason ?? undefined}>
+      <Button variant="secondary" size="sm" onClick={openSheet} disabled={disabledReason !== null} title={disabledReason ?? undefined}>
+        <Icon icon={UserPlus} />
         Assign to clients
       </Button>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Assign program" description={programName}>
+      <Sheet open={open} onClose={() => setOpen(false)} title="Assign program" description={programName} footer={footer}>
         {outcomes ? (
-          <div className="space-y-4">
-            <ul className="space-y-2 text-sm">
-              {outcomes.map((o) => (
-                <li key={o.clientId} className={o.ok ? 'text-emerald' : 'text-danger'}>
-                  {o.ok ? '✓' : '✕'} {nameOf(o.clientId)}
-                  {o.ok ? ` starts ${startDate}` : `: ${o.error}`}
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-end">
-              <Button onClick={() => setOpen(false)}>Done</Button>
-            </div>
-          </div>
+          <ul className="space-y-2 text-ui">
+            {outcomes.map((o) => (
+              <li key={o.clientId} className={`flex items-start gap-2 ${o.ok ? 'text-emerald' : 'text-danger'}`}>
+                <Icon icon={o.ok ? Check : X} />
+                <span>
+                  {nameOf(o.clientId)}
+                  {o.ok ? <span className="font-mono"> starts {startDate}</span> : `: ${o.error}`}
+                </span>
+              </li>
+            ))}
+          </ul>
         ) : (
           <div className="space-y-4">
             {clients.length === 0 ? (
-              <p className="text-sm text-muted">No active clients to assign.</p>
+              <p className="text-ui text-muted">No active clients to assign.</p>
             ) : (
-              <fieldset className="space-y-2">
-                <legend className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">Clients</legend>
-                {clients.map((c) => (
-                  <label key={c.id} className="flex min-h-11 items-center gap-3 rounded-md border border-line px-3 py-2">
-                    <input
-                      type="checkbox"
-                      className="size-5 accent-primary"
-                      checked={selected.includes(c.id)}
-                      onChange={(e) =>
-                        setSelected((s) => (e.target.checked ? [...s, c.id] : s.filter((x) => x !== c.id)))
-                      }
-                    />
-                    <span className="flex-1">
-                      <span className="block text-sm font-semibold">{c.name}</span>
-                      <span className="block text-xs text-muted">
-                        {c.currentProgram ? `Currently: ${c.currentProgram.name}` : 'No program'}
+              <fieldset className="space-y-1">
+                <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Clients</legend>
+                <div className="divide-y divide-line rounded-md border border-line">
+                  {clients.map((c) => (
+                    <label key={c.id} className="flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 hover:bg-raised/60">
+                      <input
+                        type="checkbox"
+                        className="size-4 rounded-sm"
+                        checked={selected.includes(c.id)}
+                        onChange={(e) => setSelected((s) => (e.target.checked ? [...s, c.id] : s.filter((x) => x !== c.id)))}
+                      />
+                      <span className="flex-1">
+                        <span className="block text-ui font-medium">{c.name}</span>
+                        <span className="block text-meta text-muted">{c.currentProgram ? `Currently: ${c.currentProgram.name}` : 'No program'}</span>
                       </span>
-                    </span>
-                  </label>
-                ))}
+                    </label>
+                  ))}
+                </div>
               </fieldset>
             )}
             <div>
               <Label htmlFor={`${id}-start`}>Start date</Label>
-              <Input id={`${id}-start`} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <Input id={`${id}-start`} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="font-mono" />
             </div>
             {losing.length > 0 ? (
-              <p role="status" className="rounded-md border border-amber/40 bg-amber-bg px-3 py-2 text-sm text-amber">
-                {selected.length} {selected.length === 1 ? 'client' : 'clients'} selected; {losing.length} will lose their
-                current program ({losing.map((c) => c.currentProgram?.name).join(', ')}). Their logged history stays.
+              <p role="status" className="border-l-2 border-l-amber bg-amber-bg px-3 py-2 text-ui text-amber">
+                {selected.length} {selected.length === 1 ? 'client' : 'clients'} selected; {losing.length} will lose their current program (
+                {losing.map((c) => c.currentProgram?.name).join(', ')}). Their logged history stays.
               </p>
             ) : null}
             <FormError>{error}</FormError>
-            <footer className="flex justify-between gap-2 border-t border-line pt-4">
-              <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
-                Cancel
-              </Button>
-              <Button onClick={submit} disabled={pending || selected.length === 0 || !startDate}>
-                {pending ? 'Assigning…' : `Assign to ${selected.length || ''} ${selected.length === 1 ? 'client' : 'clients'}`.replace('  ', ' ')}
-              </Button>
-            </footer>
           </div>
         )}
       </Sheet>

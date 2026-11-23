@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { CLIENT_TABS, tabHref, type ClientTab } from './overview-model';
 
 /** Tabs are links so each one is a server-rendered URL (`?tab=`) that survives refresh and sharing. */
-export function ClientTabs({ clientId, active }: { clientId: string; active: ClientTab }) {
+export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string; active: ClientTab; pending?: number }) {
   return (
-    <nav aria-label="Client sections" className="mb-6 flex flex-wrap gap-1 border-b border-line">
+    <nav aria-label="Client sections" className="mb-6 flex h-10 gap-1 border-b border-line">
       {CLIENT_TABS.map((t) => {
         const on = t.key === active;
         return (
@@ -14,11 +14,12 @@ export function ClientTabs({ clientId, active }: { clientId: string; active: Cli
             href={tabHref(clientId, t.key)}
             aria-current={on ? 'page' : undefined}
             className={clsx(
-              '-mb-px inline-flex min-h-11 items-center border-b-2 px-4 text-sm font-semibold transition-colors focus-visible:-outline-offset-2',
-              on ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink',
+              'inline-flex items-center gap-1.5 px-3 text-ui transition-colors focus-visible:-outline-offset-2',
+              on ? 'text-ink shadow-[inset_0_-2px_0_theme(colors.ink)]' : 'text-muted hover:text-ink',
             )}
           >
             {t.label}
+            {t.key === 'lifts' && pending > 0 ? <span className="font-mono text-micro text-faint">{pending}</span> : null}
           </Link>
         );
       })}
