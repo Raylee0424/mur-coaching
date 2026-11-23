@@ -7,6 +7,9 @@ import type {
   ClientOverviewDto,
   CreateInviteRequest,
   CreateInviteResponse,
+  CreateLimitationRequest,
+  LimitationDto,
+  UpdateLimitationRequest,
   DuplicateProgramRequest,
   ExerciseAlternativesDto,
   ExplainDto,
@@ -213,4 +216,16 @@ export const meApi = {
   setBaselines: (baselines: BaselineInput[]) =>
     apiFetch<MeProfileDto>('/me/baselines', { method: 'PUT', body: { baselines } }),
   completeOnboarding: () => apiFetch<AuthUser>('/me/onboarding/complete', { method: 'POST' }),
+};
+
+/** Injuries and limitations. The same routes serve the coach (tenancy-checked) and the client (own id). */
+export const limitationsApi = {
+  list: (clientId: string, active = false) =>
+    apiFetch<LimitationDto[]>(`/clients/${encodeURIComponent(clientId)}/limitations`, { query: active ? { active: 'true' } : {} }),
+  create: (clientId: string, body: CreateLimitationRequest) =>
+    apiFetch<LimitationDto>(`/clients/${encodeURIComponent(clientId)}/limitations`, { method: 'POST', body }),
+  update: (clientId: string, id: string, body: UpdateLimitationRequest) =>
+    apiFetch<LimitationDto>(`/clients/${encodeURIComponent(clientId)}/limitations/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+  remove: (clientId: string, id: string) =>
+    apiFetch<void>(`/clients/${encodeURIComponent(clientId)}/limitations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };

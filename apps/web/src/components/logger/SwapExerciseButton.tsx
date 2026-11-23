@@ -8,6 +8,7 @@ import type { ExerciseAlternativeDto, WeightUnit } from '@coaching/shared';
 import { loadAlternatives } from '@/actions/client-sheets';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Field';
+import { LimitationBadge } from '@/components/limitations/LimitationBadge';
 import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
 import { toNumber } from '@/lib/format';
@@ -151,7 +152,10 @@ function SwapSheet({
                     )}
                   >
                     <span className="min-w-0">
-                      <span className="block text-ui font-medium">{a.name}</span>
+                      <span className="flex flex-wrap items-center gap-2 text-ui font-medium">
+                        {a.name}
+                        {a.limitation ? <LimitationBadge flag={a.limitation} /> : null}
+                      </span>
                       <span className="block font-mono text-meta text-muted">
                         {s
                           ? `Suggested: ${formatTargetLine({ weightKg: toNumber(s.weightKg), repsMin: s.reps, repsMax: s.reps, rpe: s.rpe === null ? null : toNumber(s.rpe) }, unit)}`

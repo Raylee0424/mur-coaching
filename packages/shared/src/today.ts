@@ -1,4 +1,5 @@
 import type { MuscleGroup, RecommendationAction } from './enums';
+import type { LimitationFlag } from './limitations';
 import type { DecimalString, IsoDateString } from './common';
 
 /** Where today's target for an exercise came from. */
@@ -29,6 +30,8 @@ export interface TodayExercise {
   /** Recommendation to open in the "why this call" sheet; null when there is none. */
   recommendationId: string | null;
   recommendationAction: RecommendationAction | null;
+  /** Active limitation covering this exercise (advisory); null when none. */
+  limitation: LimitationFlag | null;
 }
 
 export interface TodayWorkout {

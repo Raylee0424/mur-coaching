@@ -51,6 +51,16 @@ enum MuscleGroup {
   FULL_BODY
 }
 
+enum LimitationTarget {
+  MUSCLE
+  EXERCISE
+}
+
+enum LimitationSeverity {
+  AVOID
+  CAUTION
+}
+
 enum RecommendationAction {
   INCREASE_LOAD // hit top of rep range at/under target RPE
   INCREASE_REPS // double progression: add reps at same load
@@ -98,6 +108,7 @@ model User {
   recommendations ProgressionRecommendation[]
   clientProfile   ClientProfile?
   baselines       ClientBaseline[]
+  limitations     Limitation[]
 
   authTokens AuthToken[]
   invites    Invite[]
@@ -200,6 +211,7 @@ model Exercise {
   recommendations  ProgressionRecommendation[]
   swappedFromLogs  ExerciseLog[]               @relation("SwappedFrom")
   baselines        ClientBaseline[]
+  limitations      Limitation[]
 
   @@unique([coachId, name])
   @@index([muscleGroup])
@@ -418,4 +430,25 @@ model CoachEngineRules {
   updatedAt           DateTime @updatedAt
 
   coach User @relation(fields: [coachId], references: [id], onDelete: Cascade)
+}
+
+/// A client's injury or limitation. Advisory only: it flags prescriptions and sorts swaps, it never blocks logging.
+/// `muscleGroup` is set when target = MUSCLE, `exerciseId` when target = EXERCISE (enforced by a CHECK).
+model Limitation {
+  id          String             @id @default(cuid())
+  clientId    String
+  target      LimitationTarget
+  muscleGroup MuscleGroup?
+  exerciseId  String?
+  severity    LimitationSeverity
+  note        String?
+  startsOn    DateTime           @db.Date
+  endsOn      DateTime?          @db.Date
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  client   User      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  exercise Exercise? @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, endsOn])
 }

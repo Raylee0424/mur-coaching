@@ -4,6 +4,7 @@ import type { MuscleGroup, SessionMetrics, TodayDto, TodayExercise, TodayTarget 
 import { PrismaService } from '../../prisma/prisma.service';
 import { currentProgramWeek, dayKey } from '../clients/analytics';
 import { isAccessibleLink } from '../clients/link-status';
+import { LimitationsService } from '../limitations/limitations.service';
 
 const BANNER_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -12,7 +13,10 @@ const none: TodayTarget = { weightKg: null, repsMin: null, repsMax: null, rpe: n
 /** Client-only "Today" payload. Everything is keyed on the caller's own id. */
 @Injectable()
 export class TodayService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly limitations: LimitationsService,
+  ) {}
 
   async get(clientId: string, now: Date = new Date()): Promise<TodayDto> {
     const [user, link, assignment, lastLog] = await Promise.all([
@@ -67,7 +71,7 @@ export class TodayService {
     };
     if (!next) return { ...common, state: 'WEEK_COMPLETE', workout: null };
 
-    const exercises = await this.exercises(clientId, next.exercises);
+    const exercises = await this.exercises(clientId, next.exercises, dayKey(now));
     return {
       ...common,
       state: 'READY',
@@ -83,8 +87,14 @@ export class TodayService {
   private async exercises(
     clientId: string,
     prescriptions: Prisma.WorkoutExerciseGetPayload<{ include: { exercise: { select: { id: true; name: true; muscleGroup: true } } } }>[],
+    day: string,
   ): Promise<TodayExercise[]> {
     const exerciseIds = prescriptions.map((p) => p.exerciseId);
+    const flags = await this.limitations.flagsFor(
+      clientId,
+      prescriptions.map((p) => ({ id: p.exerciseId, muscleGroup: p.exercise.muscleGroup as MuscleGroup })),
+      day,
+    );
     const [recs, lastLogs, baselines] = await Promise.all([
       this.prisma.progressionRecommendation.findMany({
         where: { clientId, exerciseId: { in: exerciseIds }, status: { in: [RecommendationStatus.ACCEPTED, RecommendationStatus.PENDING] } },
@@ -161,6 +171,7 @@ export class TodayService {
         target,
         recommendationId: why?.id ?? null,
         recommendationAction: why?.action ?? null,
+        limitation: flags.get(p.exerciseId) ?? null,
       };
     });
   }

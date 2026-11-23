@@ -2,14 +2,16 @@ import { Role, WeightUnit } from '@coaching/shared';
 import clsx from 'clsx';
 import { setWeightUnit } from '@/actions/account';
 import { logout } from '@/actions/auth';
+import { LimitationsPanel } from '@/components/limitations/LimitationsPanel';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-import { meApi } from '@/lib/api/endpoints';
+import { exercisesApi, limitationsApi, meApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 
 export default async function ProfilePage() {
   const user = await requireUser(Role.CLIENT);
-  const today = await meApi.today();
+  const [today, limitations, exercises] = await Promise.all([meApi.today(), limitationsApi.list(user.id), exercisesApi.list()]);
+  const day = new Date().toISOString().slice(0, 10);
   const rows: Array<[string, string]> = [
     ['Name', user.displayName ?? user.name],
     ['Email', user.email],
@@ -54,6 +56,14 @@ export default async function ProfilePage() {
             </dd>
           </div>
         </dl>
+
+        <LimitationsPanel
+          clientId={user.id}
+          limitations={limitations}
+          exercises={exercises.map((e) => ({ id: e.id, name: e.name }))}
+          today={day}
+          large
+        />
 
         <form action={logout}>
           <SubmitButton variant="secondary" size="lg" className="w-full" pendingLabel="Signing out…">
