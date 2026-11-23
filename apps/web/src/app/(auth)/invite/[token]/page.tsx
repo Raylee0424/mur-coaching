@@ -7,7 +7,7 @@ import { ApiError } from '@/lib/api/client';
 import { invitesApi } from '@/lib/api/endpoints';
 import { formatDate } from '@/lib/format';
 
-export const metadata = { title: 'Accept invite · Ray Coaching' };
+export const metadata = { title: 'Accept invite · MUR Coaching' };
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

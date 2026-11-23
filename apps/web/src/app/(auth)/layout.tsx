@@ -63,10 +63,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <main className="flex min-h-dvh flex-col px-5 py-6 sm:px-10 lg:py-8">
         <Link href="/" className="inline-flex w-fit items-center gap-2.5 rounded-[8px]">
           <Logo />
-          <span className="font-display text-xl font-semibold tracking-tight">Ray Coaching</span>
+          <span className="font-display text-xl font-semibold tracking-tight">MUR Coaching</span>
         </Link>
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 py-10">{children}</div>
-        <p className="text-center text-xs text-muted">Ray Coaching · Deterministic Strength Progression</p>
+        <p className="text-center text-xs text-muted">MUR Coaching · Deterministic Strength Progression</p>
       </main>
       <aside className="hidden items-center justify-center border-l border-line bg-card p-10 lg:flex">
         <EnginePreview />

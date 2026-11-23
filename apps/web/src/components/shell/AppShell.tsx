@@ -12,7 +12,7 @@ export function AppShell({ user, nav, children }: { user: AuthUser; nav: readonl
       <div className="flex flex-1 flex-col md:flex-row">
         <aside className="border-b border-line bg-canvas-low md:w-60 md:border-b-0 md:border-r">
           <div className="flex items-center justify-between gap-3 px-4 py-3 md:flex-col md:items-stretch md:gap-4 md:py-5">
-            <span className="flex items-center gap-2 whitespace-nowrap font-display text-lg font-extrabold tracking-tight"><span aria-hidden="true" className="size-2.5 rounded-full bg-primary" />Ray Coaching</span>
+            <span className="flex items-center gap-2 whitespace-nowrap font-display text-lg font-extrabold tracking-tight"><span aria-hidden="true" className="size-2.5 rounded-full bg-primary" />MUR Coaching</span>
             <div className="md:order-last md:border-t md:border-line md:pt-4">
               <UserMenu user={user} />
             </div>
