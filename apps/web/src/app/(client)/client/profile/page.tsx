@@ -24,6 +24,7 @@ const WORKSPACE_LINKS = [
   { href: '/client/body', title: 'Bodyweight & Readiness', meta: '7-day avg & photos' },
   { href: '/client/videos', title: 'Set Videos & L/R', meta: 'Clips & form checks' },
   { href: '/client/calls', title: 'Calls & Booking', meta: 'Self-book coach slots' },
+  { href: '/client/nutrition', title: 'Nutrition & Hydration', meta: 'Macros, water & meal plans' },
   { href: '/client/roadmap', title: 'Coaching Roadmap', meta: 'Event countdown & phases' },
   { href: '/client/resources', title: 'Coach Vault', meta: 'Shared PDFs & guides' },
   { href: '/client/templates', title: 'Templates & Gyms', meta: 'Folders & equipment mode' },
