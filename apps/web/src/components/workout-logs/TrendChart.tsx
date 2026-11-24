@@ -8,7 +8,7 @@ const H = 90;
 const PAD_X = 16;
 const PAD_Y = 14;
 
-/** Small server-rendered line chart (design: dashed guides, round dots, last point larger). */
+/** Small server-rendered line chart (ApexMetric: dashed guides, electric-lime or sky series, round dots). */
 export function TrendChart({
   points,
   title,
@@ -30,8 +30,8 @@ export function TrendChart({
   const x = (i: number) => (points.length === 1 ? W / 2 : PAD_X + (i * (W - 2 * PAD_X)) / (points.length - 1));
   const y = (v: number) => (span === 0 ? H / 2 : PAD_Y + ((max - v) / span) * (H - 2 * PAD_Y));
   const fmt = (v: number) => (Math.round(v * 10 ** decimals) / 10 ** decimals).toString();
-  const stroke = tone === 'sky' ? 'stroke-sky' : 'stroke-ink';
-  const fill = tone === 'sky' ? 'fill-sky' : 'fill-ink';
+  const stroke = tone === 'sky' ? 'stroke-sky' : 'stroke-primary';
+  const fill = tone === 'sky' ? 'fill-sky' : 'fill-primary';
   const first = points[0];
   const last = points[points.length - 1];
 
@@ -49,7 +49,7 @@ export function TrendChart({
           <polyline
             fill="none"
             className={stroke}
-            strokeWidth="1.5"
+            strokeWidth="1.75"
             strokeLinecap="round"
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
@@ -57,12 +57,12 @@ export function TrendChart({
           />
         ) : null}
         {points.map((p, i) => (
-          <circle key={`${p.label}-${i}`} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? 3 : 2} className={fill}>
+          <circle key={`${p.label}-${i}`} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? 3.5 : 2} className={fill}>
             <title>{`${p.label}: ${fmt(p.value)} ${unit}`}</title>
           </circle>
         ))}
       </svg>
-      <div className="mt-1 flex justify-between font-mono text-micro text-faint">
+      <div className="mt-1 flex justify-between font-mono text-micro text-muted">
         <span>{first?.label}</span>
         {points.length > 1 ? <span>{last?.label}</span> : null}
       </div>

@@ -44,7 +44,15 @@ export function InviteClientModal({
   );
 }
 
-function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDto[]; lead?: Pick<LeadDto, 'id' | 'name' | 'email' | 'phone'>; onClose: () => void }) {
+function InviteSheet({
+  templates,
+  lead,
+  onClose,
+}: {
+  templates: ProgramSummaryDto[];
+  lead?: Pick<LeadDto, 'id' | 'name' | 'email' | 'phone'>;
+  onClose: () => void;
+}) {
   const [state, action] = useActionState<ActionResult<CreateInviteResponse> | null, FormData>(createInvite, null);
   const [step, setStep] = useState<1 | 2>(1);
   const [delivery, setDelivery] = useState<Delivery>('send');
@@ -92,11 +100,11 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
         }
       >
         <div className="space-y-5">
-          <div className="border-l-2 border-l-emerald bg-emerald-bg px-3 py-2">
-            <p className="text-ui font-medium text-emerald">
+          <div className="rounded-md border border-emerald/40 bg-emerald-bg p-4">
+            <p className="font-sans text-label-lg text-emerald">
               {delivery === 'send' ? `Invite sent to ${success.invite.name}` : `Invite created for ${success.invite.name}`}
             </p>
-            <p className="mt-0.5 text-meta text-muted">
+            <p className="mt-1 font-sans text-label-sm font-normal text-ink/90">
               {success.invite.programName
                 ? `Assigned ${success.invite.programName}${success.invite.startDate ? ` starting ${formatDate(success.invite.startDate)}` : ''}.`
                 : 'No program assigned yet.'}{' '}
@@ -107,7 +115,7 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
             <Label htmlFor="invite-link">Direct onboarding link</Label>
             <div className="flex gap-2">
               <Input id="invite-link" readOnly value={success.inviteUrl} onFocus={(e) => e.currentTarget.select()} className="font-mono" />
-              <Button variant="secondary" aria-label="Copy invite link" className="w-9 shrink-0 px-0" onClick={() => void copy(success.inviteUrl)}>
+              <Button variant="secondary" aria-label="Copy invite link" className="w-10 shrink-0 px-0" onClick={() => void copy(success.inviteUrl)}>
                 <Icon icon={Copy} />
               </Button>
             </div>
@@ -134,22 +142,22 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
               Cancel
             </Button>
           ) : (
-            <Button variant="ghost" onClick={() => setStep(1)}>
+            <Button variant="secondary" onClick={() => setStep(1)}>
               Back
             </Button>
           )}
           {step === 1 ? (
             <Button onClick={next}>Continue</Button>
           ) : (
-            <SubmitButton pendingLabel="Creating invite…">{delivery === 'send' ? 'Send invite' : 'Create link'}</SubmitButton>
+            <SubmitButton pendingLabel="Creating invite…">{delivery === 'send' ? 'Send Invite' : 'Create Link'}</SubmitButton>
           )}
         </>
       }
     >
       <div className="space-y-5">
-        <p className="font-mono text-micro uppercase text-muted">
-          Step {step} / 2
-        </p>
+        <span className="inline-flex rounded-full border border-primary/40 bg-primary-container px-3 py-0.5 font-mono text-label-sm uppercase text-primary">
+          Step {step} of 2
+        </span>
         <div ref={step1} hidden={step !== 1} className="space-y-4">
           {lead ? <input type="hidden" name="leadId" value={lead.id} /> : null}
           <div>
@@ -165,8 +173,8 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
             <Input id="invite-phone" name="phone" type="tel" maxLength={30} autoComplete="off" placeholder="+1 (555) 014-8920" defaultValue={lead?.phone ?? undefined} />
           </div>
           <fieldset>
-            <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Delivery method</legend>
-            <div className="grid grid-cols-2 gap-2">
+            <legend className="mb-1.5 font-sans text-label-sm uppercase tracking-wider text-muted">Delivery method</legend>
+            <div className="grid grid-cols-2 gap-2.5">
               {(
                 [
                   ['send', 'Send invite link'],
@@ -176,8 +184,8 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
                 <label
                   key={value}
                   className={clsx(
-                    'flex h-9 cursor-pointer items-center gap-2 rounded border px-3 text-ui has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-signal',
-                    delivery === value ? 'border-ink bg-raised text-ink' : 'border-line-strong text-muted hover:text-ink',
+                    'flex h-10 cursor-pointer items-center gap-2 rounded-sm border px-3.5 font-sans text-label-md transition-colors',
+                    delivery === value ? 'border-primary bg-raised text-ink' : 'border-line bg-canvas-low text-muted hover:text-ink',
                   )}
                 >
                   <input type="radio" name="delivery" value={value} checked={delivery === value} onChange={() => setDelivery(value)} />
@@ -185,7 +193,7 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
                 </label>
               ))}
             </div>
-            <p className="mt-1 text-meta text-muted">
+            <p className="mt-1.5 text-meta text-muted">
               {delivery === 'send' ? 'The link is emailed to your client and shown to you here.' : 'Nothing is emailed. Share the link yourself.'}
             </p>
           </fieldset>
@@ -214,9 +222,9 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
               <Input id="invite-start" name="startDate" type="date" min={todayIso()} defaultValue={todayIso()} disabled={!programId} className="font-mono" />
             </div>
             <fieldset>
-              <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Units</legend>
+              <legend className="mb-1.5 font-sans text-label-sm uppercase tracking-wider text-muted">Units</legend>
               <input type="hidden" name="weightUnit" value={unit} />
-              <div className="flex gap-0.5 rounded border border-line bg-canvas-low p-0.5">
+              <div className="grid grid-cols-2 gap-1 rounded-sm border border-line bg-canvas-low p-1">
                 {(['KG', 'LB'] as const).map((u) => (
                   <button
                     key={u}
@@ -224,8 +232,8 @@ function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDt
                     aria-pressed={unit === u}
                     onClick={() => setUnit(u)}
                     className={clsx(
-                      'h-8 flex-1 rounded-sm font-mono text-micro uppercase',
-                      unit === u ? 'bg-raised text-ink' : 'text-muted hover:text-ink',
+                      'h-8 rounded-sm font-sans text-label-sm uppercase transition-colors',
+                      unit === u ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
                     )}
                   >
                     {u.toLowerCase()}

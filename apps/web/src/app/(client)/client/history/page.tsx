@@ -32,19 +32,19 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader
-        title="History"
+        title="Workout History & Lift Trends"
         actions={
-          <Link href="/client/records" className={buttonClass('ghost', '', 'sm')}>
-            Records
+          <Link href="/client/records" className={buttonClass('secondary', '', 'sm')}>
+            PRs &amp; Net Progression
           </Link>
         }
       />
-      <div className="max-w-xl space-y-5">
+      <div className="max-w-4xl space-y-6">
         <Segmented
           label="History views"
           items={[
             { href: '/client/history', label: 'Sessions', current: tab === 'sessions' },
-            { href: '/client/history?tab=charts', label: 'Per-lift charts', current: tab === 'charts' },
+            { href: '/client/history?tab=charts', label: 'Per-Lift Charts', current: tab === 'charts' },
           ]}
         />
         {tab === 'sessions' ? (
@@ -65,13 +65,13 @@ async function SessionsTab({ userId, unit, cursor, logged }: { userId: string; u
       <HistorySessions logs={page.items} unit={unit} editable />
       <div className="flex flex-wrap gap-3">
         {cursor ? (
-          <Link href="/client/history" className={buttonClass('secondary', undefined, 'lg')}>
+          <Link href="/client/history" className={buttonClass('secondary', undefined, 'md')}>
             Newest
           </Link>
         ) : null}
         {page.nextCursor ? (
-          <Link href={`/client/history?cursor=${encodeURIComponent(page.nextCursor)}`} className={buttonClass('secondary', undefined, 'lg')}>
-            Older sessions
+          <Link href={`/client/history?cursor=${encodeURIComponent(page.nextCursor)}`} className={buttonClass('secondary', undefined, 'md')}>
+            Older Sessions
           </Link>
         ) : null}
       </div>
@@ -80,7 +80,6 @@ async function SessionsTab({ userId, unit, cursor, logged }: { userId: string; u
 }
 
 async function ChartsTab({ userId, unit }: { userId: string; unit: 'KG' | 'LB' }) {
-  // Lifts come from the most recent sessions, newest first.
   const recent = await workoutLogsApi.listForClient(userId, { limit: 30 });
   const lifts = new Map<string, string>();
   for (const log of recent.items) for (const el of log.exerciseLogs) if (!lifts.has(el.exerciseId)) lifts.set(el.exerciseId, el.exercise.name);
@@ -98,7 +97,7 @@ async function ChartsTab({ userId, unit }: { userId: string; unit: 'KG' | 'LB' }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {cards.map(({ id, name, series }) => {
         const weights = series.map((s) => ({ label: shortDate(s.performedAt), value: kgToDisplay(s.topWeightKg, unit) }));
         const rpes = series.flatMap((s) => (s.avgRpe === null ? [] : [{ label: shortDate(s.performedAt), value: s.avgRpe }]));
@@ -107,26 +106,30 @@ async function ChartsTab({ userId, unit }: { userId: string; unit: 'KG' | 'LB' }
         return (
           <section key={id} aria-labelledby={`lift-${id}`} className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <h2 id={`lift-${id}`} className="font-sans text-ui font-semibold" style={{ fontStretch: '100%', letterSpacing: 0 }}>
+              <h2 id={`lift-${id}`} className="font-display text-title-lg text-ink">
                 {name}
               </h2>
               <Link href={`/client/lifts/${id}`} className={buttonClass('ghost', undefined, 'sm')}>
-                Lift detail
+                Lift Detail
                 <Icon icon={ArrowRight} />
               </Link>
             </div>
-            <Panel title={`Top-set weight · ${unitLabel(unit)}`} meta={latest ? formatWeight(latest.topWeightKg, unit) : undefined}>
-              <div className="p-4">
-                <TrendChart points={weights} title={`${name} top-set weight over time`} unit={unitLabel(unit)} decimals={2} />
-              </div>
-            </Panel>
-            <Panel title="Session RPE" meta={avgRpe === null ? 'No RPE logged' : `avg ${formatStepValue('rpe', avgRpe)}`}>
-              {rpes.length > 0 ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Panel title={`Top-set weight · ${unitLabel(unit)}`} meta={latest ? formatWeight(latest.topWeightKg, unit) : undefined}>
                 <div className="p-4">
-                  <TrendChart points={rpes} title={`${name} average RPE over time`} unit="RPE" tone="sky" />
+                  <TrendChart points={weights} title={`${name} top-set weight over time`} unit={unitLabel(unit)} decimals={2} />
                 </div>
-              ) : null}
-            </Panel>
+              </Panel>
+              <Panel title="Session RPE" meta={avgRpe === null ? 'No RPE logged' : `avg ${formatStepValue('rpe', avgRpe)}`}>
+                {rpes.length > 0 ? (
+                  <div className="p-4">
+                    <TrendChart points={rpes} title={`${name} average RPE over time`} unit="RPE" tone="sky" />
+                  </div>
+                ) : (
+                  <p className="p-4 text-meta text-muted">Log RPE or RIR on sets to see effort trends.</p>
+                )}
+              </Panel>
+            </div>
           </section>
         );
       })}

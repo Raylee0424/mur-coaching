@@ -21,20 +21,20 @@ interface StepperProps {
   action?: ReactNode;
 }
 
-/** Big +/- stepper: 44px square buttons, the live value is the largest type on screen. */
+/** Big +/- stepper: 44px pill buttons, the live value is rendered in tabular Source Code Pro. */
 export function Stepper({ label, noun, display, unit, stepLabel, onStep, canDecrease = true, canIncrease = true, compact, action }: StepperProps) {
   const button =
-    'flex size-11 items-center justify-center rounded border border-line-strong bg-transparent text-ink transition-colors hover:border-faint hover:bg-raised disabled:cursor-not-allowed disabled:text-faint disabled:hover:border-line-strong disabled:hover:bg-transparent';
+    'flex size-11 items-center justify-center rounded-full border border-line-strong bg-canvas-low text-ink transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:text-faint disabled:hover:border-line-strong';
   return (
     <div role="group" aria-label={label} className="flex items-center justify-between gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-micro uppercase text-muted">{label}</span>
+          <span className="font-mono text-label-sm uppercase text-muted">{label}</span>
           {action}
         </div>
-        <output aria-live="polite" className={clsx('block font-mono text-ink', compact ? 'text-metric' : 'text-metric-lg')}>
+        <output aria-live="polite" className={clsx('block font-mono tabular-nums text-ink', compact ? 'text-metric' : 'text-metric-lg')}>
           {display}
-          {unit ? <span className="ml-1 text-ui text-faint">{unit}</span> : null}
+          {unit ? <span className="ml-1.5 text-ui text-muted">{unit}</span> : null}
         </output>
       </div>
       <div className="flex items-center gap-2">

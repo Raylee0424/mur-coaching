@@ -33,19 +33,21 @@ export default async function ResourcesPage({ searchParams }: { searchParams: Se
             File storage is not configured on this server, so uploads and downloads are off. Set the R2 variables in the API environment.
           </p>
         ) : null}
-        <nav aria-label="Resource types" className="flex h-10 gap-1 border-b border-line">
+        <nav aria-label="Resource types" className="flex items-center gap-6 overflow-x-auto border-b border-line">
           {RESOURCE_FILTERS.map((f) => (
             <Link
               key={f.key}
               href={f.key === 'all' ? '/coach/resources' : `/coach/resources?filter=${f.key}`}
               aria-current={f.key === filter ? 'page' : undefined}
               className={clsx(
-                'inline-flex items-center gap-1.5 px-3 text-ui transition-colors focus-visible:-outline-offset-2',
-                f.key === filter ? 'text-ink shadow-[inset_0_-2px_0_theme(colors.ink)]' : 'text-muted hover:text-ink',
+                'inline-flex items-center gap-2 whitespace-nowrap border-b-2 pb-3 font-sans text-label-lg transition-colors',
+                f.key === filter ? 'border-primary text-ink' : 'border-transparent text-muted hover:text-ink',
               )}
             >
               {f.label}
-              <span className="font-mono text-micro text-faint">{count(f.key)}</span>
+              <span className="rounded-full border border-line bg-card px-2 py-0.5 font-mono text-label-sm text-muted tabular-nums">
+                {count(f.key)}
+              </span>
             </Link>
           ))}
         </nav>

@@ -20,18 +20,18 @@ export function DemoForms({ layout }: { layout: 'inline' | 'stacked' }) {
   const size = stacked ? 'md' : 'lg';
   return (
     <div className="flex flex-col gap-3">
-      <div className={clsx('flex gap-3', stacked ? 'flex-col' : 'flex-wrap items-center')}>
+      <div className={clsx('flex gap-4', stacked ? 'flex-col gap-2.5' : 'flex-wrap items-center pt-2')}>
         <form action={action} className={clsx(stacked && 'w-full')}>
           <input type="hidden" name="role" value={Role.COACH} />
-          <SubmitButton size={size} className={clsx(stacked && 'w-full')} pendingLabel="Signing in…">
-            Try the coach demo
+          <SubmitButton size={size} className={clsx(stacked ? 'w-full' : 'px-6')} pendingLabel="Signing in…">
+            Try Coach Demo
             <Icon icon={ArrowRight} />
           </SubmitButton>
         </form>
         <form action={action} className={clsx(stacked && 'w-full')}>
           <input type="hidden" name="role" value={Role.CLIENT} />
-          <SubmitButton variant="secondary" size={size} className={clsx(stacked && 'w-full')} pendingLabel="Signing in…">
-            Try the client demo
+          <SubmitButton variant="secondary" size={size} className={clsx(stacked ? 'w-full' : 'px-6')} pendingLabel="Signing in…">
+            Try Client Demo
           </SubmitButton>
         </form>
       </div>

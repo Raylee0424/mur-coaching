@@ -28,7 +28,12 @@ export function SportPicker({ sports, selected, onChange }: { sports: SportCateg
         <ul aria-label="Chosen sports" className="flex flex-wrap gap-1.5">
           {selected.map((sid) => (
             <li key={sid}>
-              <button type="button" onClick={() => toggle(sid)} aria-label={`Remove ${byId.get(sid)?.name ?? sid}`} className="inline-flex h-7 items-center gap-1 rounded border border-ink bg-raised px-2 text-meta">
+              <button
+                type="button"
+                onClick={() => toggle(sid)}
+                aria-label={`Remove ${byId.get(sid)?.name ?? sid}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary-container px-3 py-1 font-sans text-label-sm text-primary"
+              >
                 {byId.get(sid)?.name ?? sid}
                 <Icon icon={X} size={14} />
               </button>

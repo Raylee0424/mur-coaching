@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import { notFound } from 'next/navigation';
 import { RecommendationStatus, Role } from '@coaching/shared';
 import type { RecommendationDto } from '@coaching/shared';
@@ -53,7 +54,7 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
     series.length === 0
       ? []
       : [
-          { label: 'Best top set', value: formatWeight(Math.max(...tops), unit) },
+          { label: 'Best top set', value: formatWeight(Math.max(...tops), unit), emphasis: true },
           { label: 'Last top set', value: formatWeight(tops[tops.length - 1] ?? 0, unit) },
           { label: 'Sessions', value: String(series.length) },
           { label: 'Avg RPE', value: rpes.length ? formatStepValue('rpe', rpes.reduce((a, b) => a + b, 0) / rpes.length) : '—' },
@@ -62,18 +63,20 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
   return (
     <>
       <PageHeader title={exercise.name} back={{ href: '/client/history?tab=charts', label: 'Back to history' }} />
-      <div className="max-w-xl space-y-6">
+      <div className="max-w-3xl space-y-6">
         {rec && tone ? (
-          <section aria-labelledby="next-target" className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 id="next-target" className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
-                Next target
+          <section aria-labelledby="next-target" className={clsx('space-y-3 rounded-md border p-6', ACTION_META[rec.action].box)}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="next-target" className="font-mono text-label-sm uppercase text-muted">
+                Next Session Target
               </h2>
               <ActionBadge action={rec.action} />
             </div>
-            <p className={`font-mono text-metric-lg ${tone.text}`}>{line || <span className="font-sans text-body text-muted">Pick your own weight</span>}</p>
+            <p className={clsx('font-mono text-metric-lg tabular-nums', tone.text)}>
+              {line || <span className="font-sans text-body text-muted">Pick your own weight</span>}
+            </p>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-mono text-meta text-muted">
+              <p className="font-mono text-label-sm text-muted">
                 {cap !== undefined ? `RPE cap ${formatStepValue('rpe', cap)}` : ''}
                 {cap !== undefined && increment !== undefined ? ' · ' : ''}
                 {increment !== undefined ? `step +${formatWeight(increment, unit)}` : ''}
@@ -98,8 +101,10 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
                 }
               />
             </div>
-            {rec.status === RecommendationStatus.PENDING ? <p className="text-meta text-amber">Waiting for your coach to approve this change.</p> : null}
-            <p className={`border-l-2 px-3 text-ui ${ACTION_META[rec.action].rule}`}>{rec.reason}</p>
+            {rec.status === RecommendationStatus.PENDING ? (
+              <p className="font-mono text-label-sm text-amber">Waiting for your coach to approve this change.</p>
+            ) : null}
+            <p className="text-ui text-ink">{rec.reason}</p>
           </section>
         ) : (
           <EmptyState title="No target yet">Log this lift in a session and your next target shows up here.</EmptyState>

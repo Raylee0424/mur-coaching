@@ -23,9 +23,9 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const day = (iso: string): string => formatDate(`${iso}T00:00:00Z`);
 
 const TABS: { key: CheckInTab; label: string }[] = [
-  { key: 'inbox', label: 'Inbox' },
-  { key: 'builder', label: 'Questionnaires' },
-  { key: 'photos', label: 'Progress photos' },
+  { key: 'inbox', label: 'Unified Inbox' },
+  { key: 'builder', label: 'Questionnaire Builder' },
+  { key: 'photos', label: 'Progress Photos' },
 ];
 
 export default async function CoachCheckInsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -35,24 +35,35 @@ export default async function CoachCheckInsPage({ searchParams }: { searchParams
 
   return (
     <>
-      <PageHeader title="Check-ins" meta={`${inbox.unreviewed} to review`} actions={tab === 'builder' ? <TemplateEditor /> : undefined} />
+      <PageHeader
+        title="Check-ins, Unified Inbox & Progress Photos"
+        meta={`${inbox.unreviewed} to review`}
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <nav aria-label="Check-in sections" className="inline-flex gap-1 rounded-sm border border-line bg-canvas-low p-1">
+              {TABS.map((t) => {
+                const on = t.key === tab;
+                return (
+                  <Link
+                    key={t.key}
+                    href={t.key === 'inbox' ? '/coach/check-ins' : `/coach/check-ins?tab=${t.key}`}
+                    aria-current={on ? 'page' : undefined}
+                    className={clsx(
+                      'inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-3.5 py-1.5 font-sans text-label-sm transition-colors',
+                      on ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
+                    )}
+                  >
+                    {t.label}
+                    {t.key === 'inbox' ? <span className="tabular-nums">({inbox.unreviewed})</span> : null}
+                  </Link>
+                );
+              })}
+            </nav>
+            {tab === 'builder' ? <TemplateEditor /> : null}
+          </div>
+        }
+      />
       <div className="space-y-6">
-        <nav aria-label="Check-in sections" className="flex h-10 gap-1 overflow-x-auto border-b border-line">
-          {TABS.map((t) => (
-            <Link
-              key={t.key}
-              href={t.key === 'inbox' ? '/coach/check-ins' : `/coach/check-ins?tab=${t.key}`}
-              aria-current={t.key === tab ? 'page' : undefined}
-              className={clsx(
-                'inline-flex items-center gap-1.5 whitespace-nowrap px-3 text-ui transition-colors focus-visible:-outline-offset-2',
-                t.key === tab ? 'text-ink shadow-[inset_0_-2px_0_theme(colors.ink)]' : 'text-muted hover:text-ink',
-              )}
-            >
-              {t.label}
-              {t.key === 'inbox' ? <span className="font-mono text-micro text-faint">{inbox.unreviewed}</span> : null}
-            </Link>
-          ))}
-        </nav>
         {tab === 'inbox' ? <Inbox inbox={inbox} filter={parseInboxFilter(firstParam(params.filter))} selectedId={firstParam(params.r) ?? null} unit={user.weightUnit} /> : null}
         {tab === 'builder' ? <Builder inbox={inbox} /> : null}
         {tab === 'photos' ? <Photos clients={inbox.clients} clientId={firstParam(params.client) ?? null} unit={user.weightUnit} /> : null}
@@ -74,12 +85,20 @@ function Inbox({ inbox, filter, selectedId, unit }: { inbox: CheckInInboxDto; fi
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[20rem_1fr]">
-      <section aria-label="Submitted check-ins" className="space-y-3">
-        <div className="inline-flex h-9 items-center gap-0.5 rounded border border-line bg-canvas-low p-0.5" role="group" aria-label="Filter">
+    <div className="grid items-start gap-6 lg:grid-cols-12">
+      <section aria-label="Submitted check-ins" className="space-y-3 lg:col-span-4">
+        <div className="inline-flex items-center gap-1 rounded-full border border-line bg-card p-1" role="group" aria-label="Filter">
           {(['unreviewed', 'all'] as const).map((f) => (
-            <Link key={f} href={href({ filter: f })} aria-current={f === filter ? 'page' : undefined} className={clsx('inline-flex h-7 items-center rounded-sm px-2.5 text-ui', f === filter ? 'bg-raised text-ink' : 'text-muted hover:text-ink')}>
-              {f === 'unreviewed' ? `To review (${inbox.unreviewed})` : 'All'}
+            <Link
+              key={f}
+              href={href({ filter: f })}
+              aria-current={f === filter ? 'page' : undefined}
+              className={clsx(
+                'inline-flex items-center rounded-full px-3.5 py-1 font-sans text-label-sm transition-colors',
+                f === filter ? 'bg-raised text-ink' : 'text-muted hover:text-ink',
+              )}
+            >
+              {f === 'unreviewed' ? `To Review (${inbox.unreviewed})` : 'All'}
             </Link>
           ))}
         </div>
@@ -88,52 +107,58 @@ function Inbox({ inbox, filter, selectedId, unit }: { inbox: CheckInInboxDto; fi
             {inbox.templates.length === 0 ? 'Build a questionnaire and assign it to a client to start.' : 'New submissions land here.'}
           </EmptyState>
         ) : (
-          <ul className="divide-y divide-line rounded-md border border-line bg-card">
-            {shown.map((r) => (
-              <li key={r.id}>
-                <Link href={href({ r: r.id })} aria-current={r.id === selected?.id ? 'true' : undefined} className={clsx('flex min-h-14 items-start gap-3 px-4 py-3', r.id === selected?.id ? 'bg-raised' : 'hover:bg-canvas-low')}>
-                  <span aria-hidden="true" className={clsx('mt-1.5 size-2 shrink-0 rounded-full', r.reviewedAt ? 'bg-transparent' : 'bg-signal')} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-ui font-medium">{r.clientName}</span>
-                      <span className="shrink-0 font-mono text-micro text-faint">{timeAgo(r.submittedAt)}</span>
-                    </span>
-                    <span className="block truncate text-meta text-muted">
-                      {r.templateTitle}
-                      {r.reviewedAt ? '' : ' · to review'}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
+          <ul className="divide-y divide-line overflow-hidden rounded-md border border-line bg-card">
+            {shown.map((r) => {
+              const active = r.id === selected?.id;
+              return (
+                <li key={r.id}>
+                  <Link
+                    href={href({ r: r.id })}
+                    aria-current={active ? 'true' : undefined}
+                    className={clsx('flex items-center justify-between gap-3 p-4 transition-colors', active ? 'bg-raised' : 'hover:bg-raised/70')}
+                  >
+                    <div className="min-w-0">
+                      <p className={clsx('truncate font-sans text-label-md', active ? 'text-primary' : 'text-ink')}>
+                        {r.clientName}
+                      </p>
+                      <p className="truncate font-sans text-label-sm font-normal text-muted">
+                        {r.templateTitle}
+                        {r.reviewedAt ? '' : ' · To review'}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-mono text-label-sm text-muted">{timeAgo(r.submittedAt)}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
       {selected ? (
-        <article aria-labelledby="ci-detail" className="space-y-4 rounded-md border border-line bg-card p-4 md:p-6">
-          <header className="flex flex-wrap items-start justify-between gap-3">
+        <article aria-labelledby="ci-detail" className="flex flex-col gap-5 rounded-md border border-line bg-card p-6 lg:col-span-8">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
             <div>
-              <h2 id="ci-detail" className="font-display text-title font-semibold">
+              <h2 id="ci-detail" className="font-display text-title-lg text-ink">
                 {selected.clientName} — {selected.templateTitle}
               </h2>
-              <p className="font-mono text-meta text-muted">
-                For {day(selected.periodDate)} · submitted {formatDate(selected.submittedAt)}
-                {selected.bodyweightKg ? ` · weight ${formatWeight(selected.bodyweightKg, unit)}` : ''}
+              <p className="mt-0.5 font-mono text-label-sm text-muted">
+                Period {day(selected.periodDate)} · Submitted {formatDate(selected.submittedAt)}
+                {selected.bodyweightKg ? ` · Weight ${formatWeight(selected.bodyweightKg, unit)}` : ''}
               </p>
             </div>
-            <div className="flex gap-2">
-              {selected.reviewedAt ? <Badge tone="emerald">Reviewed</Badge> : <Badge tone="signal">To review</Badge>}
-              <Link href={`/coach/messages?client=${encodeURIComponent(selected.clientId)}`} className="text-ui text-primary hover:underline">
+            <div className="flex items-center gap-2.5">
+              {selected.reviewedAt ? <Badge tone="emerald">Reviewed</Badge> : <Badge tone="signal">To Review</Badge>}
+              <Link href={`/coach/messages?client=${encodeURIComponent(selected.clientId)}`} className="font-sans text-label-md text-primary hover:underline">
                 Message
               </Link>
             </div>
           </header>
-          <dl className="space-y-4">
+          <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {selected.answers.map((a) => (
-              <div key={a.questionId}>
-                <dt className="font-mono text-micro uppercase text-muted">{a.prompt}</dt>
-                <dd className="mt-1 whitespace-pre-wrap text-ui">{answerText(a)}</dd>
+              <div key={a.questionId} className="rounded-sm border border-line bg-canvas-low p-4">
+                <dt className="font-sans text-label-sm uppercase tracking-wider text-muted">{a.prompt}</dt>
+                <dd className="mt-1.5 whitespace-pre-wrap font-sans text-body-md text-ink">{answerText(a)}</dd>
               </div>
             ))}
           </dl>

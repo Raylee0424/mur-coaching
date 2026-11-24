@@ -35,22 +35,22 @@ export function InviteStep({ onInvited }: { onInvited?: () => void }) {
   if (state?.ok) {
     const { invite, inviteUrl } = state.data;
     return (
-      <div role="status" className="space-y-3 border-l-2 border-l-emerald bg-card px-4 py-3">
-        <p className="text-ui font-medium text-emerald">Invite created for {invite.name}. Share this link:</p>
+      <div role="status" className="space-y-3 rounded-md border border-emerald/40 bg-emerald-bg p-4">
+        <p className="font-sans text-label-lg text-emerald">Invite created for {invite.name}. Share this link:</p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             readOnly
             aria-label="Invite link"
             value={inviteUrl}
             onFocus={(e) => e.target.select()}
-            className="h-11 min-w-0 flex-1 rounded border border-line-strong bg-canvas-low px-3 font-mono text-ui text-ink"
+            className="h-11 min-w-0 flex-1 rounded-sm border border-line bg-canvas-low px-3.5 font-mono text-label-md text-ink"
           />
           <Button variant="secondary" size="lg" onClick={() => void copy(inviteUrl)}>
             <Icon icon={copied ? Check : Copy} />
-            {copied ? 'Copied' : 'Copy link'}
+            {copied ? 'Copied' : 'Copy Link'}
           </Button>
         </div>
-        <p className="text-meta text-muted">It is shown once and expires in a few days. Track the invite from your roster.</p>
+        <p className="font-sans text-label-sm text-muted">It is shown once and expires in a few days. Track the invite from your roster.</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export function InviteStep({ onInvited }: { onInvited?: () => void }) {
       </div>
       <FormError>{state?.ok === false ? state.error : undefined}</FormError>
       <SubmitButton size="lg" pendingLabel="Creating link…">
-        Send invite
+        Create Invite Link
       </SubmitButton>
     </form>
   );

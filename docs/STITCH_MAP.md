@@ -1,6 +1,8 @@
 # Stitch design → project map
 
-Source designs: `design/stitch/<folder>/code.html` (44 folders, Tailwind HTML mockups; tokens in `design/stitch/apexmetric_design_system.md` and `apps/web/tailwind.config.ts`). The full folder → phase → route map lives in the Obsidian note `MUR Coaching - Stitch Screens` (`docs/brain/`); the table below covers the first build only, and several folder names were renamed since (`client_today` → `athlete_web_home_today_dashboard`, `client_active_workout_logger` → `athlete_web_active_workout_logger`).
+> Historical first-build gap list. All Phase 1 and Phase 2 routes now match Stitch `ApexMetric` (electric lime `#C6FF00`, 2026-11-24). Current route status: `MUR Coaching - Stitch Screens` (`docs/brain/`). Do not re-style away from `design/stitch/apexmetric_design_system.md`.
+
+Source designs: `design/stitch/<folder>/code.html` (48 folders, Tailwind HTML mockups; tokens in `design/stitch/apexmetric_design_system.md` and `apps/web/tailwind.config.ts`). The full folder → phase → route map lives in the Obsidian note `MUR Coaching - Stitch Screens` (`docs/brain/`); the table below covers the first build only, and several folder names were renamed since (`client_today` → `athlete_web_home_today_dashboard`, `client_active_workout_logger` → `athlete_web_active_workout_logger`).
 
 | Stitch folder | Project location | Gap |
 | --- | --- | --- |

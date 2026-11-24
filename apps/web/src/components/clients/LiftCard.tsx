@@ -8,7 +8,6 @@ import { RecommendationActions } from '@/components/progression/RecommendationAc
 import { WhyThisCall } from '@/components/progression/WhyThisCall';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { OverriddenTag } from '@/components/ui/OverrideField';
-import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
 import { formatDate, formatRpe, formatTarget } from '@/lib/format';
 import { asTargetFields, effectiveTarget } from '@/lib/targets';
 import { formatWeight } from '@/lib/units';
@@ -19,7 +18,7 @@ const STATUS: Record<Exclude<RecommendationStatus, 'PENDING'>, { label: string; 
   SUPERSEDED: { label: 'Superseded', tone: 'slate' },
 };
 
-/** One engine card on the client's Lifts tab: last sessions and trend on the left, the call and its actions on the right. */
+/** Stitch exercise engine card (`coach_client_detail`): header + badge, 3-session table + sparkline, tinted verdict banner, and actions. */
 export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; exerciseName: string; unit: WeightUnit }) {
   const meta = ACTION_META[rec.action];
   const last = rec.metrics[rec.metrics.length - 1];
@@ -36,90 +35,101 @@ export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; 
   const status = pending ? null : STATUS[rec.status as keyof typeof STATUS];
 
   return (
-    <article className={clsx('grid rounded-md border border-l-2 border-line bg-card lg:grid-cols-[minmax(0,1fr)_280px]', meta.rule)}>
-      <div className="min-w-0 space-y-4 p-4">
-        <header>
-          <h3 className="font-display text-title font-semibold">{exerciseName}</h3>
-          <p className="font-mono text-meta text-muted">
-            {last ? `${formatWeight(last.topWeightKg, unit)} × ${last.topSetReps}` : 'No sessions yet'}
-            {cap !== undefined ? ` · cap ${cap}` : ''}
+    <article className="flex flex-col gap-5 rounded-md border border-line bg-card p-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h3 className="font-display text-title-lg text-ink">{exerciseName}</h3>
+          <p className="mt-0.5 font-sans text-label-sm text-muted tabular-nums">
+            Current: {last ? `${formatWeight(last.topWeightKg, unit)} × ${last.topSetReps}` : 'No sessions yet'}
+            {cap !== undefined ? ` · RPE Cap ${cap}` : ''}
           </p>
-        </header>
-
-        <div className="overflow-x-auto rounded-md border border-line">
-          <table className={clsx(TABLE, 'min-w-[18rem]')}>
-            <caption className="sr-only">Last {recent.length} sessions, newest first</caption>
-            <thead className={THEAD}>
-              <tr>
-                <th scope="col" className={TH}>Date</th>
-                <th scope="col" className={TH_NUM}>Weight</th>
-                <th scope="col" className={TH_NUM}>Reps</th>
-                <th scope="col" className={TH_NUM}>RPE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent.map((m) => (
-                <tr key={m.exerciseLogId} className={TR}>
-                  <td className={clsx(TD, 'h-9 font-mono')}>{formatDate(m.performedAt)}</td>
-                  <td className={clsx(TD_NUM, 'h-9')}>{formatWeight(m.topWeightKg, unit)}</td>
-                  <td className={clsx(TD_NUM, 'h-9')}>{m.topSetReps}</td>
-                  <td className={clsx(TD_NUM, 'h-9')}>{m.avgRpe === null ? '—' : formatRpe(m.avgRpe).replace('RPE ', '')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-
-        {weights.length > 0 ? (
-          <div className="flex items-center gap-4">
-            <div className="rounded border border-line bg-canvas-low px-3 py-2">
-              <Sparkline
-                values={weights}
-                tone={rec.action}
-                label={`Top-set weight across ${weights.length} sessions: ${weights.map((w) => formatWeight(w, unit)).join(', ')}`}
-              />
-            </div>
-            {diff !== null && weights.length > 1 ? (
-              <span className="font-mono text-meta text-muted">
-                {diff > 0 ? '+' : diff < 0 ? '−' : ''}
-                {formatWeight(Math.abs(diff), unit)} / {weights.length} sess
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="space-y-3 border-t border-line p-4 lg:border-l lg:border-t-0">
-        <p className="font-mono text-micro uppercase text-muted">Next session</p>
-        {target ? (
-          <p className={clsx('font-mono text-metric', meta.text)}>
-            {target}
-            {eff.overridden && eff.rpe ? <span className="ml-2 text-ui text-muted">{formatRpe(eff.rpe)}</span> : null}
-          </p>
-        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <ActionBadge action={rec.action} />
           {status ? (
-            <Badge tone="slate">
+            <Badge tone={status.tone}>
               {status.label}
               {rec.resolvedAt ? ` · ${formatDate(rec.resolvedAt)}` : ''}
             </Badge>
           ) : null}
           {eff.overridden ? <OverriddenTag /> : null}
         </div>
-        <p className="text-meta">{rec.reason}</p>
+      </header>
+
+      <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-12">
+        <div className="overflow-x-auto rounded-sm border border-line bg-canvas-low sm:col-span-8">
+          <table className="w-full min-w-[16rem] border-collapse text-left tabular-nums">
+            <caption className="sr-only">Last {recent.length} sessions, newest first</caption>
+            <thead>
+              <tr className="border-b border-line bg-card">
+                <th scope="col" className="px-3.5 py-2 font-sans text-label-sm text-muted">Date</th>
+                <th scope="col" className="px-3.5 py-2 text-right font-sans text-label-sm text-muted">Weight</th>
+                <th scope="col" className="px-3.5 py-2 text-right font-sans text-label-sm text-muted">Reps</th>
+                <th scope="col" className="px-3.5 py-2 text-right font-sans text-label-sm text-muted">RPE</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {recent.map((m) => (
+                <tr key={m.exerciseLogId}>
+                  <td className="px-3.5 py-2 font-sans text-label-sm text-muted">{formatDate(m.performedAt)}</td>
+                  <td className="px-3.5 py-2 text-right font-mono text-label-md text-ink">{formatWeight(m.topWeightKg, unit)}</td>
+                  <td className="px-3.5 py-2 text-right font-mono text-label-md text-ink">{m.topSetReps}</td>
+                  <td className="px-3.5 py-2 text-right font-mono text-label-md text-ink">
+                    {m.avgRpe === null ? '—' : formatRpe(m.avgRpe).replace('RPE ', '')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-col items-center justify-center gap-1.5 rounded-sm border border-line bg-canvas-low p-3 sm:col-span-4">
+          {weights.length > 0 ? (
+            <>
+              <Sparkline
+                values={weights}
+                tone={rec.action}
+                label={`Top-set weight across ${weights.length} sessions: ${weights.map((w) => formatWeight(w, unit)).join(', ')}`}
+              />
+              {diff !== null && weights.length > 1 ? (
+                <span className="font-mono text-label-sm text-muted tabular-nums">
+                  {diff > 0 ? '+' : diff < 0 ? '−' : ''}
+                  {formatWeight(Math.abs(diff), unit)} / {weights.length} sess
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="text-label-sm text-muted">No trend yet</span>
+          )}
+        </div>
+      </div>
+
+      <div className={clsx('flex flex-col gap-2 rounded-md border p-4', meta.box)}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className={clsx('font-sans text-label-sm uppercase tracking-wider', meta.text)}>NEXT SESSION TARGET</span>
+          {target ? (
+            <span className={clsx('font-display text-title-lg tabular-nums', meta.text)}>
+              {target}
+              {eff.overridden && eff.rpe ? <span className="ml-2 font-sans text-label-md text-ink/80">{formatRpe(eff.rpe)}</span> : null}
+            </span>
+          ) : null}
+        </div>
+        <p className="font-sans text-label-md font-normal text-ink">{rec.reason}</p>
         {rec.overrideNote ? (
-          <p className="border-l-2 border-l-ink pl-3 text-meta">
-            <span className="font-medium">Your note:</span> {rec.overrideNote}
+          <p className="mt-1 border-l-2 border-primary pl-3 font-sans text-label-sm font-normal text-ink">
+            <span className="font-semibold text-primary">Your note:</span> {rec.overrideNote}
           </p>
         ) : null}
-        <div className="flex flex-col items-start gap-1 pt-1">
-          {pending ? (
-            <RecommendationActions clientId={rec.clientId} recommendationId={rec.id} exerciseId={rec.exerciseId} exerciseName={exerciseName} canDismiss stacked />
-          ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <WhyThisCall recommendation={rec} exerciseName={exerciseName} audience="coach" unit={unit} label="Why?" />
           {editable ? <EditTargetButton recommendation={rec} exerciseName={exerciseName} unit={unit} /> : null}
-          <WhyThisCall recommendation={rec} exerciseName={exerciseName} audience="coach" unit={unit} label="Why" />
         </div>
+        {pending ? (
+          <RecommendationActions clientId={rec.clientId} recommendationId={rec.id} exerciseId={rec.exerciseId} exerciseName={exerciseName} canDismiss />
+        ) : null}
       </div>
     </article>
   );

@@ -15,7 +15,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Se
 
   return (
     <>
-      <PageHeader title="Templates" meta={`${templates.length} saved · ${folders.length} folders`} back={{ href: '/client', label: 'Back to today' }} />
+      <PageHeader title="Workout Templates & Gym Mode" meta={`${templates.length} saved · ${folders.length} folders`} back={{ href: '/client', label: 'Back to today' }} />
       <TemplatesManager folders={folders} templates={templates} folderId={firstParam(params.folder) ?? null} catalog={catalog} />
     </>
   );

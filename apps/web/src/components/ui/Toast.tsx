@@ -14,10 +14,10 @@ interface ToastApi {
 
 const ToastContext = createContext<ToastApi | null>(null);
 
-const RULE: Record<ToastItem['tone'], string> = {
-  ok: 'border-l-emerald',
-  error: 'border-l-danger',
-  neutral: 'border-l-line-strong',
+const TONE_BORDER: Record<ToastItem['tone'], string> = {
+  ok: 'border-emerald/40',
+  error: 'border-danger/50',
+  neutral: 'border-line-strong',
 };
 
 function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: string) => void }) {
@@ -36,8 +36,8 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: str
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
       className={clsx(
-        'pointer-events-auto flex items-center gap-3 rounded-md border border-l-2 border-line-strong bg-raised px-4 py-3 text-ui',
-        RULE[toast.tone],
+        'pointer-events-auto flex items-center gap-3 rounded-md border bg-raised px-4 py-3 text-ui text-ink',
+        TONE_BORDER[toast.tone],
       )}
     >
       <p className="min-w-0 flex-1">{toast.message}</p>
@@ -45,7 +45,7 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: str
         <Button
           variant="ghost"
           size="sm"
-          className="font-medium text-ink hover:underline"
+          className="text-primary hover:text-primary-soft"
           onClick={() => {
             toast.action?.onAction();
             onDismiss(toast.id);
@@ -79,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         role="region"
         aria-label="Notifications"
-        className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[min(380px,calc(100vw-2rem))] flex-col gap-2 max-md:bottom-20"
+        className="pointer-events-none fixed bottom-6 right-6 z-[60] flex w-[min(380px,calc(100vw-2rem))] flex-col gap-2 max-md:bottom-20"
       >
         <div aria-live="polite" className="flex flex-col gap-2">
           {toasts.map((t) => (

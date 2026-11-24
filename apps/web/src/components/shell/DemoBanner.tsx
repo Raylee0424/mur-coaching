@@ -14,10 +14,13 @@ export function DemoBanner({ role }: { role: Role }) {
   const other = role === Role.COACH ? Role.CLIENT : Role.COACH;
   return (
     <div className="border-b border-line bg-canvas-low px-4 text-meta text-muted">
-      <form action={action} className="flex min-h-9 flex-wrap items-center justify-between gap-2 py-1">
+      <form action={action} className="flex min-h-10 flex-wrap items-center justify-between gap-2 py-1.5">
         <span className="flex items-center gap-2">
-          <span className="font-mono text-micro uppercase text-signal">Demo</span>
-          Seeded data.
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary-container px-2.5 py-0.5 font-sans text-label-sm uppercase text-primary">
+            <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
+            Demo
+          </span>
+          <span>Exploring seeded data.</span>
           {state?.ok === false ? <span className="font-medium text-danger">{state.error}</span> : null}
         </span>
         <input type="hidden" name="role" value={other} />
@@ -26,7 +29,7 @@ export function DemoBanner({ role }: { role: Role }) {
             View onboarding
           </Link>
           <SubmitButton variant="secondary" size="sm" pendingLabel="Switching…">
-            Switch to {other === Role.COACH ? 'coach' : 'client'}
+            Switch to {other === Role.COACH ? 'Coach' : 'Athlete'}
           </SubmitButton>
         </span>
       </form>

@@ -1,27 +1,33 @@
 import clsx from 'clsx';
-import { Check, Circle } from 'lucide-react';
+import { Circle, CircleCheck } from 'lucide-react';
 import { Icon } from '@/components/ui/Icon';
 import { passwordChecks, passwordScore } from './auth-model';
 
 function Rule({ ok, children }: { ok: boolean; children: string }) {
   return (
-    <li className={clsx('inline-flex items-center gap-1.5 font-mono text-micro uppercase', ok ? 'text-emerald' : 'text-muted')}>
-      <Icon icon={ok ? Check : Circle} size={14} />
+    <li className={clsx('inline-flex items-center gap-1 font-sans text-label-sm', ok ? 'text-emerald' : 'text-muted')}>
+      <Icon icon={ok ? CircleCheck : Circle} size={14} />
       {children}
       <span className="sr-only">{ok ? ' (met)' : ' (not met)'}</span>
     </li>
   );
 }
 
-/** Strength bars plus the two real password rules. */
+/** Stitch 4-bar strength meter plus the two password rules. */
 export function PasswordMeter({ password, checklist = true }: { password: string; checklist?: boolean }) {
   const score = passwordScore(password);
   const checks = passwordChecks(password);
   return (
     <div className="mt-2 space-y-2">
-      <div className="grid grid-cols-4 gap-1" aria-hidden="true">
+      <div className="grid grid-cols-4 gap-1.5" aria-hidden="true">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className={clsx('h-1 rounded-sm', i < score ? (score >= 3 ? 'bg-emerald' : score === 2 ? 'bg-amber' : 'bg-rose') : 'bg-raised')} />
+          <div
+            key={i}
+            className={clsx(
+              'h-1.5 rounded-full transition-colors',
+              i < score ? (score >= 3 ? 'bg-emerald' : score === 2 ? 'bg-amber' : 'bg-rose') : 'bg-raised',
+            )}
+          />
         ))}
       </div>
       {checklist ? (

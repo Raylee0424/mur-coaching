@@ -12,7 +12,7 @@ import { FormError, Label } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 
 const AREA =
-  'block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 text-ui text-ink placeholder:text-faint transition-colors hover:border-faint';
+  'block w-full rounded-sm border border-line bg-canvas-low px-3.5 py-2.5 text-ui text-ink placeholder:text-muted transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary';
 
 /**
  * Coach comments at one scope (session, lift or set): the existing ones, then a form for a new one.

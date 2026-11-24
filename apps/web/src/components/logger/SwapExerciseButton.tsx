@@ -16,23 +16,37 @@ import { formatTargetLine } from './logger-model';
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; items: ExerciseAlternativeDto[] };
 
-/** "Swap" button + bottom sheet: reason chips, same-muscle alternatives (with your last top set), Swap. */
+/** "Swap" / "Safe Swap" button + bottom sheet: reason chips, same-muscle alternatives (with your last top set), Swap. */
 export function SwapExerciseButton({
   current,
   unit,
   onSwap,
+  caution,
 }: {
   current: { id: string; name: string };
   unit: WeightUnit;
   onSwap: (to: ExerciseAlternativeDto, reason: SwapReason, note: string) => void;
+  caution?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="secondary" size="lg" onClick={() => setOpen(true)} aria-label={`Swap ${current.name}`}>
-        <Icon icon={ArrowLeftRight} />
-        Swap
-      </Button>
+      {caution ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={`Safe swap for ${current.name}`}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber bg-card px-4 py-2 font-sans text-label-md font-semibold text-amber transition-colors hover:bg-raised"
+        >
+          <Icon icon={ArrowLeftRight} size={14} />
+          Safe Swap
+        </button>
+      ) : (
+        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-label={`Swap ${current.name}`}>
+          <Icon icon={ArrowLeftRight} />
+          Swap
+        </Button>
+      )}
       {open ? (
         <SwapSheet
           current={current}
@@ -84,7 +98,7 @@ function SwapSheet({
     <Sheet open onClose={onClose} variant="bottom" title="Swap exercise" description={`Alternatives for ${current.name}. Your coach sees the swap in your history.`}>
       <div className="space-y-5">
         <fieldset>
-          <legend className="mb-2 font-mono text-micro uppercase text-muted">Reason</legend>
+          <legend className="mb-2 font-mono text-label-sm uppercase text-muted">Reason</legend>
           <div className="flex flex-wrap gap-2">
             {Object.values(SwapReason).map((r) => (
               <button
@@ -93,8 +107,8 @@ function SwapSheet({
                 aria-pressed={reason === r}
                 onClick={() => setReason(r)}
                 className={clsx(
-                  'h-11 rounded border px-3 text-ui',
-                  reason === r ? 'border-ink bg-raised text-ink' : 'border-line-strong text-muted hover:text-ink',
+                  'h-10 rounded-full border px-4 font-sans text-label-md transition-colors',
+                  reason === r ? 'border-primary bg-primary-container text-primary' : 'border-line bg-canvas-low text-muted hover:text-ink',
                 )}
               >
                 {SWAP_REASON_LABELS[r]}
@@ -112,13 +126,13 @@ function SwapSheet({
               maxLength={200}
               onChange={(e) => setNote(e.target.value)}
               placeholder={reason === SwapReason.PAIN ? 'Where does it hurt?' : 'Anything your coach should know'}
-              className="block h-11 w-full rounded border border-line-strong bg-canvas-low px-3 text-body text-ink placeholder:text-faint hover:border-faint"
+              className="block h-11 w-full rounded-sm border border-line bg-canvas-low px-3.5 text-body text-ink placeholder:text-faint focus:border-primary focus:outline-none"
             />
           </div>
         ) : null}
 
         <fieldset>
-          <legend className="mb-2 font-mono text-micro uppercase text-muted">Alternatives</legend>
+          <legend className="mb-2 font-mono text-label-sm uppercase text-muted">Alternatives</legend>
           {load.status === 'loading' ? (
             <p role="status" className="text-ui text-muted">
               Loading alternatives…
@@ -147,12 +161,12 @@ function SwapSheet({
                     aria-checked={selected}
                     onClick={() => setChoice(a.id)}
                     className={clsx(
-                      'flex h-12 min-h-12 w-full items-center justify-between gap-3 px-1 text-left hover:bg-raised/60',
-                      selected && 'bg-raised',
+                      'flex min-h-12 w-full items-center justify-between gap-3 px-2 py-2.5 text-left transition-colors hover:bg-raised/60',
+                      selected && 'bg-primary-container/50',
                     )}
                   >
                     <span className="min-w-0">
-                      <span className="flex flex-wrap items-center gap-2 text-ui font-medium">
+                      <span className="flex flex-wrap items-center gap-2 text-ui font-medium text-ink">
                         {a.name}
                         {a.limitation ? <LimitationBadge flag={a.limitation} /> : null}
                       </span>
@@ -162,7 +176,7 @@ function SwapSheet({
                           : `${a.equipment ? EQUIPMENT_LABELS[a.equipment] : 'No equipment listed'} · not logged yet`}
                       </span>
                     </span>
-                    <span className="w-5 shrink-0 text-ink">{selected ? <Icon icon={Check} size={20} /> : null}</span>
+                    <span className="w-5 shrink-0 text-primary">{selected ? <Icon icon={Check} size={20} /> : null}</span>
                   </button>
                 );
               })}

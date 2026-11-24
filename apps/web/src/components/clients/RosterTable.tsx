@@ -26,7 +26,7 @@ import { CLIENT_STATUS_META } from './status';
 const STORAGE_KEY = 'rc.roster.columns';
 
 function adherenceTone(pct: number | null): string {
-  if (pct === null) return 'text-faint';
+  if (pct === null) return 'text-muted';
   if (pct >= 85) return 'text-emerald';
   if (pct >= 70) return 'text-amber';
   return 'text-rose';
@@ -58,40 +58,41 @@ export function RosterTable({ clients, total, toolbar }: { clients: RosterClient
   const show = (c: RosterColumn): boolean => columns.includes(c);
 
   return (
-    <section aria-label="Client roster">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <section aria-label="Client roster" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {toolbar}
         <ColumnsMenu columns={columns} onToggle={toggle} />
       </div>
-      <div className="overflow-x-auto rounded-md border border-line bg-card">
-        <table className={clsx(TABLE, 'min-w-[56rem]')}>
-          <caption className="sr-only">Your clients</caption>
-          <thead className={THEAD}>
-            <tr>
-              <th scope="col" className={TH}>Client</th>
-              {show('lastSession') ? <th scope="col" className={TH}>Last session</th> : null}
-              {show('program') ? <th scope="col" className={TH}>Program</th> : null}
-              {show('adherence') ? <th scope="col" className={TH_NUM}>Adherence</th> : null}
-              {show('pending') ? <th scope="col" className={TH}>Pending</th> : null}
-              {show('rpe') ? <th scope="col" className={TH_NUM}>RPE trend</th> : null}
-              <th scope="col" className={TH}>
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.map((client) => (
-              <Row key={client.id} client={client} show={show} />
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-line">
-              <td colSpan={7} className="h-9 px-5 font-mono text-micro text-faint">
-                Showing {clients.length} of {total} {total === 1 ? 'client' : 'clients'}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+
+      <div className="overflow-hidden rounded-md border border-line bg-card">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
+          <h2 className="font-display text-title-md text-ink">Client Roster</h2>
+          <span className="font-sans text-label-sm text-muted tabular-nums">
+            Showing {clients.length} of {total} {total === 1 ? 'client' : 'clients'}
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className={clsx(TABLE, 'min-w-[56rem]')}>
+            <caption className="sr-only">Your clients</caption>
+            <thead className={THEAD}>
+              <tr>
+                <th scope="col" className={TH}>Client</th>
+                {show('lastSession') ? <th scope="col" className={TH}>Last Session</th> : null}
+                {show('program') ? <th scope="col" className={TH}>Current Program</th> : null}
+                {show('adherence') ? <th scope="col" className={TH_NUM}>Adherence</th> : null}
+                {show('pending') ? <th scope="col" className={TH}>Pending</th> : null}
+                {show('rpe') ? <th scope="col" className={TH_NUM}>RPE Trend</th> : null}
+                <th scope="col" className={clsx(TH, 'text-right')}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map((client) => (
+                <Row key={client.id} client={client} show={show} />
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   );
@@ -105,12 +106,12 @@ function Row({ client, show }: { client: RosterClientDto; show: (c: RosterColumn
   const reasons = client.needsAttention ? client.attentionReasons : [];
   return (
     <tr className={clsx(TR, archived && 'text-muted')}>
-      <td className={clsx(TD, 'h-auto py-2')}>
-        <div className="flex flex-wrap items-center gap-2">
+      <td className={TD}>
+        <div className="flex flex-wrap items-center gap-2.5">
           {archived ? (
-            <span className="font-medium">{client.name}</span>
+            <span className="font-sans text-label-lg text-muted">{client.name}</span>
           ) : (
-            <Link href={`/coach/clients/${client.id}`} className="font-medium text-ink hover:underline">
+            <Link href={`/coach/clients/${client.id}`} className="font-sans text-label-lg text-ink hover:text-primary">
               {client.name}
             </Link>
           )}
@@ -120,46 +121,44 @@ function Row({ client, show }: { client: RosterClientDto; show: (c: RosterColumn
               <Badge tone="amber" icon={AlertTriangle}>
                 {ATTENTION_LABELS[reasons[0]!]}
               </Badge>
-              {reasons.length > 1 ? <span className="font-mono text-micro text-amber">+{reasons.length - 1}</span> : null}
+              {reasons.length > 1 ? <span className="font-mono text-label-sm text-amber">+{reasons.length - 1}</span> : null}
             </span>
           ) : null}
         </div>
-        <div className="text-meta text-faint">{client.email}</div>
+        <div className="mt-0.5 text-meta text-muted">{client.email}</div>
       </td>
       {show('lastSession') ? (
-        <td className={clsx(TD, 'whitespace-nowrap font-mono')}>
-          {client.lastSessionAt ? formatDate(client.lastSessionAt) : <span className="font-sans text-faint">No sessions</span>}
+        <td className={clsx(TD, 'whitespace-nowrap text-muted')}>
+          {client.lastSessionAt ? formatDate(client.lastSessionAt) : <span>No sessions</span>}
         </td>
       ) : null}
       {show('program') ? (
         <td className={TD}>
           {client.activeAssignment ? (
-            <>
+            <span className="text-ink">
               {client.activeAssignment.program.name}
-              {client.currentWeek !== null ? <span className="ml-2 font-mono text-faint">W{client.currentWeek}</span> : null}
-            </>
+              {client.currentWeek !== null ? <span className="ml-1.5 font-mono text-muted">· W{client.currentWeek}</span> : null}
+            </span>
           ) : (
-            <span className="text-faint">No program</span>
+            <span className="text-muted">No program</span>
           )}
         </td>
       ) : null}
       {show('adherence') ? (
-        <td className={clsx(TD_NUM, adherenceTone(client.adherencePct))}>
+        <td className={clsx(TD_NUM, 'font-sans text-label-md', adherenceTone(client.adherencePct))}>
           {client.adherencePct === null ? '—' : `${Math.round(client.adherencePct)}%`}
         </td>
       ) : null}
       {show('pending') ? (
         <td className={TD}>
           {client.pendingCount === 0 ? (
-            <span className="font-mono text-faint">0</span>
+            <span className="font-mono text-muted">0</span>
           ) : (
-            <span className="flex flex-wrap gap-3">
+            <span className="flex flex-wrap gap-2">
               {pendingEntries.map((a) => (
-                <span key={a} className={clsx('inline-flex items-center gap-1 whitespace-nowrap font-mono', ACTION_META[a].text)} title={ACTION_META[a].label}>
-                  <Icon icon={ACTION_META[a].icon} size={14} />
-                  {client.pendingByAction[a]}
-                  <span className="sr-only"> {ACTION_META[a].label}</span>
-                </span>
+                <Badge key={a} tone={ACTION_META[a].tone} icon={ACTION_META[a].icon}>
+                  {client.pendingByAction[a]} pending
+                </Badge>
               ))}
             </span>
           )}
@@ -168,7 +167,7 @@ function Row({ client, show }: { client: RosterClientDto; show: (c: RosterColumn
       {show('rpe') ? (
         <td className={TD_NUM}>
           {client.avgRpe7d === null ? (
-            <span className="text-faint">—</span>
+            <span className="text-muted">—</span>
           ) : (
             <>
               {client.avgRpe7d.toFixed(1)}
@@ -182,7 +181,15 @@ function Row({ client, show }: { client: RosterClientDto; show: (c: RosterColumn
           )}
         </td>
       ) : null}
-      <td className={clsx(TD, 'text-right')}>{archived ? <RestoreClientButton clientId={client.id} name={client.name} /> : null}</td>
+      <td className={clsx(TD, 'text-right')}>
+        {archived ? (
+          <RestoreClientButton clientId={client.id} name={client.name} />
+        ) : (
+          <Link href={`/coach/clients/${client.id}`} className={buttonClass('secondary', undefined, 'sm')}>
+            Open
+          </Link>
+        )}
+      </td>
     </tr>
   );
 }
@@ -215,10 +222,11 @@ function ColumnsMenu({ columns, onToggle }: { columns: RosterColumn[]; onToggle:
         Columns
       </button>
       {open ? (
-        <div id={id} role="group" aria-label="Visible columns" className="absolute right-0 z-20 mt-1 w-52 rounded-md border border-line bg-raised p-1">
+        <div id={id} role="group" aria-label="Visible columns" className="absolute right-0 z-20 mt-2 flex w-52 flex-col gap-1.5 rounded-md border border-line bg-card p-3">
+          <span className="font-sans text-label-sm uppercase tracking-wider text-muted">Visible Columns</span>
           {ROSTER_COLUMNS.map((c) => (
-            <label key={c.key} className="flex h-8 cursor-pointer items-center gap-2 rounded-sm px-2 text-ui hover:bg-card">
-              <input type="checkbox" checked={columns.includes(c.key)} onChange={() => onToggle(c.key)} className="size-4" />
+            <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 font-sans text-label-md text-ink hover:bg-raised">
+              <input type="checkbox" checked={columns.includes(c.key)} onChange={() => onToggle(c.key)} className="size-4 rounded" />
               {c.label}
             </label>
           ))}

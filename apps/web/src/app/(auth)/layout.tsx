@@ -1,75 +1,85 @@
 import clsx from 'clsx';
+import { TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { RecommendationAction } from '@coaching/shared';
-import { ActionBadge } from '@/components/progression/ActionBadge';
 import { Wordmark } from '@/components/shell/Wordmark';
-import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
+import { Icon } from '@/components/ui/Icon';
 
 const LOG = [
-  { date: 'Nov 20', weight: '155.0', reps: '5 / 5', rpe: '8.0' },
-  { date: 'Nov 16', weight: '152.5', reps: '5 / 5', rpe: '7.5' },
-  { date: 'Nov 12', weight: '150.0', reps: '5 / 5', rpe: '8.0' },
+  { date: 'Nov 20', weight: '155.0 kg', reps: '5 / 5', rpe: '8.0', highlight: true },
+  { date: 'Nov 16', weight: '152.5 kg', reps: '5 / 5', rpe: '7.5', highlight: false },
+  { date: 'Nov 12', weight: '150.0 kg', reps: '5 / 5', rpe: '8.0', highlight: false },
 ] as const;
 
-/** Illustration of one engine call. Static on purpose: auth pages have no data. */
+/** Right-column Live Engine Preview card matching `auth_sign_in_account_flows`. */
 function EnginePreview() {
   return (
-    <figure aria-label="Example progression engine call" className="w-full max-w-md overflow-hidden rounded-md border border-line bg-card">
-      <div className="flex h-10 items-center justify-between border-b border-line px-4">
-        <span className="font-mono text-micro uppercase text-muted">Back squat · last 3 sessions</span>
-      </div>
-      <table className={TABLE}>
-        <caption className="sr-only">Last three sessions</caption>
-        <thead className={THEAD}>
-          <tr>
-            <th scope="col" className={TH}>Date</th>
-            <th scope="col" className={TH_NUM}>Load</th>
-            <th scope="col" className={TH_NUM}>Reps</th>
-            <th scope="col" className={TH_NUM}>RPE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {LOG.map((r) => (
-            <tr key={r.date} className={TR}>
-              <td className={clsx(TD, 'font-mono text-muted')}>{r.date}</td>
-              <td className={TD_NUM}>
-                {r.weight}
-                <span className="ml-1 text-faint">kg</span>
-              </td>
-              <td className={TD_NUM}>{r.reps}</td>
-              <td className={TD_NUM}>{r.rpe}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="border-t border-l-2 border-line border-l-emerald px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <ActionBadge action={RecommendationAction.INCREASE_LOAD} />
-          <span className="font-mono text-metric">
-            157.5<span className="ml-1 text-ui text-faint">kg</span> <span className="text-ui text-faint">×</span> 5
+    <div className="flex w-full max-w-md flex-col gap-6">
+      <figure aria-label="Example progression engine call" className="flex flex-col gap-4 rounded-md border border-line bg-card p-6">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="font-sans text-label-sm uppercase tracking-wider text-muted">LIVE ENGINE PREVIEW</span>
+            <p className="mt-0.5 font-display text-title-lg text-ink">Barbell Back Squat</p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald/40 bg-emerald-bg px-3 py-1 font-sans text-label-sm text-emerald">
+            <Icon icon={TrendingUp} size={14} />
+            INCREASE_LOAD
           </span>
         </div>
-        <p className="mt-2 text-meta text-muted">
-          Avg RPE <span className="font-mono">7.8</span> over <span className="font-mono">3</span> sessions, <span className="font-mono">0.7</span> under the{' '}
-          <span className="font-mono">8.5</span> cap.
-        </p>
-      </div>
-    </figure>
+
+        <div className="overflow-hidden rounded-sm border border-line bg-canvas-low">
+          <table className="w-full border-collapse text-left tabular-nums">
+            <caption className="sr-only">Last three sessions</caption>
+            <thead>
+              <tr className="border-b border-line bg-card">
+                <th scope="col" className="px-4 py-2.5 font-sans text-label-sm text-muted">Date</th>
+                <th scope="col" className="px-4 py-2.5 font-sans text-label-sm text-muted">Weight</th>
+                <th scope="col" className="px-4 py-2.5 font-sans text-label-sm text-muted">Reps</th>
+                <th scope="col" className="px-4 py-2.5 font-sans text-label-sm text-muted">RPE</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {LOG.map((r) => (
+                <tr key={r.date}>
+                  <td className="px-4 py-2.5 font-sans text-label-sm text-muted">{r.date}</td>
+                  <td className="px-4 py-2.5 font-sans text-label-md text-ink">{r.weight}</td>
+                  <td className="px-4 py-2.5 font-sans text-label-md text-ink">{r.reps}</td>
+                  <td className={clsx('px-4 py-2.5 font-sans text-label-md', r.highlight ? 'text-primary' : 'text-ink')}>{r.rpe}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 rounded-sm border border-emerald/40 bg-emerald-bg p-4">
+          <div>
+            <p className="font-sans text-label-md text-emerald">Next Target: 157.5 kg × 5</p>
+            <p className="mt-0.5 font-sans text-label-md font-normal text-ink">3-session avg RPE 7.8 is 0.7 below the 8.5 cap.</p>
+          </div>
+          <span className="shrink-0 font-mono text-label-md text-primary tabular-nums">+2.5 kg</span>
+        </div>
+      </figure>
+
+      <p className="text-center font-display text-title-md text-muted">No black-box AI, just transparent strength rules.</p>
+    </div>
   );
 }
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <main className="flex min-h-dvh flex-col px-5 py-6 sm:px-10 lg:py-8">
-        <Link href="/" aria-label="MUR Coaching home" className="inline-flex w-fit">
-          <Wordmark />
-        </Link>
-        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6 py-10">{children}</div>
-        <p className="font-mono text-micro text-faint">© 2026 MUR Coaching</p>
+    <div className="grid min-h-dvh bg-canvas lg:grid-cols-2">
+      <main className="flex min-h-dvh flex-col justify-between p-6 sm:p-10 lg:p-12">
+        <div className="mx-auto w-full max-w-md">
+          <Link href="/" aria-label="MUR Coaching home" className="inline-flex rounded-sm">
+            <Wordmark />
+          </Link>
+        </div>
+        <div className="mx-auto my-8 flex w-full max-w-md flex-col gap-5">{children}</div>
+        <div className="mx-auto w-full max-w-md">
+          <p className="font-sans text-label-sm text-muted tabular-nums">© 2026 MUR Coaching</p>
+        </div>
       </main>
-      <aside className="hidden items-center justify-center border-l border-line bg-canvas-low p-10 lg:flex">
+      <aside className="hidden items-center justify-center border-l border-line bg-canvas-low p-12 lg:flex">
         <EnginePreview />
       </aside>
     </div>

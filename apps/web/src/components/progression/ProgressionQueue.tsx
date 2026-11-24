@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { Check, Info, X } from 'lucide-react';
+import { CheckCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RecommendationQueueItem, RecommendationQueueResponse, ResolvableStatus, WeightUnit } from '@coaching/shared';
@@ -11,7 +11,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchField } from '@/components/ui/SearchField';
-import { Segmented } from '@/components/ui/Segmented';
 import { TABLE, TD, TH, THEAD } from '@/components/ui/table';
 import { useToast } from '@/components/ui/Toast';
 import { formatTarget } from '@/lib/format';
@@ -61,7 +60,6 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
   const items = visibleItems(allItems, hidden);
 
   useEffect(() => setSelected((s) => pruneSelection(items, s)), [allItems, scheduled, inFlight]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Rows that left the server list are no longer "in flight".
   useEffect(() => {
     setInFlight((cur) => {
       const ids = new Set(allItems.map((i) => i.id));
@@ -118,7 +116,6 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
     });
   }
 
-  // Send anything still in the Undo window when the coach leaves the page.
   useEffect(() => {
     const flush = (): void => {
       for (const t of timers.current.values()) clearTimeout(t);
@@ -141,37 +138,56 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
   return (
     <>
       <PageHeader
-        title="Progression queue"
+        title="Progression Queue"
         meta={`${counts.total} pending`}
-        actions={
-          <Button size="sm" onClick={() => resolve([...selected], 'ACCEPTED')} disabled={selected.size === 0}>
-            <Icon icon={Check} />
-            Accept selected <span className="font-mono">{selected.size}</span>
-          </Button>
-        }
+        actions={<SearchField value={q} label="Search the queue by client or lift" placeholder="Filter by client or lift..." hrefFor={hrefFor} />}
       />
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <Segmented
-            label="Filter by call"
-            items={[
-              { href: queueHref('ALL', q), label: 'All', count: counts.total, current: action === 'ALL' },
-              ...ACTION_FILTERS.map((a) => ({
-                href: queueHref(a, q),
-                label: ACTION_META[a].label,
-                count: counts.byAction[a],
-                current: action === a,
-                icon: ACTION_META[a].icon,
-              })),
-            ]}
-          />
-          <SearchField value={q} label="Search the queue by client or lift" placeholder="Filter by client or lift" hrefFor={hrefFor} />
+      <div className="space-y-5">
+        {/* Stitch tinted action filter bar + Accept selected CTA */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <nav aria-label="Filter by call" className="flex flex-wrap items-center gap-2">
+            <Link
+              href={queueHref('ALL', q)}
+              aria-current={action === 'ALL' ? 'page' : undefined}
+              className={clsx(
+                'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 font-sans text-label-md transition-colors',
+                action === 'ALL' ? 'border-primary bg-raised text-ink' : 'border-line bg-card text-muted hover:text-ink',
+              )}
+            >
+              All <span className="tabular-nums">({counts.total})</span>
+            </Link>
+            {ACTION_FILTERS.map((a) => {
+              const meta = ACTION_META[a];
+              const on = action === a;
+              return (
+                <Link
+                  key={a}
+                  href={queueHref(a, q)}
+                  aria-current={on ? 'page' : undefined}
+                  className={clsx(
+                    'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 font-sans text-label-sm transition-colors',
+                    meta.box,
+                    meta.text,
+                    on ? 'ring-1 ring-inset ring-current' : 'opacity-85 hover:opacity-100',
+                  )}
+                >
+                  <Icon icon={meta.icon} size={14} />
+                  {meta.code} <span className="tabular-nums">({counts.byAction[a]})</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <Button onClick={() => resolve([...selected], 'ACCEPTED')} disabled={selected.size === 0}>
+            <Icon icon={CheckCheck} />
+            Accept selected ({selected.size})
+          </Button>
         </div>
 
         {items.length === 0 ? (
           filtersActive ? (
             <EmptyState title="No calls match">
-              <Link href="/coach/progression" className="text-ink underline">
+              <Link href="/coach/progression" className="text-primary hover:underline">
                 Clear filters
               </Link>
             </EmptyState>
@@ -184,7 +200,7 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
               <caption className="sr-only">Pending progression recommendations</caption>
               <thead className={THEAD}>
                 <tr>
-                  <th scope="col" className={clsx(TH, 'w-12')}>
+                  <th scope="col" className={clsx(TH, 'w-12 px-4')}>
                     <input
                       type="checkbox"
                       aria-label="Select all"
@@ -193,18 +209,15 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
                         if (el) el.indeterminate = state === 'some';
                       }}
                       onChange={() => setSelected(toggleAll(items, selected))}
-                      className="size-4 rounded-sm"
+                      className="size-4 rounded"
                     />
                   </th>
                   <th scope="col" className={TH}>Client</th>
                   <th scope="col" className={TH}>Exercise</th>
-                  <th scope="col" className={TH}>Current</th>
-                  <th scope="col" className={TH}>Proposed</th>
-                  <th scope="col" className={TH}>Call</th>
-                  <th scope="col" className={TH}>Reason</th>
-                  <th scope="col" className={TH}>
-                    <span className="sr-only">Actions</span>
-                  </th>
+                  <th scope="col" className={TH}>Current → Proposed</th>
+                  <th scope="col" className={TH}>Recommendation</th>
+                  <th scope="col" className={TH}>Engine Reason</th>
+                  <th scope="col" className={clsx(TH, 'text-right')}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,47 +272,51 @@ function Row({
     { recommendedSets: null, recommendedRepsMin: item.proposed.repsMin, recommendedRepsMax: item.proposed.repsMax, recommendedWeightKg: item.proposed.weightKg },
     unit,
   );
+  const current = item.current ? `${formatWeight(item.current.weightKg, unit)} × ${item.current.reps}` : '—';
   const who = `${item.clientName} ${item.exerciseName}`;
   return (
     <tr
       className={clsx(
-        'border-t border-line transition-colors hover:bg-raised/60',
-        selected && 'bg-raised shadow-[inset_2px_0_0_theme(colors.signal.DEFAULT)]',
+        'border-t border-line transition-colors hover:bg-raised',
+        selected && 'bg-raised shadow-[inset_3px_0_0_theme(colors.primary.DEFAULT)]',
       )}
     >
-      <td className={TD}>
-        <input type="checkbox" aria-label={`Select ${who}`} checked={selected} onChange={onToggle} className="size-4 rounded-sm" />
+      <td className="px-4 py-4 align-middle">
+        <input type="checkbox" aria-label={`Select ${who}`} checked={selected} onChange={onToggle} className="size-4 rounded" />
       </td>
       <td className={clsx(TD, 'whitespace-nowrap')}>
-        <Link href={`/coach/clients/${item.clientId}?tab=lifts`} className="font-medium hover:underline">
+        <Link href={`/coach/clients/${item.clientId}?tab=lifts`} className="font-sans text-label-md text-ink hover:text-primary">
           {item.clientName}
         </Link>
       </td>
-      <td className={clsx(TD, 'whitespace-nowrap text-muted')}>{item.exerciseName}</td>
-      <td className={clsx(TD, 'whitespace-nowrap font-mono text-muted')}>
-        {item.current ? `${formatWeight(item.current.weightKg, unit)} × ${item.current.reps}` : '—'}
+      <td className={clsx(TD, 'whitespace-nowrap text-ink')}>{item.exerciseName}</td>
+      <td className={clsx(TD, 'whitespace-nowrap font-mono text-label-md text-ink')}>
+        {current} <span className="text-muted">→</span>{' '}
+        <span className={ACTION_META[item.action].text}>{proposed || '—'}</span>
       </td>
-      <td className={clsx(TD, 'whitespace-nowrap font-mono font-medium', ACTION_META[item.action].text)}>{proposed || '—'}</td>
       <td className={clsx(TD, 'whitespace-nowrap')}>
         <ActionBadge action={item.action} />
       </td>
       <td className={TD}>
-        <span className="line-clamp-2 max-w-[22rem] text-meta text-muted" title={item.reason}>
+        <span className="line-clamp-2 max-w-[22rem] font-sans text-label-md font-normal text-muted" title={item.reason}>
           {item.reason}
         </span>
       </td>
-      <td className={TD}>
-        <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" aria-label={`Why this call for ${who}`} onClick={onWhy}>
-            <Icon icon={Info} />
-            Why
-          </Button>
-          <Button variant="secondary" size="sm" aria-label={`Accept ${who}`} onClick={() => onResolve('ACCEPTED')}>
-            <Icon icon={Check} />
+      <td className={clsx(TD, 'whitespace-nowrap text-right')}>
+        <div className="inline-flex items-center justify-end gap-2">
+          <button
+            type="button"
+            aria-label={`Why this call for ${who}`}
+            onClick={onWhy}
+            className="mr-1 font-sans text-label-sm text-primary underline hover:text-primary-soft"
+          >
+            Why?
+          </button>
+          <Button variant="primary" size="sm" aria-label={`Accept ${who}`} onClick={() => onResolve('ACCEPTED')}>
             Accept
           </Button>
-          <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Dismiss ${who}`} onClick={() => onResolve('DISMISSED')}>
-            <Icon icon={X} />
+          <Button variant="secondary" size="sm" aria-label={`Dismiss ${who}`} onClick={() => onResolve('DISMISSED')}>
+            Dismiss
           </Button>
         </div>
       </td>

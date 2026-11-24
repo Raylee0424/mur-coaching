@@ -19,11 +19,11 @@ import { shortDate, tabHref } from './overview-model';
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const CELL: Record<CalendarDayStatus, string> = {
-  COMPLETED: 'border-emerald/30 bg-emerald-bg',
-  MISSED: 'border-rose/30 bg-rose-bg',
+  COMPLETED: 'border-emerald/40 bg-emerald-bg',
+  MISSED: 'border-rose/40 bg-rose-bg',
   HIGH_RPE: 'border-amber/40 bg-amber-bg',
   SCHEDULED: 'border-line-strong bg-canvas-low',
-  TODAY: 'border-line-strong bg-canvas-low ring-1 ring-inset ring-ink',
+  TODAY: 'border-primary bg-raised ring-1 ring-inset ring-primary',
   SKIPPED: 'border-line bg-canvas-low opacity-70',
 };
 
@@ -32,7 +32,7 @@ const MARK: Record<CalendarDayStatus, { icon: LucideIcon | null; className: stri
   MISSED: { icon: X, className: 'text-rose' },
   HIGH_RPE: { icon: Gauge, className: 'text-amber' },
   SCHEDULED: { icon: null, className: 'text-muted' },
-  TODAY: { icon: null, className: 'text-ink' },
+  TODAY: { icon: null, className: 'text-primary' },
   SKIPPED: { icon: SkipForward, className: 'text-muted' },
 };
 

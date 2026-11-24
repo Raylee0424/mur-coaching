@@ -40,11 +40,11 @@ export function SearchField({
         e.preventDefault();
         router.replace(hrefFor(text));
       }}
-      className="w-full sm:w-64"
+      className="w-full sm:w-72"
     >
       <label className="relative block">
         <span className="sr-only">{label}</span>
-        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-faint">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
           <Icon icon={Search} />
         </span>
         <input
@@ -52,7 +52,7 @@ export function SearchField({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
-          className="block h-9 w-full rounded border border-line-strong bg-canvas-low pl-8 pr-3 text-ui text-ink placeholder:text-faint hover:border-faint"
+          className="block h-10 w-full rounded-sm border border-line bg-canvas-low pl-9 pr-3 text-label-lg font-normal text-ink placeholder:text-muted transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </label>
     </form>

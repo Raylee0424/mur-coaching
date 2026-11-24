@@ -6,21 +6,21 @@ import { Icon } from './Icon';
 export type BadgeTone = 'emerald' | 'amber' | 'sky' | 'slate' | 'red' | 'neutral' | 'signal';
 
 const TONES: Record<BadgeTone, string> = {
-  emerald: 'border-emerald/35 text-emerald',
-  sky: 'border-sky/35 text-sky',
-  amber: 'border-amber/35 text-amber',
-  red: 'border-rose/35 text-rose',
-  slate: 'border-line-strong text-muted',
-  neutral: 'border-line-strong text-ink',
-  signal: 'border-signal/40 bg-signal-bg text-signal',
+  emerald: 'border-emerald/40 bg-emerald-bg text-emerald',
+  sky: 'border-sky/40 bg-sky-bg text-sky',
+  amber: 'border-amber/40 bg-amber-bg text-amber',
+  red: 'border-rose/40 bg-rose-bg text-rose',
+  slate: 'border-line bg-canvas-low text-muted',
+  neutral: 'border-line-strong bg-raised text-ink',
+  signal: 'border-primary/40 bg-primary-container text-primary',
 };
 
-/** Always carries text: colour is never the only signal. */
+/** Stitch pill status badge. Always carries text: colour is never the only signal. */
 export function Badge({ tone = 'slate', icon, children }: { tone?: BadgeTone; icon?: LucideIcon; children: ReactNode }) {
   return (
     <span
       className={clsx(
-        'inline-flex h-5 items-center gap-1 whitespace-nowrap rounded-sm border px-1.5 font-mono text-micro uppercase',
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 font-sans text-label-sm',
         TONES[tone],
       )}
     >

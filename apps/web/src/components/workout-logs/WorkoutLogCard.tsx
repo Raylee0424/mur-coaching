@@ -15,6 +15,7 @@ export function WorkoutLogCard({ log, unit, editable = false, reviewHref }: { lo
       <header className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-mono text-ui">{formatDate(log.performedAt)}</h3>
+          {log.loggedById ? <p className="font-mono text-micro uppercase text-signal">Logged by coach</p> : null}
           {log.notes ? <p className="mt-0.5 text-meta text-muted">{log.notes}</p> : null}
         </div>
         {reviewHref ? (

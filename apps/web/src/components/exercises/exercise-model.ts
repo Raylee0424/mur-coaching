@@ -21,6 +21,8 @@ export interface ExerciseDraft {
   rpeCap: string;
   repsMin: string;
   repsMax: string;
+  /** https demo video link; empty = none. */
+  demoUrl: string;
 }
 
 export type ExerciseErrors = Partial<Record<Exclude<keyof ExerciseDraft, 'extraMuscles'>, string>>;
@@ -37,6 +39,7 @@ export const EMPTY_DRAFT: ExerciseDraft = {
   rpeCap: '',
   repsMin: '',
   repsMax: '',
+  demoUrl: '',
 };
 
 export function draftFromExercise(e: ExerciseDto): ExerciseDraft {
@@ -54,6 +57,7 @@ export function draftFromExercise(e: ExerciseDto): ExerciseDraft {
     rpeCap: e.rpeCap === null ? '' : String(toNumber(e.rpeCap)),
     repsMin: e.repsMin === null ? '' : String(e.repsMin),
     repsMax: e.repsMax === null ? '' : String(e.repsMax),
+    demoUrl: e.demoUrl ?? '',
   };
 }
 
@@ -61,6 +65,19 @@ export function draftFromExercise(e: ExerciseDto): ExerciseDraft {
 export function nextMuscleRole(role: MuscleRole | undefined): MuscleRole | undefined {
   if (role === undefined) return MuscleRole.SECONDARY;
   return role === MuscleRole.SECONDARY ? MuscleRole.PRIMARY : undefined;
+}
+
+/** Demo links must be https and short enough for the column; empty is fine. Returns an error or null. */
+export function demoUrlProblem(raw: string): string | null {
+  const url = raw.trim();
+  if (!url) return null;
+  if (url.length > 300) return 'At most 300 characters.';
+  try {
+    if (new URL(url).protocol !== 'https:') return 'Use an https:// link.';
+  } catch {
+    return 'Enter a full link, e.g. https://youtu.be/…';
+  }
+  return null;
 }
 
 export type Validation = { ok: true; body: CreateExerciseRequest } | { ok: false; errors: ExerciseErrors };
@@ -75,6 +92,9 @@ export function validateExercise(d: ExerciseDraft, viewer: LibraryViewer = 'coac
   if (!name) errors.name = 'Name is required.';
   else if (name.length > 80) errors.name = 'At most 80 characters.';
   if (d.muscleGroup === '') errors.muscleGroup = 'Choose a muscle group.';
+
+  const demoProblem = demoUrlProblem(d.demoUrl);
+  if (demoProblem) errors.demoUrl = demoProblem;
 
   const coach = viewer === 'coach';
   const inc = parseOverride(d.loadIncrementKg, ENGINE_LIMITS.loadIncrementKg);
@@ -114,6 +134,7 @@ export function validateExercise(d: ExerciseDraft, viewer: LibraryViewer = 'coac
       profile: d.profile || null,
       position: d.position || null,
       loadIncrementKg: inc.value ?? 2.5,
+      demoUrl: d.demoUrl.trim() || null,
       ...(coach ? { rpeCap: cap.value, repsMin: min.value, repsMax: max.value } : {}),
     },
   };
