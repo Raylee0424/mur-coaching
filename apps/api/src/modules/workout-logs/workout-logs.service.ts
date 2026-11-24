@@ -145,8 +145,11 @@ export class WorkoutLogsService {
     }
   }
 
-  /** Runs after the write has committed; a failing engine or record rebuild must never undo or fail the log. */
-  private async refreshProgression(clientId: string, exerciseIds: readonly string[]): Promise<void> {
+  /**
+   * Runs after the write has committed; a failing engine or record rebuild must never undo or fail the log.
+   * Public for writers outside this service (live sessions) that add sets to a client's log.
+   */
+  async refreshProgression(clientId: string, exerciseIds: readonly string[]): Promise<void> {
     for (const exerciseId of new Set(exerciseIds)) {
       try {
         await this.progression.refreshExercise(clientId, exerciseId);

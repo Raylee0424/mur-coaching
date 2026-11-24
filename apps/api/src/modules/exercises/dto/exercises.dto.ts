@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   MaxLength,
   Min,
@@ -91,6 +92,13 @@ export class CreateExerciseDto implements CreateExerciseRequest {
   @Min(ENGINE_LIMITS.reps.min)
   @Max(ENGINE_LIMITS.reps.max)
   repsMax?: number | null;
+
+  /** https demo video link; null clears it. */
+  @nullable
+  @Transform(trim)
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(300)
+  demoUrl?: string | null;
 }
 
 export class UpdateExerciseDto implements Partial<CreateExerciseRequest> {
@@ -154,6 +162,13 @@ export class UpdateExerciseDto implements Partial<CreateExerciseRequest> {
   @Min(ENGINE_LIMITS.reps.min)
   @Max(ENGINE_LIMITS.reps.max)
   repsMax?: number | null;
+
+  /** https demo video link; null clears it. */
+  @nullable
+  @Transform(trim)
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  @MaxLength(300)
+  demoUrl?: string | null;
 }
 
 export class ListExercisesQuery implements ListExercisesQueryShape {

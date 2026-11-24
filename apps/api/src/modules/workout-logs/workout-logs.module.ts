@@ -10,5 +10,6 @@ import { WorkoutLogsService } from './workout-logs.service';
   imports: [ClientsModule, ProgressionModule, RecordsModule, ScheduleModule],
   controllers: [WorkoutLogsController],
   providers: [WorkoutLogsService],
+  exports: [WorkoutLogsService],
 })
 export class WorkoutLogsModule {}
