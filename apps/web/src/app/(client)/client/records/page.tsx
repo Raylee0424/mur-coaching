@@ -41,9 +41,14 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
     return (
       <>
         <PageHeader title="Personal Records & Net Progression" meta={<Badge tone="signal">PRO</Badge>} actions={
-          <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
-            Muscle Map
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
+              Muscle Map
+            </Link>
+            <Link href="/client/coach-ai" className={buttonClass('secondary', undefined, 'sm')}>
+              Ask MUR AI Coach
+            </Link>
+          </div>
         } />
         <div className="max-w-xl">
           <EmptyState title="No records yet">Log a session and your heaviest working sets show up here. Warm-ups never count.</EmptyState>
@@ -61,9 +66,14 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
         title="Personal Records & Net Progression"
         meta={<Badge tone="signal">PRO</Badge>}
         actions={
-          <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
-            Muscle Map
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
+              Muscle Map
+            </Link>
+            <Link href="/client/coach-ai" className={buttonClass('secondary', undefined, 'sm')}>
+              Ask MUR AI Coach
+            </Link>
+          </div>
         }
       />
 

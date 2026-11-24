@@ -170,6 +170,16 @@ import type {
   UpdateExerciseNoteRequest,
   UpdateWorkoutTemplateRequest,
   WorkoutTemplateDto,
+  AiConversationDto,
+  AskCoachRequest,
+  AskCoachResponse,
+  CoachOverviewDto,
+  ConnectorGrantDto,
+  CreateConnectorRequest,
+  CreatedConnectorDto,
+  GeneratedWorkoutDto,
+  GenerateWorkoutRequest,
+  VoiceParseResponse,
 } from '@coaching/shared';
 import { apiFetch } from './client';
 
@@ -583,4 +593,20 @@ export const readinessApi = {
   saveCycle: (body: SaveCycleEntryRequest) => apiFetch<void>('/me/cycle/entries', { method: 'PUT', body }),
   removeCycle: (date: string) => apiFetch<void>(idPath('/me/cycle/entries', date), { method: 'DELETE' }),
   shareCycle: (sharedWithCoach: boolean) => apiFetch<void>('/me/cycle/sharing', { method: 'PUT', body: { sharedWithCoach } }),
+};
+
+/** MUR AI Training Coach, generator and voice: 402 without the Pro feature, 429 over the daily cap. */
+export const aiApi = {
+  coachOverview: () => apiFetch<CoachOverviewDto>('/ai/coach'),
+  conversation: (id: string) => apiFetch<AiConversationDto>(idPath('/ai/coach/conversations', id)),
+  removeConversation: (id: string) => apiFetch<void>(idPath('/ai/coach/conversations', id), { method: 'DELETE' }),
+  ask: (body: AskCoachRequest) => apiFetch<AskCoachResponse>('/ai/coach', { method: 'POST', body }),
+  generateWorkout: (body: GenerateWorkoutRequest) => apiFetch<GeneratedWorkoutDto>('/ai/workouts', { method: 'POST', body }),
+  parseVoice: (transcript: string) => apiFetch<VoiceParseResponse>('/ai/voice/parse', { method: 'POST', body: { transcript } }),
+};
+
+export const connectorsApi = {
+  list: () => apiFetch<ConnectorGrantDto[]>('/me/connectors'),
+  create: (body: CreateConnectorRequest) => apiFetch<CreatedConnectorDto>('/me/connectors', { method: 'POST', body }),
+  revoke: (id: string) => apiFetch<void>(idPath('/me/connectors', id), { method: 'DELETE' }),
 };
