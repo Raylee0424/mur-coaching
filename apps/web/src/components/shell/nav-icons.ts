@@ -1,5 +1,6 @@
 import {
   Calculator,
+  CreditCard,
   CalendarCheck,
   CalendarRange,
   Dumbbell,
@@ -22,4 +23,5 @@ export const NAV_ICONS: Record<NavIconKey, LucideIcon> = {
   history: History,
   tools: Calculator,
   user: UserRound,
+  billing: CreditCard,
 };

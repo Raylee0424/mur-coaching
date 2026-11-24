@@ -144,22 +144,28 @@ enum RecommendationStatus {
 // ─────────────── Identity & Tenancy ───────────────
 
 model User {
-  id               String     @id @default(cuid())
-  email            String     @unique
-  passwordHash     String
-  name             String
-  role             Role
-  isDemo           Boolean    @default(false)
-  weightUnit       WeightUnit @default(KG)
-  displayName      String?
-  onboardedAt      DateTime?
+  id                   String     @id @default(cuid())
+  email                String     @unique
+  passwordHash         String
+  name                 String
+  role                 Role
+  isDemo               Boolean    @default(false)
+  weightUnit           WeightUnit @default(KG)
+  displayName          String?
+  onboardedAt          DateTime?
   /// Null until the user confirms the 6-digit code (invite acceptance verifies implicitly).
-  emailVerifiedAt  DateTime?
+  emailVerifiedAt      DateTime?
   /// Consecutive failed logins; 5 in a row sets lockedUntil.
-  failedLoginCount Int        @default(0)
-  lockedUntil      DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  failedLoginCount     Int        @default(0)
+  lockedUntil          DateTime?
+  /// Platform Stripe customer (platform plan and coach-offer purchases share it). Never card data.
+  stripeCustomerId     String?    @unique
+  /// COACH: Stripe Connect Express account that receives offer payments.
+  stripeAccountId      String?    @unique
+  /// Mirrors the Connect account's charges_enabled (account.updated webhook).
+  stripeChargesEnabled Boolean    @default(false)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   // COACH side
   coachedClients  CoachClient[]     @relation("CoachSide")
@@ -187,6 +193,15 @@ model User {
 
   authTokens AuthToken[]
   invites    Invite[]
+
+  // Billing
+  subscription        Subscription?
+  billingEvents       BillingEvent[]
+  coachOffers         CoachOffer[]
+  soldSubscriptions   ClientSubscription[] @relation("CoachSales")
+  boughtSubscriptions ClientSubscription[] @relation("ClientPurchases")
+  receivedPayments    Payment[]            @relation("CoachPayments")
+  madePayments        Payment[]            @relation("ClientPayments")
 
   @@index([role])
 }
@@ -790,4 +805,185 @@ model SessionFeedback {
 
   @@index([workoutLogId])
   @@index([exerciseLogId])
+}
+
+// ─────────────── Billing ───────────────
+
+enum Feature {
+  AI_COACH
+  AI_WORKOUT_GENERATOR
+  VOICE_LOGGING
+  PROGRAM_CREATION
+  PERSONAL_RECORDS
+  EXERCISE_STATS
+  MUSCLE_ANALYTICS
+  AI_FOOD_PHOTOS
+  COACH_CLIENTS
+  CLIENT_PAYMENTS
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+enum BillingEventType {
+  TRIAL_STARTED
+  CHECKOUT_COMPLETED
+  SUBSCRIPTION_UPDATED
+  SUBSCRIPTION_CANCELED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+}
+
+enum OfferInterval {
+  ONE_TIME
+  MONTH
+}
+
+enum PaymentStatus {
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+/// Platform plan. Mirrors PLANS in @coaching/shared (migration inserts, seed upserts). id = slug.
+model Plan {
+  id          String @id
+  name        String
+  role        Role
+  priceCents  Int
+  currency    String @default("usd")
+  trialDays   Int    @default(0)
+  /// Coach seats included; null for athlete plans.
+  clientLimit Int?
+
+  entitlements  Entitlement[]
+  subscriptions Subscription[]
+}
+
+/// Feature granted by a plan.
+model Entitlement {
+  planId  String
+  feature Feature
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@id([planId, feature])
+}
+
+/// A user's platform plan. One row per user; cancellation keeps the row (status CANCELED) and never touches data.
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  planId               String
+  status               SubscriptionStatus
+  /// Coach seats; null = the plan's clientLimit.
+  clientLimit          Int?
+  trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  stripeSubscriptionId String?            @unique
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([status])
+}
+
+/// Append-only audit of platform billing changes.
+model BillingEvent {
+  id            String              @id @default(cuid())
+  userId        String
+  type          BillingEventType
+  planId        String?
+  status        SubscriptionStatus?
+  amountCents   Int?
+  /// One audit row per Stripe event: concurrent deliveries of the same event cannot add a second.
+  stripeEventId String?             @unique
+  createdAt     DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// Webhook idempotency: one row per Stripe event id. processedAt set once handling succeeded.
+model StripeEvent {
+  id          String    @id
+  type        String
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  error       String?
+}
+
+/// Something a coach sells to their clients. Checkout builds the Stripe price inline, so no Stripe ids live here.
+model CoachOffer {
+  id          String        @id @default(cuid())
+  coachId     String
+  name        String
+  description String?
+  priceCents  Int
+  currency    String        @default("usd")
+  interval    OfferInterval
+  /// Soft archive: hidden from clients, existing subscriptions and payments stay.
+  archivedAt  DateTime?
+  createdAt   DateTime      @default(now())
+
+  coach         User                 @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  subscriptions ClientSubscription[]
+  payments      Payment[]
+
+  @@index([coachId, archivedAt])
+}
+
+/// A client's recurring purchase of a coach offer.
+model ClientSubscription {
+  id                   String             @id @default(cuid())
+  offerId              String
+  coachId              String
+  clientId             String
+  status               SubscriptionStatus
+  amountCents          Int
+  currency             String             @default("usd")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  stripeSubscriptionId String             @unique
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  offer    CoachOffer @relation(fields: [offerId], references: [id], onDelete: NoAction)
+  coach    User       @relation("CoachSales", fields: [coachId], references: [id], onDelete: Cascade)
+  client   User       @relation("ClientPurchases", fields: [clientId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([coachId, status])
+  @@index([clientId])
+}
+
+/// One settled (or failed) charge for a coach offer. stripeRef = invoice id (recurring) or checkout session id (one-time).
+model Payment {
+  id                   String        @id @default(cuid())
+  coachId              String
+  clientId             String
+  offerId              String?
+  clientSubscriptionId String?
+  amountCents          Int
+  currency             String        @default("usd")
+  status               PaymentStatus
+  stripeRef            String        @unique
+  paidAt               DateTime
+  createdAt            DateTime      @default(now())
+
+  coach              User                @relation("CoachPayments", fields: [coachId], references: [id], onDelete: Cascade)
+  client             User                @relation("ClientPayments", fields: [clientId], references: [id], onDelete: Cascade)
+  offer              CoachOffer?         @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  clientSubscription ClientSubscription? @relation(fields: [clientSubscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([coachId, paidAt])
 }

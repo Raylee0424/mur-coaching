@@ -3,6 +3,7 @@ import {
   LOCKOUT_MS,
   LOCKOUT_THRESHOLD,
   afterFailedLogin,
+  resendWaitSeconds,
   clearedLockout,
   generateCode,
   generateToken,
@@ -79,5 +80,25 @@ describe('lockout', () => {
 
   it('success clears the counter', () => {
     expect(clearedLockout()).toEqual({ failedLoginCount: 0, lockedUntil: null });
+  });
+});
+
+describe('resendWaitSeconds', () => {
+  const now = new Date('2026-11-24T12:00:00Z');
+  const ago = (s: number) => new Date(now.getTime() - s * 1000);
+
+  it('allows the first send', () => {
+    expect(resendWaitSeconds([], now)).toBe(0);
+  });
+
+  it('enforces a one-minute cooldown after the last send', () => {
+    expect(resendWaitSeconds([ago(20)], now)).toBe(40);
+    expect(resendWaitSeconds([ago(61)], now)).toBe(0);
+  });
+
+  it('caps sends at five per hour', () => {
+    const five = [ago(3000), ago(2400), ago(1800), ago(1200), ago(600)];
+    expect(resendWaitSeconds(five, now)).toBe(600);
+    expect(resendWaitSeconds(five.slice(1), now)).toBe(0);
   });
 });

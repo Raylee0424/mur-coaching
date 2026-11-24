@@ -20,3 +20,4 @@ export * from './records';
 export * from './periodization';
 export * from './scheduling';
 export * from './session-review';
+export * from './billing';

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import { Role } from '@coaching/shared';
 import type { AssignmentDto, ClientProgramConflictsDto, ProgramDto, ProgramShareDto, ProgramSummaryDto, SharedProgramDto, SportCategoryDto } from '@coaching/shared';
-import { CurrentUser, Public, RequestUser, Roles } from '../../common';
+import { CurrentUser, Public, RateLimit, RequestUser, Roles } from '../../common';
 import { ClientAccessService } from '../clients/client-access.service';
 import { CreateAssignmentDto, DuplicateProgramDto, ListProgramsQuery, ProgramConflictsQuery, ProgramTreeDto } from './dto/program.dto';
 import { ProgramsService } from './programs.service';
@@ -91,6 +91,7 @@ export class SharedProgramsController {
   constructor(private readonly programs: ProgramsService) {}
 
   @Public()
+  @RateLimit(60, 60_000)
   @Get(':token')
   get(@Param('token') token: string): Promise<SharedProgramDto> {
     return this.programs.getShared(token);

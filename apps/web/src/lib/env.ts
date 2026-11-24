@@ -9,3 +9,9 @@ function readApiUrl(): string {
 }
 
 export const API_URL = readApiUrl();
+
+/**
+ * Single-IP header your edge proxy sets and overwrites (e.g. cf-connecting-ip). Unset: no visitor IP is sent, and
+ * the API rate-limits by this server's address (fine locally, too coarse in production).
+ */
+export const CLIENT_IP_HEADER = process.env.CLIENT_IP_HEADER || undefined;
