@@ -1,5 +1,6 @@
 import { Role, WeightUnit } from '@coaching/shared';
 import clsx from 'clsx';
+import Link from 'next/link';
 import { setWeightUnit } from '@/actions/account';
 import { logout } from '@/actions/auth';
 import { LimitationsPanel } from '@/components/limitations/LimitationsPanel';
@@ -53,6 +54,14 @@ export default async function ProfilePage() {
                   );
                 })}
               </form>
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="font-mono text-micro uppercase text-muted">Plan and billing</dt>
+            <dd>
+              <Link href="/client/billing" className="text-ui text-primary hover:underline">
+                Manage
+              </Link>
             </dd>
           </div>
         </dl>

@@ -1,4 +1,4 @@
-import { ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, GoneException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AssignmentStatus, Prisma, Role } from '@prisma/client';
 import type {
@@ -11,6 +11,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { INVITE_TTL_MS, generateToken, hashToken, isExpired } from '../auth/token-utils';
 import { MailService } from '../mail/mail.service';
+import { EntitlementsService } from '../billing/entitlements.service';
 import type { AcceptInviteDto, CreateInviteDto } from './dto/invites.dto';
 
 const inviteInclude = { program: { select: { name: true } } } satisfies Prisma.InviteInclude;
@@ -38,6 +39,7 @@ export class InvitesService {
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
     private readonly mail: MailService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   /** Replaces any earlier pending invite from this coach to the same email. */
@@ -49,6 +51,8 @@ export class InvitesService {
       const program = await this.prisma.program.findFirst({ where: { id: dto.programId, coachId }, select: { id: true } });
       if (!program) throw new NotFoundException('Program not found');
     }
+    // A pending invite holds a seat, so acceptance never pushes the coach over the limit.
+    await this.entitlements.assertSeat(coachId, dto.email);
     const coach = await this.prisma.user.findUniqueOrThrow({ where: { id: coachId }, select: { name: true, displayName: true } });
 
     const raw = generateToken();
@@ -105,6 +109,16 @@ export class InvitesService {
     const invite = await this.findUsable(token);
     if (await this.prisma.user.findUnique({ where: { email: invite.email }, select: { id: true } })) {
       throw new ConflictException('Email already registered');
+    }
+    // The invite held a seat when it was sent, but the coach's plan may have lapsed or the roster filled since.
+    const seat = await this.entitlements.seatFor(invite.coachId, invite.email);
+    if (!seat.ok) {
+      throw new HttpException(
+        seat.reason === 'NO_PLAN'
+          ? "This coach's plan is not active, so they can't take new clients right now. Ask them to renew, then open the link again."
+          : "This coach's roster is full right now. Ask them to free a seat, then open the link again.",
+        402,
+      );
     }
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const now = new Date();

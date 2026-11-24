@@ -8,6 +8,22 @@ const envSchema = z.object({
   /** Public web origin used in emailed links (reset, invite). */
   WEB_URL: z.string().url().default('http://localhost:3000'),
   PORT: z.coerce.number().int().positive().default(4000),
+  /**
+   * Express `trust proxy`: which hops may set X-Forwarded-For (rate limits key on the client IP).
+   * `true`/`false`, a hop count, or an Express preset / comma-separated subnet list. The web server forwards
+   * the visitor IP only from its CLIENT_IP_HEADER, so set this to the web server's address or subnet.
+   */
+  TRUST_PROXY: z.string().min(1).default('loopback'),
+  /** Unset = payments disabled: billing endpoints answer 503, entitlements still resolve. */
+  STRIPE_SECRET_KEY: z.string().startsWith('sk_').optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
+  /** Signing secret of the separate Connect endpoint (connected-account events). Unset = that endpoint answers 503. */
+  STRIPE_CONNECT_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
+  /** Stripe Price ids for the paid platform plans (monthly). */
+  STRIPE_PRICE_ATHLETE_PRO: z.string().startsWith('price_').optional(),
+  STRIPE_PRICE_COACH: z.string().startsWith('price_').optional(),
+  /** Platform cut of coach-offer payments, in percent. */
+  STRIPE_PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(50).default(0),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -22,4 +38,20 @@ export function validateEnv(raw: Record<string, unknown>): Env {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   return parsed.data;
+}
+
+/**
+ * Express `trust proxy` value. Booleans and hop counts must reach Express typed: the raw string "true" would be
+ * read as a subnet list and crash proxy-addr at boot.
+ */
+export function parseTrustProxy(value: string): boolean | number | string {
+  const v = value.trim();
+  if (/^true$/i.test(v)) return true;
+  if (/^false$/i.test(v)) return false;
+  if (/^\d+$/.test(v)) return Number(v);
+  return v
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(',');
 }

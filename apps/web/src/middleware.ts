@@ -26,7 +26,8 @@ export function middleware(request: NextRequest): NextResponse {
   if (inCoach || inClient) {
     if (!claims) {
       const url = new URL('/login', request.url);
-      url.searchParams.set('next', pathname);
+      // Keep the query: a coach's copied link (/client/billing?offer=id) must survive sign-in.
+      url.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
       const res = NextResponse.redirect(url);
       if (token) res.cookies.delete(SESSION_COOKIE);
       return res;

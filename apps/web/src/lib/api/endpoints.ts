@@ -1,5 +1,12 @@
 import 'server-only';
 import type {
+  CheckoutRequest,
+  ClientOffersDto,
+  CoachBillingDto,
+  CoachOfferDto,
+  CreateCoachOfferRequest,
+  EntitlementsDto,
+  RedirectUrlDto,
   AcceptInviteRequest,
   ClientGroupDto,
   CreateSessionFeedbackRequest,
@@ -323,4 +330,17 @@ export const exerciseNotesApi = {
   update: (id: string, body: UpdateExerciseNoteRequest) =>
     apiFetch<ExerciseNoteDto>(idPath('/exercise-notes', id), { method: 'PATCH', body }),
   remove: (id: string) => apiFetch<void>(idPath('/exercise-notes', id), { method: 'DELETE' }),
+};
+
+export const billingApi = {
+  entitlements: () => apiFetch<EntitlementsDto>('/me/entitlements'),
+  checkout: (body: CheckoutRequest) => apiFetch<RedirectUrlDto>('/billing/checkout', { method: 'POST', body }),
+  portal: () => apiFetch<RedirectUrlDto>('/billing/portal', { method: 'POST' }),
+  coachOverview: () => apiFetch<CoachBillingDto>('/coach/billing'),
+  connect: () => apiFetch<RedirectUrlDto>('/coach/billing/connect', { method: 'POST' }),
+  dashboard: () => apiFetch<RedirectUrlDto>('/coach/billing/dashboard', { method: 'POST' }),
+  createOffer: (body: CreateCoachOfferRequest) => apiFetch<CoachOfferDto>('/coach/offers', { method: 'POST', body }),
+  archiveOffer: (id: string) => apiFetch<void>(`/coach/offers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  clientOffers: () => apiFetch<ClientOffersDto>('/me/offers'),
+  checkoutOffer: (id: string) => apiFetch<RedirectUrlDto>(`/me/offers/${encodeURIComponent(id)}/checkout`, { method: 'POST' }),
 };

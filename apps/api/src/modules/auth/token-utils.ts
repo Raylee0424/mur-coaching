@@ -50,3 +50,22 @@ export function afterFailedLogin(state: LockoutState, now: Date = new Date()): L
 }
 
 export const clearedLockout = (): LockoutState => ({ failedLoginCount: 0, lockedUntil: null });
+
+/** Resend throttle for emailed codes and reset links: one per minute, five per hour, per account. */
+export const RESEND_COOLDOWN_MS = 60 * 1000;
+export const RESEND_WINDOW_MS = 60 * 60 * 1000;
+export const RESEND_MAX_PER_WINDOW = 5;
+
+/**
+ * Seconds until another email may be sent, or 0 when sending is allowed now.
+ * `issuedAt` = creation times of this account's tokens of one type inside the last RESEND_WINDOW_MS.
+ */
+export function resendWaitSeconds(issuedAt: readonly Date[], now: Date = new Date()): number {
+  const recent = issuedAt.map((d) => d.getTime()).filter((t) => now.getTime() - t < RESEND_WINDOW_MS).sort((a, b) => a - b);
+  if (recent.length === 0) return 0;
+  const latest = recent[recent.length - 1] as number;
+  const cooldownEnds = latest + RESEND_COOLDOWN_MS;
+  const windowEnds = recent.length >= RESEND_MAX_PER_WINDOW ? (recent[recent.length - RESEND_MAX_PER_WINDOW] as number) + RESEND_WINDOW_MS : 0;
+  const waitMs = Math.max(cooldownEnds, windowEnds) - now.getTime();
+  return waitMs > 0 ? Math.ceil(waitMs / 1000) : 0;
+}

@@ -3,6 +3,8 @@ import { randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 import { AssignmentStatus, CoachClientStatus, Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EntitlementsService } from '../billing/entitlements.service';
+import { isAccessibleLink } from './link-status';
 import { CreateClientDto, ListClientsQuery, UpdateClientDto } from './dto/clients.dto';
 
 const clientUserSelect = { id: true, email: true, name: true, createdAt: true } satisfies Prisma.UserSelect;
@@ -44,7 +46,10 @@ const TEMP_PASSWORD_BYTES = 9; // 12 base64url chars
 /** Callers authorize first (ClientAccessService); methods taking coachId trust it. */
 @Injectable()
 export class ClientsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly entitlements: EntitlementsService,
+  ) {}
 
   async list(coachId: string, q: ListClientsQuery): Promise<ClientView[]> {
     const rows = await this.prisma.coachClient.findMany({
@@ -59,6 +64,7 @@ export class ClientsService {
   async create(coachId: string, dto: CreateClientDto): Promise<{ client: ClientView; temporaryPassword: string }> {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email }, select: { id: true } });
     if (existing) throw new ConflictException('Email already registered');
+    await this.entitlements.assertSeat(coachId);
 
     const temporaryPassword = randomBytes(TEMP_PASSWORD_BYTES).toString('base64url');
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
@@ -91,8 +97,10 @@ export class ClientsService {
 
   /** Coach-only. Works for ARCHIVED clients too so they can be restored. */
   async update(coachId: string, clientId: string, dto: UpdateClientDto): Promise<ClientView> {
-    const link = await this.prisma.coachClient.findFirst({ where: { coachId, clientId }, select: { id: true } });
+    const link = await this.prisma.coachClient.findFirst({ where: { coachId, clientId }, select: { id: true, status: true } });
     if (!link) throw new NotFoundException('Client not found');
+    // Leaving ARCHIVED (to ACTIVE or PAUSED) takes a seat; ACTIVE <-> PAUSED and archiving never need one.
+    if (dto.status && isAccessibleLink(dto.status) && !isAccessibleLink(link.status)) await this.entitlements.assertSeat(coachId);
 
     const row = await this.prisma.coachClient.update({
       where: { id: link.id },

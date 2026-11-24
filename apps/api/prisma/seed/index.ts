@@ -3,6 +3,7 @@ import { Prisma, PrismaClient, Role, ScheduledStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { EXERCISES, seedMuscles, type ExerciseSeed } from './exercises';
 import { SPORTS } from './sports';
+import { PLANS, PlanId } from '@coaching/shared';
 import {
   CLIENT_PLANS,
   EXTRA_CLIENTS,
@@ -183,8 +184,17 @@ async function main(): Promise<void> {
     return id;
   };
 
+  for (const plan of PLANS) {
+    const fields = { name: plan.name, role: plan.role, priceCents: plan.priceCents, trialDays: plan.trialDays, clientLimit: plan.clientLimit };
+    await prisma.plan.upsert({ where: { id: plan.id }, update: fields, create: { id: plan.id, ...fields } });
+    await prisma.entitlement.deleteMany({ where: { planId: plan.id, feature: { notIn: [...plan.features] } } });
+    await prisma.entitlement.createMany({ data: plan.features.map((feature) => ({ planId: plan.id, feature })), skipDuplicates: true });
+  }
+
   const coach = await prisma.user.create({
     data: {
+      // Comped plan with room for the whole demo roster; no Stripe ids, so nothing bills.
+      subscription: { create: { planId: PlanId.COACH, status: 'ACTIVE', clientLimit: 25 } },
       email: COACH_EMAIL,
       name: 'Morgan Reyes (Demo Coach)',
       displayName: 'Coach Morgan',
