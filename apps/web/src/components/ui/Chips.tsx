@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { Check } from 'lucide-react';
 import { Icon } from './Icon';
 
-/** Toggleable chip group (multi-select). Each chip is a pressed/unpressed button. */
+/** Stitch pill chip group (multi-select). Each chip is a pressed/unpressed button. */
 export function Chips({
   label,
   options,
@@ -22,7 +22,7 @@ export function Chips({
 }) {
   return (
     <fieldset aria-describedby={describedBy}>
-      <legend className="mb-2 font-mono text-micro uppercase text-muted">{label}</legend>
+      <legend className="mb-2 font-sans text-label-sm uppercase tracking-wider text-muted">{label}</legend>
       <div className="flex flex-wrap gap-2">
         {options.map((o) => {
           const on = selected.includes(o);
@@ -33,9 +33,9 @@ export function Chips({
               aria-pressed={on}
               onClick={() => onToggle(o)}
               className={clsx(
-                'inline-flex items-center gap-1.5 rounded border px-3 text-ui transition-colors',
-                size === 'lg' ? 'min-h-12' : 'h-9',
-                on ? 'border-ink bg-raised text-ink' : 'border-line-strong text-muted hover:text-ink',
+                'inline-flex items-center gap-1.5 rounded-full border px-4 font-sans text-label-md transition-colors',
+                size === 'lg' ? 'min-h-11' : 'h-9',
+                on ? 'border-primary/60 bg-primary-container text-primary' : 'border-line bg-card text-muted hover:border-line-strong hover:text-ink',
               )}
             >
               {on ? <Icon icon={Check} size={14} /> : null}

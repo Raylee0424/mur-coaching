@@ -12,18 +12,23 @@ import { webOrigin } from '@/lib/origin';
 
 export default async function LeadsPage() {
   await requireUser(Role.COACH);
-  const [board, form, templates, origin] = await Promise.all([leadsApi.board(), leadsApi.form(), programsApi.list({ template: true }), webOrigin()]);
+  const [board, form, templates, origin] = await Promise.all([
+    leadsApi.board(),
+    leadsApi.form(),
+    programsApi.list({ template: true }),
+    webOrigin(),
+  ]);
   const { stats } = board;
 
   return (
     <>
       <PageHeader
-        title="Leads"
-        meta={`${stats.open} open`}
+        title="Onboarding & Lead Pipeline"
+        meta={`${stats.open} active leads`}
         actions={
           <>
-            <AddLeadSheet />
             <IntakeFormSheet form={form} origin={origin} />
+            <AddLeadSheet />
           </>
         }
       />
@@ -31,18 +36,21 @@ export default async function LeadsPage() {
         <StatStrip
           label="Pipeline"
           items={[
-            { label: 'Open leads', value: String(stats.open) },
-            { label: 'Pipeline MRR', value: formatMoney(stats.pipelineCents), note: 'Monthly value you set on open leads' },
-            { label: 'Win rate', value: stats.conversionPct === null ? '—' : `${stats.conversionPct}%`, note: 'Clients out of won and lost' },
-            { label: 'Days to convert', value: stats.avgDaysToConvert === null ? '—' : String(stats.avgDaysToConvert), note: 'Average, first contact to client' },
+            { label: 'Pipeline MRR', value: formatMoney(stats.pipelineCents), emphasis: stats.pipelineCents > 0, note: 'Monthly value on open leads' },
+            { label: 'Open Leads', value: String(stats.open) },
+            { label: 'Call → Client Rate', value: stats.conversionPct === null ? '—' : `${stats.conversionPct}%`, delta: stats.conversionPct !== null ? { text: 'Clients out of won & lost', tone: 'good' } : null },
+            { label: 'Avg Onboard Time', value: stats.avgDaysToConvert === null ? '—' : `${stats.avgDaysToConvert}d`, note: 'First contact to active' },
           ]}
         />
-        <p className="flex flex-wrap items-center gap-2 text-meta text-muted">
-          {form.acceptingLeads ? <Badge tone="emerald">Accepting applications</Badge> : <Badge tone="amber">Applications paused</Badge>}
-          <span className="font-mono">{`${origin}/apply/${form.slug}`}</span>
-        </p>
+
+        <div className="flex flex-wrap items-center gap-2.5 rounded-md border border-line bg-card px-4 py-3 text-meta text-muted">
+          {form.acceptingLeads ? <Badge tone="emerald">Accepting Applications</Badge> : <Badge tone="amber">Applications Paused</Badge>}
+          <span className="font-sans text-label-sm text-muted">Public intake URL:</span>
+          <span className="font-mono text-label-md text-ink">{`${origin}/apply/${form.slug}`}</span>
+        </div>
+
         {board.leads.length === 0 ? (
-          <EmptyState title="No leads yet">Share your application link, or add someone by hand. Applications land in New lead.</EmptyState>
+          <EmptyState title="No leads yet">Share your application link, or add someone by hand. Applications land in New Lead.</EmptyState>
         ) : (
           <LeadBoard leads={board.leads} templates={templates} />
         )}

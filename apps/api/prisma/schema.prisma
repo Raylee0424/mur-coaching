@@ -226,6 +226,33 @@ model User {
   bodyGoal            BodyGoal?
   progressPhotos      ProgressPhoto[]
 
+  // Videos, form checks, calls, automations, live sessions
+  mediaAssets       MediaAsset[]
+  setVideos         SetVideo[]
+  clientReviews     FormReview[]      @relation("ClientFormReviews")
+  coachReviews      FormReview[]      @relation("CoachFormReviews")
+  availability      Availability?
+  coachBookings     Booking[]         @relation("CoachBookings")
+  clientBookings    Booking[]         @relation("ClientBookings")
+  automationRules   AutomationRule[]
+  automationRuns    AutomationRun[]
+  liveSessions      LiveSession[]
+  liveParticipation LiveParticipant[]
+  loggedForOthers   WorkoutLog[]      @relation("LoggedBy")
+
+  // Nutrition
+  foods           Food[]
+  mealEntries     MealEntry[]
+  waterLogs       WaterLog[]
+  nutritionTarget NutritionTarget?  @relation("TargetClient")
+  targetsSet      NutritionTarget[] @relation("TargetSetter")
+  mealTemplates   MealTemplate[]
+  foodFavorites   FoodFavorite[]
+  coachMealPlans  MealPlan[]        @relation("CoachMealPlans")
+  clientMealPlans MealPlan[]        @relation("ClientMealPlans")
+  ReadinessSurvey ReadinessSurvey[]
+  CycleLog        CycleLog[]
+
   @@index([role])
 }
 
@@ -321,6 +348,8 @@ model Exercise {
   rpeCap          Decimal?           @db.Decimal(3, 1)
   repsMin         Int?
   repsMax         Int?
+  /// Optional https link to a demo video (YouTube, Vimeo, etc.). Shown in the library and the logger.
+  demoUrl         String?            @db.VarChar(300)
   /// Soft delete: hidden from lists and pickers, history stays intact.
   archivedAt      DateTime?
   coachId         String?
@@ -452,9 +481,13 @@ model WorkoutLog {
   workoutId    String? // template day this session followed; null = ad-hoc
   performedAt  DateTime
   notes        String?
+  /// Audit: the coach who logged this session for the client (live or in person). Null = the client logged it.
+  loggedById   String?
   createdAt    DateTime @default(now())
 
   client       User               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  loggedBy     User?              @relation("LoggedBy", fields: [loggedById], references: [id], onDelete: SetNull)
+  liveEntry    LiveParticipant?
   assignment   ProgramAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
   workout      Workout?           @relation(fields: [workoutId], references: [id], onDelete: SetNull)
   exerciseLogs ExerciseLog[]
@@ -501,10 +534,13 @@ model SetLog {
   tempo         String?  @db.VarChar(16)
   /// Rest taken before this set; CHECK (restSeconds BETWEEN 0 AND 3600) in migration.
   restSeconds   Int?
+  /// Client-generated id of a live-logged set, so an offline retry never logs it twice.
+  requestId     String?  @unique @db.Uuid
 
   exerciseLog    ExerciseLog       @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
   personalRecord PersonalRecord?
   feedback       SessionFeedback[]
+  videos         SetVideo[]
 
   @@unique([exerciseLogId, setNumber])
 }
@@ -1386,4 +1422,450 @@ model ProgressPhoto {
   client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId, takenOn])
+}
+
+// ─────────────── Set videos and form checks ───────────────
+
+enum MediaKind {
+  VIDEO
+  AUDIO
+}
+
+/// One stored file in R2. Hidden until `uploadedAt` (size and file signature checked). Delete is hard.
+model MediaAsset {
+  id          String    @id @default(cuid())
+  ownerId     String
+  kind        MediaKind
+  contentType String    @db.VarChar(40)
+  sizeBytes   Int
+  storageKey  String    @unique
+  uploadedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  owner       User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  setVideo    SetVideo?
+  reviewAudio FormReview? @relation("ReviewAudio")
+
+  @@index([ownerId, kind])
+}
+
+enum VideoSide {
+  LEFT
+  RIGHT
+  BOTH
+}
+
+/// A clip of one logged set. One clip per set and side, so a unilateral set can hold a left and a right clip.
+model SetVideo {
+  id        String    @id @default(cuid())
+  setLogId  String
+  clientId  String
+  mediaId   String    @unique
+  side      VideoSide
+  createdAt DateTime  @default(now())
+
+  setLog SetLog      @relation(fields: [setLogId], references: [id], onDelete: Cascade)
+  client User        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  media  MediaAsset  @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  review FormReview?
+
+  @@unique([setLogId, side])
+  @@index([clientId, createdAt])
+}
+
+enum FormReviewStatus {
+  PENDING
+  REVIEWED
+}
+
+/// A client's request for the coach to review one clip. The coach is fixed at request time.
+model FormReview {
+  id           String           @id @default(cuid())
+  setVideoId   String           @unique
+  clientId     String
+  coachId      String
+  status       FormReviewStatus @default(PENDING)
+  summary      String?          @db.VarChar(2000)
+  /// Narrated review (coach voice over the clip).
+  audioMediaId String?          @unique
+  requestedAt  DateTime         @default(now())
+  reviewedAt   DateTime?
+
+  setVideo    SetVideo          @relation(fields: [setVideoId], references: [id], onDelete: Cascade)
+  client      User              @relation("ClientFormReviews", fields: [clientId], references: [id], onDelete: Cascade)
+  coach       User              @relation("CoachFormReviews", fields: [coachId], references: [id], onDelete: Cascade)
+  audio       MediaAsset?       @relation("ReviewAudio", fields: [audioMediaId], references: [id], onDelete: SetNull)
+  annotations VideoAnnotation[]
+
+  @@index([coachId, status, requestedAt])
+}
+
+/// Drawing on one frame. `shapes` holds arrows, angles and freehand strokes in 0–1 frame coordinates.
+model VideoAnnotation {
+  id          String   @id @default(cuid())
+  reviewId    String
+  timestampMs Int
+  shapes      Json
+  note        String?  @db.VarChar(300)
+  createdAt   DateTime @default(now())
+
+  review FormReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, timestampMs])
+}
+
+// ─────────────── Calls and scheduling ───────────────
+
+/// The coach's weekly bookable hours. `windows` = [{ weekday, startMinute, endMinute }] in `timezone` (IANA).
+model Availability {
+  id         String   @id @default(cuid())
+  coachId    String   @unique
+  timezone   String   @db.VarChar(64)
+  windows    Json
+  /// Default video room link copied onto new bookings.
+  meetingUrl String?  @db.VarChar(500)
+  updatedAt  DateTime @updatedAt
+
+  coach User @relation(fields: [coachId], references: [id], onDelete: Cascade)
+}
+
+enum CallKind {
+  CHECK_IN
+  ONBOARDING
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+/// Instants are UTC. Overlap among a coach's CONFIRMED bookings is refused under a per-coach advisory lock.
+model Booking {
+  id          String        @id @default(cuid())
+  coachId     String
+  clientId    String
+  kind        CallKind
+  startsAt    DateTime
+  endsAt      DateTime
+  status      BookingStatus @default(CONFIRMED)
+  agenda      String?       @db.VarChar(300)
+  meetingUrl  String?       @db.VarChar(500)
+  bookedById  String
+  cancelledAt DateTime?
+  createdAt   DateTime      @default(now())
+
+  coach  User @relation("CoachBookings", fields: [coachId], references: [id], onDelete: Cascade)
+  client User @relation("ClientBookings", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([coachId, status, startsAt])
+  @@index([clientId, status, startsAt])
+}
+
+// ─────────────── Automations ───────────────
+
+enum AutomationTrigger {
+  PAYMENT_RECEIVED
+  SESSION_MISSED
+  CHECK_IN_OVERDUE
+}
+
+/// IF trigger fires `delayHours` after its event THEN send `messageBody` in the coach–client thread.
+/// Only events due after the rule was created fire, so a new rule never sends a backlog.
+model AutomationRule {
+  id          String            @id @default(cuid())
+  coachId     String
+  name        String            @db.VarChar(80)
+  trigger     AutomationTrigger
+  delayHours  Int
+  messageBody String            @db.VarChar(1000)
+  enabled     Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  coach User            @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  runs  AutomationRun[]
+
+  @@index([coachId])
+}
+
+/// One fired action. `idempotencyKey` = rule + event, unique, so a rule fires once per event across retries and instances.
+model AutomationRun {
+  id             String   @id @default(cuid())
+  ruleId         String
+  clientId       String
+  idempotencyKey String   @unique @db.VarChar(200)
+  messageId      String?
+  firedAt        DateTime @default(now())
+
+  rule   AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  client User           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, firedAt])
+}
+
+// ─────────────── Train Together ───────────────
+
+enum LiveMode {
+  REMOTE
+  IN_PERSON
+}
+
+/// A coach-run session. At most one open (endedAt null) per coach (partial unique index in migration).
+model LiveSession {
+  id        String    @id @default(cuid())
+  coachId   String
+  title     String    @db.VarChar(80)
+  mode      LiveMode
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  coach        User              @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  participants LiveParticipant[]
+
+  @@index([coachId, startedAt])
+}
+
+/// A client in a live session. `workoutLogId` is the log the coach writes into, created on the first set.
+model LiveParticipant {
+  id           String   @id @default(cuid())
+  sessionId    String
+  clientId     String
+  workoutLogId String?  @unique
+  joinedAt     DateTime @default(now())
+
+  session    LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  client     User        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workoutLog WorkoutLog? @relation(fields: [workoutLogId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, clientId])
+  @@index([clientId])
+}
+
+// ─────────────── Nutrition ───────────────
+
+enum FoodSource {
+  CUSTOM
+  USDA
+  CNF
+}
+
+enum MealSlot {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+/// Nutrients are per 100 g. Global when ownerId is null (starter USDA rows from the migration); otherwise a user's
+/// custom food. Archived instead of deleted so templates and plans that use it keep working.
+model Food {
+  id           String     @id @default(cuid())
+  ownerId      String?
+  source       FoodSource @default(CUSTOM)
+  name         String     @db.VarChar(120)
+  brand        String?    @db.VarChar(80)
+  servingG     Decimal    @default(100) @db.Decimal(6, 1)
+  servingLabel String?    @db.VarChar(40)
+  kcal         Decimal    @db.Decimal(5, 1)
+  proteinG     Decimal    @db.Decimal(4, 1)
+  carbsG       Decimal    @db.Decimal(4, 1)
+  fatG         Decimal    @db.Decimal(4, 1)
+  fiberG       Decimal?   @db.Decimal(4, 1)
+  sodiumMg     Decimal?   @db.Decimal(7, 1)
+  potassiumMg  Decimal?   @db.Decimal(7, 1)
+  calciumMg    Decimal?   @db.Decimal(7, 1)
+  ironMg       Decimal?   @db.Decimal(6, 2)
+  magnesiumMg  Decimal?   @db.Decimal(7, 1)
+  vitaminDMcg  Decimal?   @db.Decimal(6, 2)
+  archivedAt   DateTime?
+  createdAt    DateTime   @default(now())
+
+  owner         User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  entries       MealEntry[]
+  templateItems MealTemplateItem[]
+  planItems     MealPlanItem[]
+  favorites     FoodFavorite[]
+
+  @@index([ownerId, name])
+}
+
+/// One logged portion. Name and nutrients are a snapshot at log time, so food edits never rewrite history.
+model MealEntry {
+  id          String     @id @default(cuid())
+  clientId    String
+  date        DateTime   @db.Date
+  slot        MealSlot
+  foodId      String?
+  name        String     @db.VarChar(120)
+  source      FoodSource
+  grams       Decimal    @db.Decimal(6, 1)
+  kcal        Decimal    @db.Decimal(6, 1)
+  proteinG    Decimal    @db.Decimal(5, 1)
+  carbsG      Decimal    @db.Decimal(5, 1)
+  fatG        Decimal    @db.Decimal(5, 1)
+  fiberG      Decimal?   @db.Decimal(5, 1)
+  sodiumMg    Decimal?   @db.Decimal(8, 1)
+  potassiumMg Decimal?   @db.Decimal(8, 1)
+  calciumMg   Decimal?   @db.Decimal(8, 1)
+  ironMg      Decimal?   @db.Decimal(7, 2)
+  magnesiumMg Decimal?   @db.Decimal(8, 1)
+  vitaminDMcg Decimal?   @db.Decimal(7, 2)
+  createdAt   DateTime   @default(now())
+
+  client User  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  food   Food? @relation(fields: [foodId], references: [id], onDelete: SetNull)
+
+  @@index([clientId, date])
+}
+
+/// Additive water entries; the day total is their sum (CHECK 1–5000 ml in migration).
+model WaterLog {
+  id        String   @id @default(cuid())
+  clientId  String
+  date      DateTime @db.Date
+  ml        Int
+  createdAt DateTime @default(now())
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, date])
+}
+
+/// One per client. While `setById` is the client's current coach, only that coach may change it.
+model NutritionTarget {
+  id        String   @id @default(cuid())
+  clientId  String   @unique
+  kcal      Int
+  proteinG  Int
+  carbsG    Int
+  fatG      Int
+  fiberG    Int?
+  waterMl   Int?
+  setById   String?
+  updatedAt DateTime @updatedAt
+
+  client User  @relation("TargetClient", fields: [clientId], references: [id], onDelete: Cascade)
+  setBy  User? @relation("TargetSetter", fields: [setById], references: [id], onDelete: SetNull)
+}
+
+/// Saved meal (servings = 1) or recipe (servings > 1). Logging scales each item by servings eaten / servings.
+model MealTemplate {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String   @db.VarChar(80)
+  servings  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items MealTemplateItem[]
+
+  @@index([ownerId])
+}
+
+model MealTemplateItem {
+  id         String  @id @default(cuid())
+  templateId String
+  foodId     String
+  position   Int
+  grams      Decimal @db.Decimal(6, 1)
+
+  template MealTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  food     Food         @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model FoodFavorite {
+  userId    String
+  foodId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@id([userId, foodId])
+}
+
+/// Coach-assigned one-day meal plan. The client sees it only while that coach link is accessible.
+model MealPlan {
+  id        String   @id @default(cuid())
+  coachId   String
+  clientId  String
+  name      String   @db.VarChar(80)
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach  User           @relation("CoachMealPlans", fields: [coachId], references: [id], onDelete: Cascade)
+  client User           @relation("ClientMealPlans", fields: [clientId], references: [id], onDelete: Cascade)
+  meals  MealPlanMeal[]
+
+  @@index([clientId])
+  @@index([coachId])
+}
+
+model MealPlanMeal {
+  id       String @id @default(cuid())
+  planId   String
+  position Int
+  name     String @db.VarChar(80)
+
+  plan  MealPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  items MealPlanItem[]
+
+  @@index([planId])
+}
+
+model MealPlanItem {
+  id       String  @id @default(cuid())
+  mealId   String
+  foodId   String
+  position Int
+  grams    Decimal @db.Decimal(6, 1)
+
+  meal MealPlanMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food Food         @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([mealId])
+}
+
+// ─────────────── Readiness & Cycle Context ───────────────
+
+/// One pre-workout survey per client per day (resubmitting the day replaces it). Scales are 1–5 (CHECK in migration).
+model ReadinessSurvey {
+  id           String   @id @default(cuid())
+  clientId     String
+  date         DateTime @db.Date
+  sleepQuality Int
+  sleepHours   Decimal? @db.Decimal(3, 1)
+  soreness     Int
+  stress       Int
+  motivation   Int
+  /// Shared `readinessScore`, 0–100, stored so history never shifts if the formula changes.
+  score        Int
+  note         String?  @db.VarChar(280)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, date])
+}
+
+/// Owner-only cycle day. `ciphertext` is AES-256-GCM (iv.tag.data, base64) of the day's JSON, with clientId+date as
+/// associated data. Only the owner's routes decrypt it; a coach gets a phase summary, and only while `sharedWithCoach`.
+model CycleLog {
+  id              String   @id @default(cuid())
+  clientId        String
+  date            DateTime @db.Date
+  ciphertext      String   @db.Text
+  keyVersion      Int      @default(1)
+  sharedWithCoach Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, date])
 }

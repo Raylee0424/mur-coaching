@@ -6,24 +6,24 @@ import { DemoForms } from './DemoForms';
 import { CONTAINER } from './Section';
 
 const ANCHORS = [
-  { href: '#engine', label: 'Engine' },
-  { href: '#loop', label: 'How it works' },
-  { href: '#coaches', label: 'Coaches' },
-  { href: '#athletes', label: 'Athletes' },
+  { href: '#how-it-works', label: 'How It Works' },
+  { href: '#progression-engine', label: 'Progression Engine' },
+  { href: '#for-coaches', label: 'For Coaches' },
+  { href: '#for-clients', label: 'For Clients' },
   { href: '#pricing', label: 'Pricing' },
 ] as const;
 
-const LINK = 'text-ui text-muted transition-colors hover:text-ink';
+const LINK = 'font-sans text-label-lg text-muted transition-colors hover:text-ink';
 
 export function MarketingNav() {
   return (
-    <header className="sticky top-0 z-50 h-14 border-b border-line bg-canvas/95">
-      <div className={clsx(CONTAINER, 'flex h-full items-center justify-between gap-4')}>
-        <a href="#top" aria-label="MUR Coaching home">
+    <header className="sticky top-0 z-50 border-b border-line bg-canvas/95 backdrop-blur-sm">
+      <div className={clsx(CONTAINER, 'flex h-20 items-center justify-between gap-8')}>
+        <a href="#top" aria-label="MUR Coaching home" className="shrink-0">
           <Wordmark />
         </a>
 
-        <nav aria-label="Page sections" className="hidden items-center gap-8 lg:flex">
+        <nav aria-label="Primary Navigation" className="hidden items-center gap-8 lg:flex">
           {ANCHORS.map((a) => (
             <a key={a.href} href={a.href} className={LINK}>
               {a.label}
@@ -31,17 +31,17 @@ export function MarketingNav() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+        <div className="flex shrink-0 items-center gap-5">
           <Link href="/login" className={LINK}>
-            Sign in
+            Sign In
           </Link>
           <details className="group relative">
-            <summary className={buttonClass('primary', 'cursor-pointer list-none [&::-webkit-details-marker]:hidden', 'sm')}>
-              Try the demo
+            <summary className={buttonClass('primary', 'cursor-pointer list-none px-6 [&::-webkit-details-marker]:hidden', 'lg')}>
+              Try Live Demo
             </summary>
-            <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-line bg-raised p-3">
+            <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-line bg-card p-3.5">
               <DemoForms layout="stacked" />
-              <p className="mt-3 text-meta text-muted">Seeded accounts. No signup.</p>
+              <p className="mt-3 text-meta text-muted">Seeded accounts. No signup required.</p>
             </div>
           </details>
         </div>

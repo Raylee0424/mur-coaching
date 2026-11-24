@@ -24,6 +24,13 @@ import { RoadmapsModule } from './modules/roadmaps/roadmaps.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
 import { CheckInsModule } from './modules/check-ins/check-ins.module';
 import { BodyModule } from './modules/body/body.module';
+import { NutritionModule } from './modules/nutrition/nutrition.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { ReadinessModule } from './modules/readiness/readiness.module';
+import { VideosModule } from './modules/videos/videos.module';
+import { CallsModule } from './modules/calls/calls.module';
+import { AutomationsModule } from './modules/automations/automations.module';
+import { LiveModule } from './modules/live/live.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { EntitlementGuard } from './modules/billing/entitlement.guard';
 import { PrismaModule } from './prisma/prisma.module';
@@ -35,7 +42,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     PrismaModule,
     // Limits are per route via @RateLimit; no global ThrottlerGuard.
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 60 }], errorMessage: 'Too many requests. Wait a few minutes and try again.' }),
-    BillingModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule, LeadsModule, ResourcesModule, RoadmapsModule, MessagingModule, CheckInsModule, BodyModule],
+    BillingModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule, LeadsModule, ResourcesModule, RoadmapsModule, MessagingModule, CheckInsModule, BodyModule, VideosModule, CallsModule, AutomationsModule, LiveModule, NutritionModule, AnalyticsModule, ReadinessModule],
   providers: [
     // Order matters: authenticate first, then authorize by role.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

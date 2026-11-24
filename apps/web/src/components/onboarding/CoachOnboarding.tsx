@@ -71,36 +71,39 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-3xl rounded-md border border-line bg-card p-6 sm:p-8">
       <div className="space-y-8">
         <StepHeader steps={STEPS} current={step} onSelect={pending ? undefined : setStep} />
 
         {step === 0 ? (
           <section className="space-y-5">
-            <StepTitle title={replay ? 'Your coaching profile' : 'Profile & brand'} subtitle="This appears on client invites and inside their app." />
+            <StepTitle title={replay ? 'Your coaching profile' : 'Profile & brand'} subtitle="This appears on client invites and inside their workspace." />
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor={`${id}-name`}>Full name</Label>
+                <Label htmlFor={`${id}-name`}>Your name</Label>
                 <Input size="lg" id={`${id}-name`} value={name} maxLength={100} onChange={(e) => setName(e.target.value)} aria-invalid={errors.name ? true : undefined} />
                 <FieldError>{errors.name}</FieldError>
               </div>
               <div>
                 <Label htmlFor={`${id}-display`}>Coaching display name</Label>
-                <Input size="lg" id={`${id}-display`} value={displayName} maxLength={60} placeholder="Coach Alex" onChange={(e) => setDisplayName(e.target.value)} />
+                <Input size="lg" id={`${id}-display`} value={displayName} maxLength={60} placeholder="MUR Coaching" onChange={(e) => setDisplayName(e.target.value)} />
               </div>
             </div>
             <fieldset>
-              <legend className="mb-2 font-mono text-micro uppercase text-muted">Default units</legend>
-              <div className="flex max-w-sm gap-0.5 rounded border border-line bg-canvas-low p-0.5">
+              <legend className="mb-2 font-sans text-label-sm uppercase tracking-wider text-muted">Default weight units</legend>
+              <div className="grid max-w-sm grid-cols-2 gap-1.5 rounded-sm border border-line bg-canvas-low p-1">
                 {[WeightUnit.KG, WeightUnit.LB].map((u) => (
                   <button
                     key={u}
                     type="button"
                     aria-pressed={unit === u}
                     onClick={() => setUnit(u)}
-                    className={clsx('h-11 flex-1 rounded-sm font-mono text-micro uppercase', unit === u ? 'bg-raised text-ink' : 'text-muted hover:text-ink')}
+                    className={clsx(
+                      'rounded-sm py-2.5 font-sans text-label-md transition-colors',
+                      unit === u ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
+                    )}
                   >
-                    {u === WeightUnit.KG ? 'kg' : 'lb'}
+                    {u === WeightUnit.KG ? 'Kilograms (kg)' : 'Pounds (lb)'}
                   </button>
                 ))}
               </div>
@@ -110,7 +113,7 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
 
         {step === 1 ? (
           <section className="space-y-5">
-            <StepTitle title="Engine defaults" subtitle="Applied to every client unless you override them. Leave empty to keep the default." />
+            <StepTitle title="Engine defaults" subtitle="Set your global progression rules. You can override these per exercise or per client later." />
             <div className="grid gap-4 sm:grid-cols-3">
               {ENGINE_KEYS.map((k) => {
                 const p = parsed[k];
@@ -131,11 +134,13 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
                 );
               })}
             </div>
-            <p className="text-meta text-muted">Load increments are set per exercise in your library. Finer thresholds live under Settings.</p>
+            <p className="font-sans text-label-md font-normal text-muted">
+              Load increments are set per exercise in your library. Finer thresholds live under Engine rules.
+            </p>
             {previewTarget && engineValid ? (
               <PreviewLine target={previewTarget} rules={draftRules} unit={unit} />
             ) : (
-              <p className="rounded-md border border-dashed border-line-strong p-4 text-ui text-muted">
+              <p className="rounded-md border border-dashed border-line-strong bg-canvas-low p-4 font-sans text-label-md font-normal text-muted">
                 A live preview appears here once a client has logged a prescribed lift twice.
               </p>
             )}
@@ -145,27 +150,27 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
         {step === 2 ? (
           <section className="space-y-5">
             <StepTitle
-              title="Starter library"
-              subtitle={`Your clients already get ${library.filter((e) => e.coachId === null).length} global lifts. Add your own variations below.`}
+              title="Starter exercise library"
+              subtitle={`Your clients already get ${library.filter((e) => e.coachId === null).length} global lifts with pre-configured rules. Add your own variations below.`}
             />
-            <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {Object.values(MuscleGroup).map((g) => {
                 const items = library.filter((e) => e.muscleGroup === g && e.coachId === null);
                 return items.length === 0 ? null : (
-                  <div key={g}>
-                    <p className="font-mono text-micro uppercase text-muted">{MUSCLE_GROUP_LABELS[g]}</p>
-                    <p className="text-ui">{items.map((e) => e.name).join(', ')}</p>
+                  <div key={g} className="rounded-sm border border-line bg-canvas-low p-3.5">
+                    <p className="font-sans text-label-sm uppercase tracking-wider text-primary">{MUSCLE_GROUP_LABELS[g]}</p>
+                    <p className="mt-1 font-sans text-label-md font-normal text-ink">{items.map((e) => e.name).join(', ')}</p>
                   </div>
                 );
               })}
             </div>
             {custom.length > 0 ? (
-              <p className="text-ui">
-                <span className="font-medium">Your exercises:</span> {custom.map((e) => e.name).join(', ')}
+              <p className="font-sans text-body-md text-ink">
+                <span className="font-semibold text-primary">Your exercises:</span> {custom.map((e) => e.name).join(', ')}
               </p>
             ) : null}
-            <div className="rounded-md border border-line p-4">
-              <h2 className="mb-3 font-sans text-ui font-medium" style={{ fontStretch: '100%', letterSpacing: 0 }}>Add a custom exercise</h2>
+            <div className="rounded-md border border-line bg-canvas-low p-5">
+              <h2 className="mb-3 font-display text-title-md text-ink">Add a custom exercise</h2>
               <ExerciseForm mode="create" />
             </div>
           </section>
@@ -180,20 +185,24 @@ export function CoachOnboarding({ user, rules, library, previewTarget, replay }:
 
         <FormError>{formError}</FormError>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-line pt-4">
-          {step > 0 ? (
-            <Button variant="ghost" size="lg" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={pending}>
-              Back
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+          <div>
+            {step > 0 ? (
+              <Button variant="secondary" size="lg" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={pending}>
+                Back
+              </Button>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-3">
+            {step >= 1 ? (
+              <Button variant="ghost" size="lg" disabled={pending} onClick={() => (step === last ? next() : setStep(step + 1))}>
+                {step === 2 ? 'Skip, I’ll build my own' : step === last ? 'Skip for now' : 'Skip'}
+              </Button>
+            ) : null}
+            <Button size="lg" onClick={next} disabled={pending || (step === 1 && !engineValid)}>
+              {pending ? 'Saving…' : step === last ? 'Go to Roster' : 'Continue'}
             </Button>
-          ) : null}
-          {step >= 1 ? (
-            <Button variant="ghost" size="lg" disabled={pending} onClick={() => (step === last ? next() : setStep(step + 1))}>
-              {step === 2 ? 'Skip, I’ll build my own' : step === last ? 'Skip for now' : 'Skip'}
-            </Button>
-          ) : null}
-          <Button size="lg" onClick={next} disabled={pending || (step === 1 && !engineValid)}>
-            {pending ? 'Saving…' : step === last ? 'Go to roster' : 'Continue'}
-          </Button>
+          </div>
         </footer>
       </div>
     </div>

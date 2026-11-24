@@ -29,10 +29,12 @@ export function NotesTab({ clientId, initial }: { clientId: string; initial: str
   }
 
   return (
-    <section className="max-w-3xl space-y-3">
+    <section className="max-w-3xl space-y-4 rounded-md border border-line bg-card p-6">
       <div>
-        <h2 className="font-sans text-ui font-semibold" style={{ fontStretch: '100%', letterSpacing: 0 }}>Private notes</h2>
-        <p className="text-meta text-muted">Only you can see these. Use them for injuries, preferences and context behind your calls.</p>
+        <h2 className="font-display text-title-lg text-ink">Private Notes</h2>
+        <p className="mt-0.5 font-sans text-body-md text-muted">
+          Only you can see these. Use them for injuries, preferences, and context behind your calls.
+        </p>
       </div>
       <div>
         <Label htmlFor="coach-notes">Notes</Label>
@@ -45,16 +47,16 @@ export function NotesTab({ clientId, initial }: { clientId: string; initial: str
             setText(e.target.value);
           }}
           placeholder="e.g. Left shoulder tight on heavy pressing, keep an eye on it."
-          className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 font-sans text-body text-ink placeholder:text-faint hover:border-faint"
+          className="block w-full rounded-sm border border-line bg-canvas-low px-3.5 py-2.5 font-sans text-body-md text-ink placeholder:text-muted transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         />
-        <p className="mt-1 text-right font-mono text-micro text-faint">
+        <p className="mt-1.5 text-right font-mono text-micro text-muted tabular-nums">
           {text.length} / {MAX}
         </p>
       </div>
       <FormError>{error}</FormError>
       <div className="flex items-center gap-3">
         <Button onClick={save} disabled={!dirty || pending}>
-          {pending ? 'Saving…' : 'Save notes'}
+          {pending ? 'Saving…' : 'Save Notes'}
         </Button>
         <span className="text-meta text-muted">{dirty ? 'Unsaved changes' : ''}</span>
       </div>

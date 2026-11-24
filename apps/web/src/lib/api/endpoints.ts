@@ -1,5 +1,49 @@
 import 'server-only';
 import type {
+  CycleContextDto,
+  MuscleAnalyticsDto,
+  ReadinessDto,
+  ReadinessHistoryDto,
+  SaveCycleEntryRequest,
+  SaveReadinessRequest,
+  CoachNutritionDto,
+  FoodDto,
+  LogMealRequest,
+  LogWaterRequest,
+  MealEntryDto,
+  MealPlanDto,
+  MealTemplateDto,
+  NutritionDayDto,
+  NutritionLibraryDto,
+  NutritionTargetDto,
+  SaveFoodRequest,
+  SaveMealPlanRequest,
+  SaveMealTemplateRequest,
+  SaveNutritionTargetRequest,
+  WaterLogDto,
+  AutomationCandidateDto,
+  AutomationRuleDto,
+  AutomationsDto,
+  AvailabilityDto,
+  BookingDto,
+  ClientCallsDto,
+  ClientVideosDto,
+  CoachLiveDto,
+  CoachScheduleDto,
+  CreateAnnotationRequest,
+  CreateBookingRequest,
+  CreateReviewAudioRequest,
+  CreateSetVideoRequest,
+  FormCheckQueueDto,
+  LiveSessionDto,
+  LogLiveSetRequest,
+  RunAutomationsResultDto,
+  SaveAutomationRuleRequest,
+  SaveAvailabilityRequest,
+  StartLiveSessionRequest,
+  UpdateBookingRequest,
+  UploadTicketDto,
+  VideoAnnotationDto,
   BodyTrendDto,
   CheckInInboxDto,
   CheckInResponseDto,
@@ -448,4 +492,95 @@ export const bodyApi = {
   sharePhoto: (id: string, sharedWithCoach: boolean) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'PATCH', body: { sharedWithCoach } }),
   removePhoto: (id: string) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'DELETE' }),
   clientProgress: (clientId: string) => apiFetch<CoachProgressDto>(`${idPath('/clients', clientId)}/progress`),
+};
+
+export const videosApi = {
+  mine: () => apiFetch<ClientVideosDto>('/me/set-videos'),
+  reserve: (body: CreateSetVideoRequest) => apiFetch<UploadTicketDto>('/me/set-videos', { method: 'POST', body }),
+  complete: (id: string) => apiFetch<void>(`${idPath('/me/set-videos', id)}/complete`, { method: 'POST' }),
+  requestReview: (id: string) => apiFetch<void>(`${idPath('/me/set-videos', id)}/form-check`, { method: 'POST' }),
+  remove: (id: string) => apiFetch<void>(idPath('/me/set-videos', id), { method: 'DELETE' }),
+};
+
+export const formChecksApi = {
+  queue: () => apiFetch<FormCheckQueueDto>('/coach/form-checks'),
+  annotate: (id: string, body: CreateAnnotationRequest) => apiFetch<VideoAnnotationDto>(`${idPath('/coach/form-checks', id)}/annotations`, { method: 'POST', body }),
+  removeAnnotation: (id: string, annotationId: string) => apiFetch<void>(idPath(`${idPath('/coach/form-checks', id)}/annotations`, annotationId), { method: 'DELETE' }),
+  reserveAudio: (id: string, body: CreateReviewAudioRequest) => apiFetch<UploadTicketDto>(`${idPath('/coach/form-checks', id)}/audio`, { method: 'POST', body }),
+  completeAudio: (id: string, assetId: string) => apiFetch<void>(`${idPath(`${idPath('/coach/form-checks', id)}/audio`, assetId)}/complete`, { method: 'POST' }),
+  submit: (id: string, summary: string) => apiFetch<void>(`${idPath('/coach/form-checks', id)}/submit`, { method: 'POST', body: { summary } }),
+};
+
+export const callsApi = {
+  schedule: () => apiFetch<CoachScheduleDto>('/coach/schedule'),
+  saveAvailability: (body: SaveAvailabilityRequest) => apiFetch<AvailabilityDto>('/coach/availability', { method: 'PUT', body }),
+  book: (body: CreateBookingRequest) => apiFetch<BookingDto>('/coach/bookings', { method: 'POST', body }),
+  update: (id: string, body: UpdateBookingRequest) => apiFetch<BookingDto>(idPath('/coach/bookings', id), { method: 'PATCH', body }),
+  cancel: (id: string) => apiFetch<void>(`${idPath('/coach/bookings', id)}/cancel`, { method: 'POST' }),
+  mine: () => apiFetch<ClientCallsDto>('/me/calls'),
+  bookMine: (body: CreateBookingRequest) => apiFetch<BookingDto>('/me/bookings', { method: 'POST', body }),
+  moveMine: (id: string, startsAt: string) => apiFetch<BookingDto>(idPath('/me/bookings', id), { method: 'PATCH', body: { startsAt } }),
+  cancelMine: (id: string) => apiFetch<void>(`${idPath('/me/bookings', id)}/cancel`, { method: 'POST' }),
+};
+
+export const automationsApi = {
+  overview: () => apiFetch<AutomationsDto>('/coach/automations'),
+  create: (body: SaveAutomationRuleRequest) => apiFetch<AutomationRuleDto>('/coach/automations', { method: 'POST', body }),
+  update: (id: string, body: SaveAutomationRuleRequest) => apiFetch<AutomationRuleDto>(idPath('/coach/automations', id), { method: 'PUT', body }),
+  remove: (id: string) => apiFetch<void>(idPath('/coach/automations', id), { method: 'DELETE' }),
+  dryRun: (id: string) => apiFetch<AutomationCandidateDto[]>(`${idPath('/coach/automations', id)}/dry-run`, { method: 'POST' }),
+  run: () => apiFetch<RunAutomationsResultDto>('/coach/automations/run', { method: 'POST' }),
+};
+
+export const liveApi = {
+  view: () => apiFetch<CoachLiveDto>('/coach/live-sessions'),
+  start: (body: StartLiveSessionRequest) => apiFetch<LiveSessionDto>('/coach/live-sessions', { method: 'POST', body }),
+  get: (id: string) => apiFetch<LiveSessionDto>(idPath('/coach/live-sessions', id)),
+  logSet: (id: string, body: LogLiveSetRequest) => apiFetch<LiveSessionDto>(`${idPath('/coach/live-sessions', id)}/sets`, { method: 'POST', body }),
+  removeSet: (id: string, setLogId: string) => apiFetch<LiveSessionDto>(idPath(`${idPath('/coach/live-sessions', id)}/sets`, setLogId), { method: 'DELETE' }),
+  end: (id: string) => apiFetch<void>(`${idPath('/coach/live-sessions', id)}/end`, { method: 'POST' }),
+  mine: () => apiFetch<{ session: LiveSessionDto | null }>('/me/live-session'),
+};
+
+export const nutritionApi = {
+  searchFoods: (q?: string) => apiFetch<FoodDto[]>('/foods', { query: { q } }),
+  createFood: (body: SaveFoodRequest) => apiFetch<FoodDto>('/foods', { method: 'POST', body }),
+  archiveFood: (id: string) => apiFetch<void>(idPath('/foods', id), { method: 'DELETE' }),
+  favorite: (id: string, on: boolean) => apiFetch<void>(`${idPath('/foods', id)}/favorite`, { method: on ? 'PUT' : 'DELETE' }),
+
+  day: (date?: string) => apiFetch<NutritionDayDto>('/me/nutrition', { query: { date } }),
+  saveTarget: (body: SaveNutritionTargetRequest) => apiFetch<NutritionTargetDto>('/me/nutrition/target', { method: 'PUT', body }),
+  log: (body: LogMealRequest) => apiFetch<MealEntryDto[]>('/me/nutrition/entries', { method: 'POST', body }),
+  removeEntry: (id: string) => apiFetch<void>(idPath('/me/nutrition/entries', id), { method: 'DELETE' }),
+  logWater: (body: LogWaterRequest) => apiFetch<WaterLogDto>('/me/nutrition/water', { method: 'POST', body }),
+  removeWater: (id: string) => apiFetch<void>(idPath('/me/nutrition/water', id), { method: 'DELETE' }),
+  library: () => apiFetch<NutritionLibraryDto>('/me/nutrition/library'),
+  createTemplate: (body: SaveMealTemplateRequest) => apiFetch<MealTemplateDto>('/me/meal-templates', { method: 'POST', body }),
+  removeTemplate: (id: string) => apiFetch<void>(idPath('/me/meal-templates', id), { method: 'DELETE' }),
+
+  forClient: (clientId: string) => apiFetch<CoachNutritionDto>(`${idPath('/clients', clientId)}/nutrition`),
+  saveClientTarget: (clientId: string, body: SaveNutritionTargetRequest) =>
+    apiFetch<NutritionTargetDto>(`${idPath('/clients', clientId)}/nutrition/target`, { method: 'PUT', body }),
+  clearClientTarget: (clientId: string) => apiFetch<void>(`${idPath('/clients', clientId)}/nutrition/target`, { method: 'DELETE' }),
+  createPlan: (clientId: string, body: SaveMealPlanRequest) => apiFetch<MealPlanDto>(`${idPath('/clients', clientId)}/meal-plans`, { method: 'POST', body }),
+  replacePlan: (clientId: string, planId: string, body: SaveMealPlanRequest) =>
+    apiFetch<MealPlanDto>(`${idPath('/clients', clientId)}/meal-plans/${encodeURIComponent(planId)}`, { method: 'PUT', body }),
+  removePlan: (clientId: string, planId: string) =>
+    apiFetch<void>(`${idPath('/clients', clientId)}/meal-plans/${encodeURIComponent(planId)}`, { method: 'DELETE' }),
+};
+
+export const analyticsApi = {
+  /** 402 without MUSCLE_ANALYTICS (Pro). */
+  muscles: (from: string, to: string) => apiFetch<MuscleAnalyticsDto>('/me/analytics/muscles', { query: { from, to } }),
+  forClient: (clientId: string, from: string, to: string) =>
+    apiFetch<MuscleAnalyticsDto>(`${idPath('/clients', clientId)}/analytics/muscles`, { query: { from, to } }),
+};
+
+export const readinessApi = {
+  history: () => apiFetch<ReadinessHistoryDto>('/me/readiness'),
+  save: (body: SaveReadinessRequest) => apiFetch<ReadinessDto>('/me/readiness', { method: 'PUT', body }),
+  cycle: () => apiFetch<CycleContextDto>('/me/cycle'),
+  saveCycle: (body: SaveCycleEntryRequest) => apiFetch<void>('/me/cycle/entries', { method: 'PUT', body }),
+  removeCycle: (date: string) => apiFetch<void>(idPath('/me/cycle/entries', date), { method: 'DELETE' }),
+  shareCycle: (sharedWithCoach: boolean) => apiFetch<void>('/me/cycle/sharing', { method: 'PUT', body: { sharedWithCoach } }),
 };

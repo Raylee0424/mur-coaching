@@ -12,7 +12,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { formatTarget } from '@/lib/format';
 import { unitLabel, unitStep } from '@/lib/units';
-import { ActionBadge } from './ActionBadge';
+import { ACTION_META, ActionBadge } from './ActionBadge';
 import {
   initialDraft,
   subjectFromRecommendation,
@@ -139,18 +139,18 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
       }
     >
       <div className="space-y-5">
-        <section className="space-y-2">
+        <section className={`space-y-2 rounded-md border p-4 ${ACTION_META[subject.action].box}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-mono text-micro uppercase text-muted">Engine proposed</span>
+            <span className={`font-sans text-label-sm uppercase tracking-wider ${ACTION_META[subject.action].text}`}>Engine proposed</span>
             <ActionBadge action={subject.action} />
           </div>
           {engineTarget ? (
-            <p className="font-mono text-metric">
+            <p className="font-display text-title-lg text-ink tabular-nums">
               {engineTarget}
-              {subject.rpeCap !== null ? <span className="ml-2 text-ui text-muted">@ RPE {subject.rpeCap}</span> : null}
+              {subject.rpeCap !== null ? <span className="ml-2 font-sans text-label-md text-muted">@ RPE {subject.rpeCap}</span> : null}
             </p>
           ) : null}
-          <p className="text-meta text-muted">{subject.reason}</p>
+          <p className="font-sans text-label-sm font-normal text-ink/90">{subject.reason}</p>
         </section>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -169,12 +169,12 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
             value={draft.note}
             onChange={set('note')}
             placeholder="Why you changed it, in plain words"
-            className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 text-ui text-ink placeholder:text-faint hover:border-faint"
+            className="block w-full rounded-sm border border-line bg-canvas-low px-3.5 py-2.5 text-ui text-ink placeholder:text-muted transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <FieldError>{errors.note}</FieldError>
         </div>
 
-        <p className="border-l-2 border-l-ink bg-raised px-3 py-2 text-meta text-muted">
+        <p className="rounded-sm border border-primary/40 bg-primary-container px-3.5 py-2.5 font-sans text-label-sm font-normal text-primary-soft">
           Visible to the client on Today and Lift detail as a coach override.
         </p>
 

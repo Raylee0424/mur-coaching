@@ -20,7 +20,7 @@ export function TabBar({ items }: { items: readonly NavItem[] }) {
   return (
     <nav
       aria-label="Client navigation"
-      className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-5 items-center border-t border-line bg-canvas-low px-2 pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-5 items-center border-t border-line bg-canvas-low/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
     >
       {items.map((item) => {
         const active = isActive(item, pathname);
@@ -30,11 +30,11 @@ export function TabBar({ items }: { items: readonly NavItem[] }) {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={clsx(
-              'relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded text-meta font-medium',
-              active ? 'text-ink' : 'text-faint hover:text-ink',
+              'relative flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-sm font-sans text-label-sm transition-colors',
+              active ? 'text-primary' : 'text-muted hover:text-ink',
             )}
           >
-            {active ? <span aria-hidden="true" className="absolute inset-x-6 -top-px h-0.5 bg-signal" /> : null}
+            {active ? <span aria-hidden="true" className="absolute inset-x-5 -top-px h-0.5 rounded-full bg-primary" /> : null}
             <Icon icon={NAV_ICONS[item.icon]} size={20} />
             {item.label}
           </Link>

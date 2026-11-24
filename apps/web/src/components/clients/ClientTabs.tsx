@@ -2,10 +2,10 @@ import clsx from 'clsx';
 import Link from 'next/link';
 import { CLIENT_TABS, tabHref, type ClientTab } from './overview-model';
 
-/** Tabs are links so each one is a server-rendered URL (`?tab=`) that survives refresh and sharing. */
-export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string; active: ClientTab | 'roadmap'; pending?: number }) {
+/** Stitch client section tabs with electric-lime active underline (`coach_client_detail`). */
+export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string; active: ClientTab | 'roadmap' | 'nutrition'; pending?: number }) {
   return (
-    <nav aria-label="Client sections" className="mb-6 flex h-10 gap-1 border-b border-line">
+    <nav aria-label="Client sections" className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-line">
       {CLIENT_TABS.map((t) => {
         const on = t.key === active;
         return (
@@ -14,25 +14,32 @@ export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string
             href={tabHref(clientId, t.key)}
             aria-current={on ? 'page' : undefined}
             className={clsx(
-              'inline-flex items-center gap-1.5 px-3 text-ui transition-colors focus-visible:-outline-offset-2',
-              on ? 'text-ink shadow-[inset_0_-2px_0_theme(colors.ink)]' : 'text-muted hover:text-ink',
+              'inline-flex items-center gap-2 whitespace-nowrap border-b-2 pb-3 font-sans text-label-lg transition-colors',
+              on ? 'border-primary text-ink' : 'border-transparent text-muted hover:text-ink',
             )}
           >
             {t.label}
-            {t.key === 'lifts' && pending > 0 ? <span className="font-mono text-micro text-faint">{pending}</span> : null}
+            {t.key === 'lifts' && pending > 0 ? (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 font-sans text-label-sm text-primary-ink tabular-nums">
+                {pending}
+              </span>
+            ) : null}
           </Link>
         );
       })}
-      <Link
-        href={`/coach/clients/${clientId}/roadmap`}
-        aria-current={active === 'roadmap' ? 'page' : undefined}
-        className={clsx(
-          'inline-flex items-center px-3 text-ui transition-colors focus-visible:-outline-offset-2',
-          active === 'roadmap' ? 'text-ink shadow-[inset_0_-2px_0_theme(colors.ink)]' : 'text-muted hover:text-ink',
-        )}
-      >
-        Roadmap
-      </Link>
+      {(['roadmap', 'nutrition'] as const).map((key) => (
+        <Link
+          key={key}
+          href={`/coach/clients/${clientId}/${key}`}
+          aria-current={active === key ? 'page' : undefined}
+          className={clsx(
+            'inline-flex items-center whitespace-nowrap border-b-2 pb-3 font-sans text-label-lg capitalize transition-colors',
+            active === key ? 'border-primary text-ink' : 'border-transparent text-muted hover:text-ink',
+          )}
+        >
+          {key}
+        </Link>
+      ))}
     </nav>
   );
 }

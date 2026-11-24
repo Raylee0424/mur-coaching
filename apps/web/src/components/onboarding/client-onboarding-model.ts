@@ -1,14 +1,64 @@
-import { Experience, WORKOUT_LOG_LIMITS } from '@coaching/shared';
+import { Equipment, Experience, WORKOUT_LOG_LIMITS } from '@coaching/shared';
 import type { BaselineDto, BaselineInput, MeProfileDto, ProgramDto, WeightUnit } from '@coaching/shared';
 import { displayToKg, kgToDisplay, unitLabel } from '@/lib/units';
 
-export const CLIENT_STEPS = ['Goals', 'Units and experience', 'Limitations', 'Starting weights', 'All set'] as const;
+export const CLIENT_STEPS = ['Goals', 'Units & Experience', 'Gym Equipment', 'Limitations', 'Starting Weights', 'All Set'] as const;
 
 export const EXPERIENCE_OPTIONS: { value: Experience; label: string; description: string }[] = [
   { value: Experience.BEGINNER, label: 'Beginner', description: 'Under a year of consistent lifting.' },
   { value: Experience.INTERMEDIATE, label: 'Intermediate', description: '1–3 years; you know your main lifts.' },
   { value: Experience.ADVANCED, label: 'Advanced', description: '3+ years of structured programs.' },
 ];
+
+export type GymProfileId = 'COMMERCIAL' | 'HOME_RACK' | 'HOTEL_DB';
+
+export const GYM_PROFILE_STORAGE_KEY = 'mur:gym-profile';
+
+export const GYM_PROFILES: readonly {
+  id: GymProfileId;
+  title: string;
+  description: string;
+  allowed: readonly Equipment[];
+}[] = [
+  {
+    id: 'COMMERCIAL',
+    title: 'Commercial Barbell Gym',
+    description: 'Full competition barbells, squat racks, cable stacks, leg press, and plate-loaded machines.',
+    allowed: Object.values(Equipment),
+  },
+  {
+    id: 'HOME_RACK',
+    title: 'Home Power Rack',
+    description: 'Power rack, Olympic barbell, adjustable bench, pull-up bar, and dumbbells.',
+    allowed: [
+      Equipment.BARBELL,
+      Equipment.DUMBBELL,
+      Equipment.BODYWEIGHT,
+      Equipment.KETTLEBELL,
+      Equipment.BAND,
+      Equipment.SPECIALTY_BAR,
+    ],
+  },
+  {
+    id: 'HOTEL_DB',
+    title: 'Hotel / Dumbbells Only',
+    description: 'Dumbbells up to 30 kg, flat/incline bench, and bodyweight progressions.',
+    allowed: [Equipment.DUMBBELL, Equipment.BODYWEIGHT, Equipment.BAND, Equipment.KETTLEBELL],
+  },
+];
+
+export function isEquipmentEligible(equipment: Equipment | null, profileId: GymProfileId): boolean {
+  if (profileId === 'COMMERCIAL' || equipment === null) return true;
+  const p = GYM_PROFILES.find((x) => x.id === profileId);
+  return p ? p.allowed.includes(equipment) : true;
+}
+
+export function countEligibleMovements(
+  library: readonly { equipment: Equipment | null }[],
+  profileId: GymProfileId,
+): number {
+  return library.filter((e) => isEquipmentEligible(e.equipment, profileId)).length;
+}
 
 export interface LiftRow {
   exerciseId: string;
@@ -25,6 +75,7 @@ export interface ClientAnswers {
   unit: WeightUnit;
   experience: Experience | null;
   daysPerWeek: number;
+  gymProfile: GymProfileId;
   limitations: string[];
   limitationsNote: string;
   lifts: LiftRow[];
@@ -71,6 +122,7 @@ export function initialAnswers(
     unit,
     experience: me.profile.experience,
     daysPerWeek: me.profile.daysPerWeek ?? 3,
+    gymProfile: 'COMMERCIAL',
     limitations: [...me.profile.limitations],
     limitationsNote: me.profile.limitationsNote ?? '',
     lifts: lifts.map((l) => {
@@ -90,8 +142,8 @@ export function resumeStep(me: MeProfileDto): number {
   if (me.profile.goals.length === 0) return 0;
   if (me.profile.experience === null) return 1;
   if (me.profile.limitations.length === 0) return 2;
-  if (me.baselines.length === 0) return 3;
-  return 4;
+  if (me.baselines.length === 0) return 4;
+  return 5;
 }
 
 /** "None" excludes every other limitation and vice versa. */
@@ -108,8 +160,8 @@ export function validateStep(step: number, a: ClientAnswers): StepErrors {
     if (!a.experience) errors.experience = 'Choose your experience level.';
     if (a.daysPerWeek < 1 || a.daysPerWeek > 7) errors.daysPerWeek = '1–7 days.';
   }
-  if (step === 2 && a.limitations.length === 0) errors.limitations = 'Pick any that apply, or None.';
-  if (step === 3) {
+  if (step === 3 && a.limitations.length === 0) errors.limitations = 'Pick any that apply, or None.';
+  if (step === 4) {
     const max = kgToDisplay(WORKOUT_LOG_LIMITS.maxWeightKg, a.unit);
     for (const l of a.lifts) {
       if (l.unknown) continue;

@@ -16,27 +16,26 @@
   h3,
   .font-display {
     font-family: var(--font-display), system-ui, sans-serif;
-    font-stretch: 87.5%;
     letter-spacing: -0.02em;
   }
   .font-mono,
   table,
   input[type='number'],
   output {
-    font-variant-numeric: tabular-nums slashed-zero;
+    font-variant-numeric: tabular-nums;
   }
   :focus-visible {
-    outline: 2px solid theme('colors.signal.DEFAULT');
+    outline: 2px solid theme('colors.primary.DEFAULT');
     outline-offset: 2px;
   }
   ::selection {
-    background: theme('colors.signal.DEFAULT');
-    color: theme('colors.canvas');
+    background: theme('colors.primary.DEFAULT');
+    color: theme('colors.primary.ink');
   }
   input[type='checkbox'],
   input[type='radio'],
   input[type='range'] {
-    accent-color: theme('colors.ink');
+    accent-color: theme('colors.primary.DEFAULT');
   }
   @media (prefers-reduced-motion: reduce) {
     *,

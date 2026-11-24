@@ -11,11 +11,11 @@ import {
   pickExerciseId,
   trendSeries,
 } from '@/components/records/records-model';
-import { Panel } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { buttonClass } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Segmented } from '@/components/ui/Segmented';
-import { StatStrip, type StatItem } from '@/components/ui/StatStrip';
 import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
 import { exercisesApi, meApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
@@ -27,7 +27,6 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const MAX_PICKS = 6;
 const DELTA_TONE = { good: 'text-emerald', bad: 'text-rose', neutral: 'text-muted' } as const;
-const MICRO = 'font-mono text-micro uppercase text-muted';
 
 export default async function RecordsPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser(Role.CLIENT);
@@ -41,7 +40,11 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
   if (records.exercises.length === 0) {
     return (
       <>
-        <PageHeader title="Personal records" />
+        <PageHeader title="Personal Records & Net Progression" meta={<Badge tone="signal">PRO</Badge>} actions={
+          <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
+            Muscle Map
+          </Link>
+        } />
         <div className="max-w-xl">
           <EmptyState title="No records yet">Log a session and your heaviest working sets show up here. Warm-ups never count.</EmptyState>
         </div>
@@ -50,19 +53,33 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
   }
 
   const series = stats ? trendSeries(stats.trend, unit) : [];
-  const strip: StatItem[] = stats
-    ? [
-        { label: 'Net e1RM', value: formatDeltaWeight(stats.netDeltaKg, unit), delta: stats.netDeltaPct === null ? null : formatDeltaPct(stats.netDeltaPct) },
-        { label: 'Sessions', value: String(stats.sessions) },
-        { label: 'Latest e1RM', value: stats.trend.length ? formatWeight(stats.trend[stats.trend.length - 1]!.e1rmKg, unit) : '—' },
-      ]
-    : [];
+  const windowCutoff = Date.now() - records.windowDays * 86_400_000;
 
   return (
     <>
-      <PageHeader title="Personal records" meta={`${records.newRecords} new in the last ${records.windowDays} days`} />
-      <div className="max-w-5xl space-y-6">
-        <Panel title="Rep-range PR matrix" meta="Heaviest working set at each rep count or more">
+      <PageHeader
+        title="Personal Records & Net Progression"
+        meta={<Badge tone="signal">PRO</Badge>}
+        actions={
+          <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
+            Muscle Map
+          </Link>
+        }
+      />
+
+      <div className="space-y-6">
+        {/* Section 1: Rep-Range PR Matrix (`athlete_web_personal_records_net_progression_pro`) */}
+        <section className="overflow-hidden rounded-md border border-line bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-5">
+            <div>
+              <h2 className="font-display text-title-md text-ink">Rep-Range PR Matrix (1RM – 20RM)</h2>
+              <p className="text-label-md text-muted">All-time verified working-set and tested maxes across rep brackets.</p>
+            </div>
+            <span className="rounded-full border border-primary/40 bg-primary-container px-3 py-1 font-mono text-label-sm text-primary">
+              {records.newRecords} New PR{records.newRecords === 1 ? '' : 's'} ({records.windowDays}d)
+            </span>
+          </div>
+
           <div className="overflow-x-auto">
             <table className={TABLE}>
               <caption className="sr-only">Heaviest working set per exercise and rep bracket. Warm-ups are excluded.</caption>
@@ -77,13 +94,23 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
               <tbody>
                 {records.exercises.map((e) => (
                   <tr key={e.exerciseId} className={TR}>
-                    <th scope="row" className={`${TD} whitespace-nowrap text-left font-medium`}>
-                      <Link href={href(e.exerciseId)} className="hover:text-signal">{e.exerciseName}</Link>
+                    <th scope="row" className={clsx(TD, 'whitespace-nowrap text-left font-medium')}>
+                      <Link href={href(e.exerciseId)} className={clsx('hover:text-primary', e.exerciseId === selectedId && 'text-primary')}>
+                        {e.exerciseName}
+                      </Link>
                     </th>
                     {records.brackets.map((reps, i) => {
                       const cell = e.cells[i] ?? null;
+                      const isRecent = cell ? Date.parse(cell.achievedAt) >= windowCutoff : false;
                       return (
-                        <td key={reps} className={clsx(TD_NUM, cell ? 'text-ink' : 'text-faint')} title={cell ? `Set ${shortDate(cell.achievedAt)}` : undefined}>
+                        <td
+                          key={reps}
+                          className={clsx(
+                            TD_NUM,
+                            !cell ? 'text-faint' : reps === 1 ? 'text-primary' : isRecent ? 'text-emerald' : 'text-ink',
+                          )}
+                          title={cell ? `Set ${shortDate(cell.achievedAt)}` : undefined}
+                        >
                           <span aria-label={cellLabel(e.exerciseName, cell, reps, unit)}>{formatCell(cell, unit)}</span>
                         </td>
                       );
@@ -93,23 +120,38 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
               </tbody>
             </table>
           </div>
-        </Panel>
+        </section>
 
-        {stats ? (
-          <Panel title="Session-to-session net progression" meta={`${stats.exercise.name} · e1RM`}>
-            <div className="space-y-4 p-4">
+        {/* Section 2: Net Progression Chart (Left) + Exercise Statistics Table (Right) */}
+        <section className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-12">
+          {stats ? (
+            <div className="flex h-full flex-col justify-between gap-4 rounded-md border border-line bg-card p-5 xl:col-span-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <span className="font-mono text-label-sm uppercase text-primary">SESSION-TO-SESSION NET PROGRESSION</span>
+                  <h2 className="mt-0.5 font-display text-title-md text-ink">{stats.exercise.name} e1RM Trend</h2>
+                </div>
+                <span className="rounded-full border border-primary/40 bg-primary-container px-3 py-1 font-mono text-label-sm text-primary">
+                  {formatDeltaWeight(stats.netDeltaKg, unit)} ({stats.sessions} {stats.sessions === 1 ? 'Session' : 'Sessions'})
+                </span>
+              </div>
+
               {records.exercises.length > 1 ? (
                 <Segmented
                   label="Exercise"
-                  items={records.exercises.slice(0, MAX_PICKS).map((e) => ({ href: href(e.exerciseId), label: e.exerciseName, current: e.exerciseId === selectedId }))}
+                  items={records.exercises.slice(0, MAX_PICKS).map((e) => ({
+                    href: href(e.exerciseId),
+                    label: e.exerciseName,
+                    current: e.exerciseId === selectedId,
+                  }))}
                 />
               ) : null}
+
               {series.length >= 2 ? (
-                <>
-                  <StatStrip label={`${stats.exercise.name} net progression`} items={strip} />
+                <div className="space-y-3 rounded-sm border border-line bg-canvas-low p-4">
                   <LineChart points={series} unit={unitLabel(unit)} title={`${stats.exercise.name} estimated one-rep max by session`} />
                   <details className="text-meta text-muted">
-                    <summary className="cursor-pointer">Chart data</summary>
+                    <summary className="cursor-pointer font-mono text-label-sm text-primary">Session e1RM Breakdown</summary>
                     <table className={`${TABLE} mt-2`}>
                       <caption className="sr-only">Estimated one-rep max per session, oldest first</caption>
                       <thead className={THEAD}>
@@ -130,47 +172,56 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
                       </tbody>
                     </table>
                   </details>
-                </>
+                </div>
               ) : (
-                <p className="text-meta text-muted">Log this lift in two sessions to see your net progression.</p>
+                <div className="flex flex-1 items-center justify-center rounded-sm border border-line bg-canvas-low p-6">
+                  <p className="text-meta text-muted">Log this lift in two sessions to plot your net e1RM progression.</p>
+                </div>
               )}
             </div>
-          </Panel>
-        ) : null}
+          ) : null}
 
-        <Panel title="Exercise statistics" meta={`Last ${records.windowDays} days`}>
-          <div className="overflow-x-auto">
-            <table className={TABLE}>
-              <caption className="sr-only">Working sets, average RPE and e1RM change per exercise over the last {records.windowDays} days</caption>
-              <thead className={THEAD}>
-                <tr>
-                  <th scope="col" className={TH}>Exercise</th>
-                  <th scope="col" className={TH_NUM}>Best e1RM</th>
-                  <th scope="col" className={TH_NUM}>Sets</th>
-                  <th scope="col" className={TH_NUM}>Avg RPE</th>
-                  <th scope="col" className={TH_NUM}>Net delta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.exercises.map((e) => {
-                  const d = formatDeltaPct(e.stats.netDeltaPct);
-                  return (
-                    <tr key={e.exerciseId} className={TR}>
-                      <th scope="row" className={`${TD} text-left font-medium`}>
-                        <Link href={href(e.exerciseId)} className="hover:text-signal">{e.exerciseName}</Link>
-                      </th>
-                      <td className={TD_NUM}>{formatWeight(e.bestE1rmKg, unit)}</td>
-                      <td className={TD_NUM}>{e.stats.sets}</td>
-                      <td className={TD_NUM}>{e.stats.avgRpe === null ? '—' : e.stats.avgRpe.toFixed(1)}</td>
-                      <td className={clsx(TD_NUM, DELTA_TONE[d.tone])}>{d.text}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className={clsx('h-full overflow-hidden rounded-md border border-line bg-card', stats ? 'xl:col-span-6' : 'xl:col-span-12')}>
+            <div className="flex items-center justify-between gap-3 border-b border-line p-5">
+              <h2 className="font-display text-title-md text-ink">Exercise Statistics</h2>
+              <span className="rounded-full border border-primary/40 bg-primary-container px-2.5 py-0.5 font-mono text-label-sm text-primary">
+                PRO TELEMETRY · {records.windowDays}D
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className={TABLE}>
+                <caption className="sr-only">Working sets, average RPE and e1RM change per exercise over the last {records.windowDays} days</caption>
+                <thead className={THEAD}>
+                  <tr>
+                    <th scope="col" className={TH}>Exercise</th>
+                    <th scope="col" className={TH_NUM}>Best e1RM</th>
+                    <th scope="col" className={TH_NUM}>Sets ({records.windowDays}D)</th>
+                    <th scope="col" className={TH_NUM}>Avg RPE</th>
+                    <th scope="col" className={TH_NUM}>Net Delta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.exercises.map((e) => {
+                    const d = formatDeltaPct(e.stats.netDeltaPct);
+                    return (
+                      <tr key={e.exerciseId} className={TR}>
+                        <th scope="row" className={`${TD} text-left font-medium`}>
+                          <Link href={href(e.exerciseId)} className="hover:text-primary">{e.exerciseName}</Link>
+                        </th>
+                        <td className={TD_NUM}>{formatWeight(e.bestE1rmKg, unit)}</td>
+                        <td className={TD_NUM}>{e.stats.sets}</td>
+                        <td className={TD_NUM}>{e.stats.avgRpe === null ? '—' : e.stats.avgRpe.toFixed(1)}</td>
+                        <td className={clsx(TD_NUM, DELTA_TONE[d.tone])}>{d.text}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </Panel>
-        <p className={MICRO}>e1RM uses the Epley formula on your top working set.</p>
+        </section>
+
+        <p className="font-mono text-label-sm uppercase text-muted">e1RM uses the Epley formula on your top working set.</p>
       </div>
     </>
   );

@@ -1,140 +1,146 @@
 import clsx from 'clsx';
-import { RecommendationAction } from '@coaching/shared';
-import { ActionBadge } from '@/components/progression/ActionBadge';
-import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
+import { Check, CircleCheck, LayoutDashboard, RotateCcw, Smartphone } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
 import { CONTAINER } from './Section';
 
-const QUEUE = [
-  { client: 'M. Vance', lift: 'Back squat', from: '155.0 kg × 5', to: '157.5 kg × 5', action: RecommendationAction.INCREASE_LOAD },
-  { client: 'E. Rostova', lift: 'Bench press', from: '80.0 kg × 5', to: '80.0 kg × 6', action: RecommendationAction.INCREASE_REPS },
-  { client: 'D. Brooks', lift: 'Deadlift', from: '200.0 kg × 3', to: '180.0 kg × 3', action: RecommendationAction.DELOAD },
-] as const;
-
-/** Static roster-queue preview. Illustration only. */
-function RosterQueuePreview() {
-  return (
-    <figure aria-label="Example progression queue" className="overflow-hidden rounded-md border border-line bg-card">
-      <div className="flex h-10 items-center justify-between border-b border-line px-4">
-        <span className="font-mono text-micro uppercase text-muted">Progression queue</span>
-        <span className="font-mono text-micro text-signal">3 pending</span>
-      </div>
-      <div className="overflow-x-auto">
-        <table className={clsx(TABLE, 'min-w-[36rem]')}>
-          <caption className="sr-only">Pending engine calls</caption>
-          <thead className={THEAD}>
-            <tr>
-              <th scope="col" className={TH}>Client</th>
-              <th scope="col" className={TH}>Lift</th>
-              <th scope="col" className={TH_NUM}>Current → Proposed</th>
-              <th scope="col" className={TH}>Call</th>
-            </tr>
-          </thead>
-          <tbody>
-            {QUEUE.map((r) => (
-              <tr key={r.client} className={TR}>
-                <td className={clsx(TD, 'whitespace-nowrap font-medium')}>{r.client}</td>
-                <td className={clsx(TD, 'whitespace-nowrap text-muted')}>{r.lift}</td>
-                <td className={TD_NUM}>
-                  <span className="text-faint">{r.from}</span> <span aria-hidden="true" className="text-faint">→</span>
-                  <span className="sr-only"> to </span> {r.to}
-                </td>
-                <td className={TD}>
-                  <ActionBadge action={r.action} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </figure>
-  );
-}
-
-const FIELDS = [
-  { label: 'Load', value: '67.5', unit: 'kg' },
-  { label: 'Reps', value: '6', unit: '' },
-  { label: 'RPE', value: '7.5', unit: '' },
-] as const;
-
-/** Static set-logger preview at phone width. Illustration only. */
-function SetLoggerPreview() {
-  return (
-    <figure aria-label="Example set logger" className="w-full max-w-[360px] rounded-md border border-line bg-card">
-      <div className="border-b border-line px-4 py-3">
-        <p className="text-ui font-semibold">Overhead press</p>
-        <p className="mt-0.5 font-mono text-meta text-muted">Target 67.5 kg × 6 @ RPE 8.0</p>
-      </div>
-      <div className="grid grid-cols-3 divide-x divide-line">
-        {FIELDS.map((f) => (
-          <div key={f.label} className="px-4 py-3">
-            <p className="font-mono text-micro uppercase text-muted">{f.label}</p>
-            <p className="mt-1 font-mono text-metric">
-              {f.value}
-              {f.unit ? <span className="ml-1 text-ui text-faint">{f.unit}</span> : null}
-            </p>
-          </div>
-        ))}
-      </div>
-      <div aria-hidden="true" className="border-t border-line p-3">
-        <span className="flex h-11 items-center justify-center rounded bg-primary text-body font-medium text-primary-ink">Log set</span>
-      </div>
-    </figure>
-  );
-}
-
 const COACH_POINTS = [
-  'Roster with adherence and needs-attention flags',
-  'A queue of every pending call, bulk accept',
-  'Per-client and per-exercise rule overrides',
+  'Roster overview & client detail drill-down',
+  'Custom exercise library CRUD & RPE rules',
+  'One-click Accept / Dismiss on progression queue',
 ] as const;
 
 const ATHLETE_POINTS = [
-  'Weight, reps and RPE in three taps per set',
-  'Repeat last session as a starting point',
-  'Every target shows the sessions behind it',
+  'Fast set-by-set weight, reps, and RPE entry',
+  '"Repeat Last Session" one-tap quick-start',
+  'Full workout history & transparent progression targets',
 ] as const;
 
-function Points({ items }: { items: readonly string[] }) {
-  return (
-    <ul className="divide-y divide-line border-y border-line">
-      {items.map((p) => (
-        <li key={p} className="py-3 text-ui text-muted">
-          {p}
-        </li>
-      ))}
-    </ul>
-  );
-}
+const QUEUE_ROWS = [
+  { client: 'M. Vance', lift: 'Back Squat', badge: '+2.5 kg', badgeCls: 'bg-emerald-bg text-emerald', cta: 'Accept', primaryCta: true },
+  { client: 'E. Rostova', lift: 'Bench Press', badge: '+1 rep', badgeCls: 'bg-sky-bg text-sky', cta: 'Accept', primaryCta: true },
+  { client: 'D. Brooks', lift: 'Deadlift', badge: 'Deload', badgeCls: 'bg-rose-bg text-rose', cta: 'Review', primaryCta: false },
+] as const;
 
 export function Workspaces() {
   return (
-    <>
-      <section id="coaches" aria-labelledby="coaches-heading" className="scroll-mt-14 border-t border-line py-20 lg:py-28">
-        <div className={clsx(CONTAINER, 'grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-12')}>
-          <div className="flex flex-col gap-6 lg:col-span-4">
-            <h2 id="coaches-heading" className="font-display text-h1 font-semibold">
-              For coaches
-            </h2>
-            <Points items={COACH_POINTS} />
+    <section className="border-b border-line py-20 lg:py-24">
+      <div className={clsx(CONTAINER, 'grid grid-cols-1 items-stretch gap-8 lg:grid-cols-2')}>
+        {/* Left Card: For Coaches */}
+        <article id="for-coaches" className="scroll-mt-24 flex h-full flex-col justify-between gap-8 rounded-md border border-line bg-card p-8">
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-2.5 text-primary">
+              <Icon icon={LayoutDashboard} size={20} />
+              <span className="font-sans text-label-sm uppercase tracking-wider">COACH WORKSPACE</span>
+            </div>
+            <h2 className="font-display text-headline-md text-ink">For Coaches</h2>
+            <p className="font-sans text-body-md text-muted">
+              Manage your entire athlete roster, drill into per-lift history, maintain your exercise library CRUD, and accept or dismiss
+              engine calls in one click.
+            </p>
+            <ul className="flex flex-col gap-2.5">
+              {COACH_POINTS.map((p) => (
+                <li key={p} className="flex items-center gap-2.5">
+                  <Icon icon={CircleCheck} className="shrink-0 text-primary" />
+                  <span className="font-sans text-body-md text-ink">{p}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="min-w-0 lg:col-span-8">
-            <RosterQueuePreview />
+
+          <div aria-label="Example client roster queue" className="overflow-hidden rounded-md border border-line bg-canvas-low">
+            <div className="flex items-center justify-between border-b border-line bg-card px-4 py-2.5">
+              <span className="font-sans text-label-sm uppercase tracking-wider text-muted">CLIENT ROSTER QUEUE</span>
+              <span className="font-sans text-label-sm text-primary tabular-nums">3 PENDING</span>
+            </div>
+            <table className="w-full border-collapse text-left tabular-nums">
+              <tbody className="divide-y divide-line">
+                {QUEUE_ROWS.map((r) => (
+                  <tr key={r.client}>
+                    <td className="px-4 py-3 font-sans text-label-md text-ink">{r.client}</td>
+                    <td className="px-4 py-3 font-sans text-label-md font-normal text-muted">{r.lift}</td>
+                    <td className="px-4 py-3">
+                      <span className={clsx('inline-flex rounded-full px-2.5 py-0.5 font-sans text-label-sm', r.badgeCls)}>{r.badge}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right" aria-hidden="true">
+                      <span
+                        className={clsx(
+                          'inline-flex rounded-full px-3 py-1 font-sans text-label-sm',
+                          r.primaryCta
+                            ? 'bg-primary text-primary-ink'
+                            : 'border border-line-strong bg-card text-muted',
+                        )}
+                      >
+                        {r.cta}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      </section>
-      <section id="athletes" aria-labelledby="athletes-heading" className="scroll-mt-14 border-t border-line py-20 lg:py-28">
-        <div className={clsx(CONTAINER, 'grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-12')}>
-          <div className="order-2 lg:order-1 lg:col-span-5">
-            <SetLoggerPreview />
+        </article>
+
+        {/* Right Card: For Clients */}
+        <article id="for-clients" className="scroll-mt-24 flex h-full flex-col justify-between gap-8 rounded-md border border-line bg-card p-8">
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-2.5 text-primary">
+              <Icon icon={Smartphone} size={20} />
+              <span className="font-sans text-label-sm uppercase tracking-wider">ATHLETE LOGGER</span>
+            </div>
+            <h2 className="font-display text-headline-md text-ink">For Clients</h2>
+            <p className="font-sans text-body-md text-muted">
+              Log sets between rests in seconds. Start faster with &ldquo;Repeat Last Session&rdquo;, inspect full lift history, and see
+              exactly why your next target moved.
+            </p>
+            <ul className="flex flex-col gap-2.5">
+              {ATHLETE_POINTS.map((p) => (
+                <li key={p} className="flex items-center gap-2.5">
+                  <Icon icon={CircleCheck} className="shrink-0 text-primary" />
+                  <span className="font-sans text-body-md text-ink">{p}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="order-1 flex flex-col gap-6 lg:order-2 lg:col-span-4 lg:col-start-9">
-            <h2 id="athletes-heading" className="font-display text-h1 font-semibold">
-              For athletes
-            </h2>
-            <Points items={ATHLETE_POINTS} />
+
+          <div aria-label="Example mobile set logger" className="flex flex-col gap-3 rounded-md border border-line bg-canvas-low p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+              <div>
+                <p className="font-display text-title-md text-ink">Overhead Press</p>
+                <p className="font-sans text-label-sm text-muted tabular-nums">Target: 67.5 kg × 6 @ RPE 8.0</p>
+              </div>
+              <span
+                aria-hidden="true"
+                className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-card px-3 py-1.5 font-sans text-label-sm text-ink"
+              >
+                <Icon icon={RotateCcw} size={14} />
+                Repeat Last Session
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 tabular-nums sm:grid-cols-4">
+              <div className="flex flex-col rounded-sm border border-line bg-card px-3 py-2">
+                <span className="font-sans text-label-sm text-muted">WEIGHT</span>
+                <span className="font-display text-title-md text-ink">67.5 kg</span>
+              </div>
+              <div className="flex flex-col rounded-sm border border-line bg-card px-3 py-2">
+                <span className="font-sans text-label-sm text-muted">REPS</span>
+                <span className="font-display text-title-md text-ink">6</span>
+              </div>
+              <div className="flex flex-col rounded-sm border border-line bg-card px-3 py-2">
+                <span className="font-sans text-label-sm text-muted">RPE</span>
+                <span className="font-display text-title-md text-ink">7.5</span>
+              </div>
+              <span
+                aria-hidden="true"
+                className="flex items-center justify-center gap-1 rounded-sm bg-primary px-3 py-2 font-sans text-label-md text-primary-ink"
+              >
+                <Icon icon={Check} size={16} />
+                Log Set
+              </span>
+            </div>
           </div>
-        </div>
-      </section>
-    </>
+        </article>
+      </div>
+    </section>
   );
 }

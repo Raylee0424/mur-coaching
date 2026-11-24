@@ -21,8 +21,8 @@ export function ResetForm({ token }: { token: string | undefined }) {
       <div className="space-y-6">
         <StatusIcon tone="emerald" icon={CircleCheck} />
         <AuthHeading title="Password updated" subtitle="You can now sign in with your new password." />
-        <Link href="/login" className={buttonClass('primary', undefined, 'lg')}>
-          Back to sign in
+        <Link href="/login" className={buttonClass('primary', 'w-full justify-center', 'lg')}>
+          Back to Sign In
         </Link>
       </div>
     );
@@ -33,8 +33,8 @@ export function ResetForm({ token }: { token: string | undefined }) {
       <div className="space-y-6">
         <StatusIcon tone="rose" icon={Unlink} />
         <AuthHeading title="Reset link missing" subtitle="Open the link from your email, or request a new one." />
-        <Link href="/forgot" className={buttonClass('primary', undefined, 'lg')}>
-          Request a new link
+        <Link href="/forgot" className={buttonClass('primary', 'w-full justify-center', 'lg')}>
+          Request a New Link
         </Link>
       </div>
     );
@@ -43,11 +43,20 @@ export function ResetForm({ token }: { token: string | undefined }) {
   return (
     <div className="space-y-6">
       <AuthHeading title="Set new password" subtitle="Choose a strong password for your account." />
-      <form action={action} className="space-y-5">
+      <form action={action} className="flex flex-col gap-4">
         <input type="hidden" name="token" value={token} />
         <div>
           <Label htmlFor="reset-password">New password</Label>
-          <PasswordInput size="lg" id="reset-password" name="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+          <PasswordInput
+            size="lg"
+            id="reset-password"
+            name="password"
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="At least 8 characters"
+          />
           <PasswordMeter password={password} />
         </div>
         <div>
@@ -56,12 +65,12 @@ export function ResetForm({ token }: { token: string | undefined }) {
         </div>
         <FormError>{state?.ok === false ? state.error : undefined}</FormError>
         {state?.ok === false && state.error.includes('Request a new one') ? (
-          <Link href="/forgot" className="inline-block text-sm text-ink underline underline-offset-2 hover:text-primary-soft">
+          <Link href="/forgot" className="inline-block font-sans text-label-md text-primary hover:underline">
             Request a new link
           </Link>
         ) : null}
         <SubmitButton size="lg" className="w-full" pendingLabel="Updating…">
-          Update password
+          Update Password
         </SubmitButton>
       </form>
     </div>

@@ -64,14 +64,18 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
   const defaultKeys = Object.keys(RULE_FIELD_META) as EngineRuleKey[];
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <p className="text-meta text-muted">Rules run top to bottom; the first match decides. Client and exercise overrides take precedence over these.</p>
+    <div className="space-y-6">
+      <p className="font-sans text-body-md text-muted">
+        Rules run top to bottom; the first match decides. Client and exercise overrides take precedence over these.
+      </p>
 
-      <section aria-label="Live rule simulation" className="space-y-3 border-b border-line pb-6">
+      <section aria-label="Live rule simulation" className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="font-mono text-micro uppercase text-muted">Live rule simulation</p>
-            <p className="text-meta text-muted">Pick a client lift to see what your current rules decide. Edits preview here before you save.</p>
+            <p className="font-sans text-label-sm uppercase tracking-wider text-primary">Live Rule Simulation</p>
+            <p className="mt-0.5 font-sans text-label-md font-normal text-muted">
+              Pick a client lift to see what your current rules decide. Edits preview here before you save.
+            </p>
           </div>
           {previewTargets.length > 0 ? (
             <div className="w-full sm:w-80">
@@ -89,7 +93,9 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
         {target ? (
           <PreviewLine target={target} rules={saved.rules} unit={unit} />
         ) : (
-          <p className="text-ui text-muted">Previews appear once a client has logged a prescribed lift twice.</p>
+          <p className="rounded-md border border-dashed border-line-strong bg-card p-4 text-ui text-muted">
+            Previews appear once a client has logged a prescribed lift twice.
+          </p>
         )}
       </section>
 

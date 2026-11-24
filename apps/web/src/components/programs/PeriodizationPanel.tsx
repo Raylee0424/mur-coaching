@@ -60,9 +60,9 @@ export function PeriodizationPanel({ mesocycles, durationWeeks, week, errors, on
                 title={label}
                 onClick={() => onSelectWeek(w)}
                 className={clsx(
-                  'h-7 min-w-7 rounded-sm border px-1 font-mono text-micro transition-colors',
-                  b ? blockTone(b.mesoIndex) : 'bg-canvas-low text-faint',
-                  w === week ? 'border-ink' : 'border-transparent hover:border-line-strong',
+                  'h-7 min-w-7 rounded-sm border px-1.5 font-mono text-micro transition-colors',
+                  b ? blockTone(b.mesoIndex) : 'bg-canvas-low text-muted',
+                  w === week ? 'border-primary ring-1 ring-primary' : 'border-transparent hover:border-line-strong',
                   b?.isDeload ? 'underline decoration-2 underline-offset-2' : '',
                 )}
               >

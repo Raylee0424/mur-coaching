@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { AccountMenu } from './AccountMenu';
 import { DemoBanner } from './DemoBanner';
 import { NavLink } from './NavLink';
+import { OfflineBanner } from './OfflineBanner';
 import { Wordmark } from './Wordmark';
 
 export function AppShell({
@@ -20,22 +21,28 @@ export function AppShell({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-canvas">
+      <OfflineBanner />
       {user.isDemo ? <DemoBanner role={user.role} /> : null}
       <div className="flex flex-1 flex-col md:flex-row">
-        <aside className="flex flex-col border-b border-line bg-canvas-low md:sticky md:top-0 md:h-dvh md:w-sidebar md:shrink-0 md:border-b-0 md:border-r">
-          <div className="flex h-topbar shrink-0 items-center justify-between gap-3 px-4 md:px-5">
-            <Wordmark />
-            <div className="md:hidden">
-              <AccountMenu user={user} />
+        <aside className="flex flex-col justify-between border-b border-line bg-canvas-low md:sticky md:top-0 md:h-dvh md:w-sidebar md:shrink-0 md:border-b-0 md:border-r md:p-4">
+          <div className="flex flex-col md:min-h-0 md:flex-1 md:gap-5">
+            <div className="flex h-topbar shrink-0 items-center justify-between gap-3 px-4 md:h-auto md:px-2 md:py-1">
+              <Wordmark />
+              <div className="md:hidden">
+                <AccountMenu user={user} />
+              </div>
             </div>
+            <nav
+              aria-label="Main"
+              className="flex gap-1 overflow-x-auto px-4 pb-3 md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:px-0 md:pb-0"
+            >
+              {nav.map((item) => (
+                <NavLink key={item.href} item={item} count={badges?.[item.href]} />
+              ))}
+            </nav>
           </div>
-          <nav aria-label="Main" className="flex gap-1 overflow-x-auto px-4 pb-3 md:flex-1 md:flex-col md:overflow-visible md:px-5 md:pb-0">
-            {nav.map((item) => (
-              <NavLink key={item.href} item={item} count={badges?.[item.href]} />
-            ))}
-          </nav>
-          <div className="hidden border-t border-line p-2 md:block">
+          <div className="hidden pt-3 md:block">
             <AccountMenu user={user} />
           </div>
         </aside>

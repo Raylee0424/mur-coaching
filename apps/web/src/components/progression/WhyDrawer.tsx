@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { ArrowRight, ArrowUpRight, CircleCheck, CircleDashed, Minus, PenLine } from 'lucide-react';
+import { ArrowUpRight, CircleCheck, CircleDashed, Minus, PenLine } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useId, useState, useTransition } from 'react';
 import { ENGINE_LIMITS, RecommendationStatus } from '@coaching/shared';
@@ -20,7 +20,6 @@ import { Button, buttonClass } from '@/components/ui/Button';
 import { FormError } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
-import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
 import { useToast } from '@/components/ui/Toast';
 import { formatDate, formatRpe, formatTarget, toNumber } from '@/lib/format';
 import { formatWeight } from '@/lib/units';
@@ -143,21 +142,8 @@ export function WhyDrawer({
                 </>
               ),
               headerExtra: (
-                <div className="mt-3 flex items-end justify-between gap-3 border-t border-line pt-3">
+                <div className="mt-2.5 flex items-center gap-2">
                   <ActionBadge action={data.action} />
-                  <span className="flex items-center gap-2 font-mono text-ui text-muted">
-                    {lastSession ? (
-                      <>
-                        {formatWeight(lastSession.topWeightKg, unit)}
-                        <span className="text-faint">
-                          <Icon icon={ArrowRight} />
-                        </span>
-                      </>
-                    ) : null}
-                    <span className={clsx('text-metric', ACTION_META[data.action].text)}>
-                      {data.proposed.weightKg !== null ? formatWeight(data.proposed.weightKg, unit) : targetText(data.proposed, unit)}
-                    </span>
-                  </span>
                 </div>
               ),
             }
@@ -204,11 +190,11 @@ export function WhyDrawer({
             </Button>
           </div>
         ) : data ? (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {state === 'overridden' && data.override ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-l-ink bg-raised px-3 py-2 text-ui">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-primary/40 bg-primary-container p-3.5 text-label-md text-primary-soft">
                 <p className="flex items-center gap-2">
-                  <Icon icon={PenLine} />
+                  <Icon icon={PenLine} className="text-primary" />
                   <span>
                     {data.override.byName ?? 'You'} overrode the engine
                     {data.override.at ? ' on ' : ''}
@@ -216,21 +202,24 @@ export function WhyDrawer({
                     <span className="font-mono">{targetText(data.override, unit)}</span>).
                   </span>
                 </p>
-                <Button variant="ghost" size="sm" onClick={resetOverride} disabled={pending || data.proposed.weightKg === null}>
-                  Reset to engine
-                </Button>
+                <button
+                  type="button"
+                  onClick={resetOverride}
+                  disabled={pending || data.proposed.weightKg === null}
+                  className="font-sans text-label-sm text-primary hover:underline disabled:opacity-50"
+                >
+                  Reset
+                </button>
               </div>
             ) : null}
 
-            <Verdict data={data} unit={unit} />
+            <Verdict data={data} unit={unit} lastWeightKg={lastSession?.topWeightKg ?? null} />
 
             {state === 'insufficient' ? (
-              <section className="rounded-md border border-dashed border-line-strong px-5 py-8">
+              <section className="rounded-md border border-dashed border-line-strong bg-canvas-low px-5 py-8">
                 <p className="font-mono text-metric text-muted">{data.sessions.length}/3</p>
-                <h3 className="mt-2 font-sans text-ui font-semibold" style={{ fontStretch: '100%', letterSpacing: 0 }}>
-                  Not enough data yet
-                </h3>
-                <p className="mt-1 max-w-sm text-meta text-muted">
+                <h3 className="mt-2 font-display text-title-md text-ink">Not enough data yet</h3>
+                <p className="mt-1 max-w-sm text-body-md text-muted">
                   The progression engine needs at least 2 logged sessions of this movement before recommending a load change ({data.sessions.length} logged). This call holds the current load.
                 </p>
               </section>
@@ -267,21 +256,31 @@ export function WhyDrawer({
 
 function SectionTitle({ children, action }: { children: string; action?: React.ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-2 border-b border-line pb-2">
-      <h3 className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
-        {children}
-      </h3>
+    <div className="mb-2.5 flex items-center justify-between gap-2">
+      <h3 className="font-sans text-label-sm uppercase tracking-wider text-muted">{children}</h3>
       {action}
     </div>
   );
 }
 
-function Verdict({ data }: { data: ExplainDto; unit: WeightUnit }) {
+function Verdict({ data, unit, lastWeightKg }: { data: ExplainDto; unit: WeightUnit; lastWeightKg: number | null }) {
+  const meta = ACTION_META[data.action];
+  const proposedText = data.proposed.weightKg !== null ? formatWeight(data.proposed.weightKg, unit) : targetText(data.proposed, unit);
   return (
-    <section>
-      <SectionTitle>Engine verdict</SectionTitle>
-      <p className="text-ui">{data.reason}</p>
-      {data.autoApproved ? <p className="mt-2 text-meta font-medium text-emerald">Auto-approved by your rules</p> : null}
+    <section className={clsx('flex flex-col gap-2 rounded-md border p-4', meta.box)}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className={clsx('font-sans text-label-sm uppercase tracking-wider', meta.text)}>1. ENGINE VERDICT</span>
+        <span className="font-display text-title-md text-ink tabular-nums">
+          {lastWeightKg !== null ? (
+            <>
+              {formatWeight(lastWeightKg, unit)} <span className="text-muted">→</span>{' '}
+            </>
+          ) : null}
+          <span className={meta.text}>{proposedText}</span>
+        </span>
+      </div>
+      <p className="font-sans text-body-md text-ink">{data.reason}</p>
+      {data.autoApproved ? <p className="font-sans text-label-sm text-emerald">Auto-approved by your rules</p> : null}
     </section>
   );
 }
@@ -290,38 +289,41 @@ function Inputs({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
   const target = data.prescription?.repsMax ?? null;
   const rpes = data.sessions.flatMap((s) => (s.avgRpe === null ? [] : [s.avgRpe]));
   const mean = rpes.length ? Math.round((rpes.reduce((a, b) => a + b, 0) / rpes.length) * 10) / 10 : null;
+  const rows = [...data.sessions].reverse();
   return (
     <section>
-      <SectionTitle>{`Inputs · last ${data.sessions.length} sessions`}</SectionTitle>
-      <div className="overflow-x-auto rounded-md border border-line">
-        <table className={clsx(TABLE, 'min-w-[22rem]')}>
+      <SectionTitle>{`2. Inputs (Last ${data.sessions.length} Sessions)`}</SectionTitle>
+      <div className="overflow-x-auto rounded-md border border-line bg-canvas-low">
+        <table className="w-full min-w-[22rem] border-collapse text-left tabular-nums">
           <caption className="sr-only">Sessions the engine used, newest first</caption>
-          <thead className={THEAD}>
-            <tr>
-              <th scope="col" className={TH}>Date</th>
-              <th scope="col" className={TH_NUM}>Weight</th>
-              <th scope="col" className={TH_NUM}>Reps{target !== null ? ' / target' : ''}</th>
-              <th scope="col" className={TH_NUM}>RPE</th>
+          <thead>
+            <tr className="border-b border-line bg-card">
+              <th scope="col" className="px-3.5 py-2 font-sans text-label-sm text-muted">Date</th>
+              <th scope="col" className="px-3.5 py-2 text-right font-sans text-label-sm text-muted">Weight</th>
+              <th scope="col" className="px-3.5 py-2 text-right font-sans text-label-sm text-muted">Reps{target !== null ? ' / Target' : ''}</th>
+              <th scope="col" className="px-3.5 py-2 text-right font-sans text-label-sm text-muted">RPE</th>
             </tr>
           </thead>
-          <tbody>
-            {[...data.sessions].reverse().map((s) => (
-              <tr key={s.exerciseLogId} className={TR}>
-                <td className={clsx(TD, 'font-mono')}>{formatDate(s.performedAt)}</td>
-                <td className={TD_NUM}>{formatWeight(s.topWeightKg, unit)}</td>
-                <td className={TD_NUM}>
+          <tbody className="divide-y divide-line">
+            {rows.map((s, idx) => (
+              <tr key={s.exerciseLogId}>
+                <td className="px-3.5 py-2.5 font-sans text-label-sm text-muted">{formatDate(s.performedAt)}</td>
+                <td className="px-3.5 py-2.5 text-right font-mono text-label-md text-ink">{formatWeight(s.topWeightKg, unit)}</td>
+                <td className="px-3.5 py-2.5 text-right font-mono text-label-md text-emerald">
                   {s.repsPerSet.length > 0 ? s.repsPerSet.join(', ') : s.topSetReps}
-                  {target !== null ? <span className="text-faint"> / {target}</span> : null}
+                  {target !== null ? <span className="text-muted"> / {target}</span> : null}
                 </td>
-                <td className={TD_NUM}>{s.avgRpe === null ? '—' : formatRpe(s.avgRpe).replace('RPE ', '')}</td>
+                <td className={clsx('px-3.5 py-2.5 text-right font-mono text-label-md', idx === 0 ? 'bg-primary-container text-primary' : 'text-ink')}>
+                  {s.avgRpe === null ? '—' : formatRpe(s.avgRpe).replace('RPE ', '')}
+                </td>
               </tr>
             ))}
           </tbody>
           {mean !== null ? (
             <tfoot>
-              <tr className="border-t border-line">
-                <td colSpan={4} className="h-9 px-5 font-mono text-meta text-faint">
-                  Computed: average RPE {mean.toFixed(1)} over {formatSessions(rpes.length)}.
+              <tr className="border-t border-line bg-card">
+                <td colSpan={4} className="px-3.5 py-2.5 font-sans text-label-sm text-ink">
+                  Computed: Average RPE {mean.toFixed(1)} over {formatSessions(rpes.length)}.
                 </td>
               </tr>
             </tfoot>
@@ -333,36 +335,38 @@ function Inputs({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
 }
 
 const RULE_ICON = { decided: CircleCheck, also: CircleDashed, not: Minus } as const;
-const RULE_ICON_TONE = { decided: 'text-emerald', also: 'text-muted', not: 'text-faint' } as const;
-const RULE_RESULT = { decided: 'Matched', also: 'Also true', not: 'No' } as const;
+const RULE_ICON_TONE = { decided: 'text-emerald', also: 'text-muted', not: 'text-muted' } as const;
+const RULE_RESULT = { decided: 'MATCHED', also: 'Also true', not: 'Not triggered' } as const;
 
 function RuleTrace({ data }: { data: ExplainDto }) {
   return (
     <section>
-      <SectionTitle>Rule evaluation, in order</SectionTitle>
+      <SectionTitle>3. Rule Evaluation (In Order)</SectionTitle>
       {data.rules === null ? (
         <p className="text-ui text-muted">The sessions behind this call were edited or deleted, so the rule trace is no longer available.</p>
       ) : (
-        <ol className="border-b border-line">
+        <ol className="divide-y divide-line overflow-hidden rounded-md border border-line bg-canvas-low tabular-nums">
           {data.rules.map((step) => {
             const status = ruleStatus(step);
             return (
               <li
                 key={step.action}
-                className={clsx('grid grid-cols-[20px_1fr_auto] gap-3 border-t border-line py-2.5', status === 'decided' && 'bg-emerald-bg/40')}
+                className={clsx('grid grid-cols-[20px_1fr_auto] items-center gap-3 px-3.5 py-2.5', status === 'decided' && 'bg-emerald-bg')}
               >
-                <span className={clsx('pt-0.5', RULE_ICON_TONE[status])}>
+                <span className={RULE_ICON_TONE[status]}>
                   <Icon icon={RULE_ICON[status]} />
                 </span>
                 <span className="min-w-0 break-words">
-                  <span className="block text-ui font-medium">{ACTION_META[step.action].label}?</span>
-                  <span className="block text-meta text-muted">{step.condition}</span>
+                  <span className={clsx('block font-sans text-label-md', status === 'decided' ? 'text-emerald' : 'text-ink')}>
+                    {ACTION_META[step.action].code}?
+                  </span>
+                  <span className="block font-sans text-label-sm font-normal text-muted">{step.condition}</span>
                 </span>
                 <span className="text-right">
                   <span
                     className={clsx(
-                      'block font-mono text-micro uppercase',
-                      status === 'decided' ? 'text-emerald' : status === 'also' ? 'text-muted' : 'text-faint',
+                      'block font-sans text-label-sm',
+                      status === 'decided' ? 'text-emerald' : 'text-muted',
                     )}
                   >
                     {RULE_RESULT[status]}

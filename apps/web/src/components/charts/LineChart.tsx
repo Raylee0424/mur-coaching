@@ -3,7 +3,7 @@ interface Point {
   value: number;
 }
 
-/** Server-rendered SVG line chart. Accessible via the table that sits beside it. */
+/** Server-rendered SVG line chart in ApexMetric electric lime. Accessible via the companion table. */
 export function LineChart({ points, unit, title }: { points: Point[]; unit: string; title: string }) {
   const W = 640;
   const H = 220;
@@ -26,21 +26,21 @@ export function LineChart({ points, unit, title }: { points: Point[]; unit: stri
       {ticks.map((t) => (
         <g key={t}>
           <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} className="stroke-line" strokeWidth="1" />
-          <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" className="fill-faint font-mono" fontSize="10.5">
+          <text x={PAD.l - 8} y={y(t) + 4} textAnchor="end" className="fill-muted font-mono" fontSize="11">
             {Math.round(t)}
           </text>
         </g>
       ))}
-      <path d={path} fill="none" className="stroke-ink" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d={path} fill="none" className="stroke-primary" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
       {points.map((p, i) => (
-        <circle key={p.label + i} cx={x(i)} cy={y(p.value)} r="3" className="fill-ink stroke-canvas" strokeWidth="1">
+        <circle key={p.label + i} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 ? '4' : '3'} className="fill-primary stroke-card" strokeWidth="1.5">
           <title>{`${p.label}: ${Math.round(p.value * 10) / 10} ${unit}`}</title>
         </circle>
       ))}
-      <text x={PAD.l} y={H - 8} className="fill-faint font-mono" fontSize="10.5">
+      <text x={PAD.l} y={H - 8} className="fill-muted font-mono" fontSize="11">
         {points[0]?.label}
       </text>
-      <text x={W - PAD.r} y={H - 8} textAnchor="end" className="fill-faint font-mono" fontSize="10.5">
+      <text x={W - PAD.r} y={H - 8} textAnchor="end" className="fill-muted font-mono" fontSize="11">
         {points[points.length - 1]?.label}
       </text>
     </svg>

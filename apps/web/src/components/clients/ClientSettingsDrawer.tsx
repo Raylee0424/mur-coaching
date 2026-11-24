@@ -26,7 +26,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
   return (
     <section className="space-y-4 border-t border-line pt-6 first:border-0 first:pt-0">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>{title}</h3>
+        <h3 className="font-sans text-label-sm uppercase tracking-wider text-primary">{title}</h3>
         {action}
       </div>
       {children}
@@ -133,8 +133,8 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                 <FieldError>{errors.name}</FieldError>
               </div>
               <fieldset>
-                <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Units</legend>
-                <div className="flex gap-0.5 rounded border border-line bg-canvas-low p-0.5">
+                <legend className="mb-1.5 font-sans text-label-sm uppercase tracking-wider text-muted">Units</legend>
+                <div className="grid grid-cols-2 gap-1 rounded-sm border border-line bg-canvas-low p-1">
                   {[WeightUnit.KG, WeightUnit.LB].map((u) => (
                     <button
                       key={u}
@@ -142,8 +142,8 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                       aria-pressed={draft.weightUnit === u}
                       onClick={() => patch({ weightUnit: u })}
                       className={clsx(
-                        'h-8 flex-1 rounded-sm font-mono text-micro uppercase',
-                        draft.weightUnit === u ? 'bg-raised text-ink' : 'text-muted hover:text-ink',
+                        'h-8 rounded-sm font-sans text-label-sm uppercase transition-colors',
+                        draft.weightUnit === u ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
                       )}
                     >
                       {u === WeightUnit.KG ? 'kg' : 'lb'}
@@ -167,15 +167,15 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                 maxLength={1000}
                 value={draft.limitationsNote}
                 onChange={(e) => patch({ limitationsNote: e.target.value })}
-                className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 text-ui text-ink hover:border-faint"
+                className="block w-full rounded-sm border border-line bg-canvas-low px-3.5 py-2.5 text-ui text-ink transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </Section>
 
           <Section title="Training schedule">
             <fieldset>
-              <legend className="mb-2 font-mono text-micro uppercase text-muted">Training days</legend>
-              <div className="grid grid-cols-7 gap-1">
+              <legend className="mb-2 font-sans text-label-sm uppercase tracking-wider text-muted">Training days</legend>
+              <div className="grid grid-cols-7 gap-1.5">
                 {WEEKDAYS.map((label, i) => {
                   const day = i + 1;
                   const on = draft.trainingDays.includes(day);
@@ -188,8 +188,8 @@ export function ClientSettingsDrawer({ settings, coachUnit }: { settings: Client
                         patch({ trainingDays: on ? draft.trainingDays.filter((d) => d !== day) : [...draft.trainingDays, day] })
                       }
                       className={clsx(
-                        'h-9 rounded border font-mono text-micro uppercase',
-                        on ? 'border-ink bg-raised text-ink' : 'border-line-strong text-muted hover:text-ink',
+                        'h-9 rounded-sm border font-sans text-label-sm uppercase transition-colors',
+                        on ? 'border-primary/60 bg-primary-container text-primary' : 'border-line bg-canvas-low text-muted hover:text-ink',
                       )}
                     >
                       {label}

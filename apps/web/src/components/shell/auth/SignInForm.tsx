@@ -17,26 +17,28 @@ export function SignInForm({ next }: { next?: string }) {
   const fieldError = failed && !locked ? state.error : undefined;
 
   return (
-    <form action={action} className="space-y-5">
+    <form action={action} className="flex flex-col gap-4">
       {locked ? (
-        <div role="alert" className="flex gap-3 border-l-2 border-l-amber bg-amber-bg px-3 py-2 text-ui text-amber">
-          <Icon icon={Lock} />
+        <div role="alert" className="flex items-start gap-3 rounded-sm border border-amber/40 bg-amber-bg p-3.5 font-sans text-label-md font-normal text-amber">
+          <Icon icon={Lock} className="mt-0.5 shrink-0" />
           <p>{state.error}</p>
         </div>
       ) : null}
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <div>
         <Label htmlFor="email">Email</Label>
-        <Input size="lg" id="email" name="email" type="email" autoComplete="email" required placeholder="you@example.com" aria-invalid={fieldError ? true : undefined} />
+        <Input size="lg" id="email" name="email" type="email" autoComplete="email" required placeholder="alex@murcoaching.io" aria-invalid={fieldError ? true : undefined} />
       </div>
       <div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
-          <Link href="/forgot" className="mb-1 text-xs text-ink underline underline-offset-2 hover:text-primary-soft">
+        <div className="mb-1.5 flex items-center justify-between">
+          <Label htmlFor="password" className="mb-0">Password</Label>
+          <Link href="/forgot" className="font-sans text-label-sm text-primary hover:underline">
             Forgot password?
           </Link>
         </div>
-        <PasswordInput size="lg"           id="password"
+        <PasswordInput
+          size="lg"
+          id="password"
           name="password"
           autoComplete="current-password"
           required
@@ -44,13 +46,13 @@ export function SignInForm({ next }: { next?: string }) {
           aria-describedby={fieldError ? 'password-error' : undefined}
         />
         {fieldError ? (
-          <p id="password-error" role="alert" className="mt-1 text-meta font-medium text-danger">
+          <p id="password-error" role="alert" className="mt-1.5 font-sans text-label-sm text-danger">
             {fieldError}
           </p>
         ) : null}
       </div>
-      <SubmitButton size="lg" className="w-full" pendingLabel="Signing in…">
-        Sign in
+      <SubmitButton size="lg" className="mt-1 w-full" pendingLabel="Signing in…">
+        Sign In
       </SubmitButton>
     </form>
   );

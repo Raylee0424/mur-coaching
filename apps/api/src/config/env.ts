@@ -29,6 +29,16 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1).optional(),
   R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   R2_BUCKET: z.string().min(1).optional(),
+  /** How often the automation worker checks triggers. 0 = off (fire only through "Run now"). */
+  /**
+   * AES-256-GCM key for cycle logs: 32 random bytes, base64 (`openssl rand -base64 32`).
+   * Unset = cycle routes answer 503; readiness still works. Rotating it makes existing cycle logs unreadable.
+   */
+  CYCLE_ENCRYPTION_KEY: z
+    .string()
+    .refine((v) => Buffer.from(v, 'base64').length === 32, 'CYCLE_ENCRYPTION_KEY must be 32 bytes, base64-encoded')
+    .optional(),
+  AUTOMATIONS_INTERVAL_MINUTES: z.coerce.number().int().min(0).max(1440).default(5),
 });
 
 export type Env = z.infer<typeof envSchema>;

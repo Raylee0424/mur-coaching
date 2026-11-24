@@ -11,7 +11,7 @@ export type SheetVariant = 'modal' | 'drawer' | 'bottom';
 const PLACEMENT: Record<SheetVariant, string> = {
   // Bottom sheet on mobile; centred modal on md+.
   modal: 'm-auto mb-0 w-full max-w-lg rounded-t-lg md:mb-auto md:rounded-lg',
-  // Bottom sheet on mobile; right-hand drawer on md+, flush to the viewport edge.
+  // Bottom sheet on mobile; right-hand 560px drawer on md+, flush to the viewport edge.
   drawer:
     'm-auto mb-0 w-full rounded-t-lg md:my-0 md:ml-auto md:mr-0 md:h-dvh md:max-h-dvh md:w-drawer md:max-w-drawer md:rounded-none md:border-y-0 md:border-r-0',
   bottom: 'm-auto mb-0 w-full max-w-lg rounded-t-lg',
@@ -46,9 +46,9 @@ export function Sheet({ open, onClose, title, description, variant = 'modal', he
 
   const body = (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
       {footer ? (
-        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-line bg-canvas-low px-5 py-3">{footer}</footer>
+        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-line bg-canvas-low px-6 py-4">{footer}</footer>
       ) : null}
     </>
   );
@@ -63,19 +63,19 @@ export function Sheet({ open, onClose, title, description, variant = 'modal', he
       }}
       className={clsx(
         // `open:flex`, never plain `flex`: plain display would override the UA rule that hides closed dialogs.
-        'max-h-[90dvh] overflow-hidden border border-line bg-card p-0 text-ink backdrop:bg-black/70 open:flex open:flex-col',
+        'max-h-[90dvh] overflow-hidden border border-line bg-card p-0 text-ink backdrop:bg-canvas/80 backdrop:backdrop-blur-sm open:flex open:flex-col',
         PLACEMENT[variant],
       )}
     >
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-5 py-4">
+      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-6 py-4">
         <div className="min-w-0">
-          <h2 id={titleId} className="font-display text-title font-semibold">
+          <h2 id={titleId} className="font-display text-title-lg text-ink">
             {title}
           </h2>
-          {description ? <p className="mt-0.5 text-meta text-muted">{description}</p> : null}
+          {description ? <p className="mt-1 text-label-md font-normal text-muted">{description}</p> : null}
           {headerExtra}
         </div>
-        <button type="button" aria-label="Close" onClick={onClose} className={buttonClass('ghost', 'w-8 shrink-0 px-0', 'sm')}>
+        <button type="button" aria-label="Close" onClick={onClose} className={buttonClass('ghost', 'w-9 shrink-0 px-0', 'sm')}>
           <Icon icon={X} />
         </button>
       </header>

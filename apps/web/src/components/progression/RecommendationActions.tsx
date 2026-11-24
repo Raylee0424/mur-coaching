@@ -46,14 +46,14 @@ export function RecommendationActions({ clientId, recommendationId, exerciseId, 
 
   return (
     <div className="space-y-2">
-      <div className={stacked ? 'flex flex-col items-stretch gap-1' : 'flex flex-wrap gap-2'}>
-        <Button variant="secondary" size={canDismiss ? 'sm' : 'lg'} onClick={() => run('ACCEPTED')} disabled={pending}>
+      <div className={stacked ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap gap-2'}>
+        <Button variant="primary" size={canDismiss ? 'sm' : 'lg'} onClick={() => run('ACCEPTED')} disabled={pending}>
           <Icon icon={Check} />
           Accept
         </Button>
         {canDismiss ? (
           <>
-            <Button variant="ghost" size="sm" onClick={() => setConfirming(true)} disabled={pending}>
+            <Button variant="secondary" size="sm" onClick={() => setConfirming(true)} disabled={pending}>
               <Icon icon={X} />
               Dismiss
             </Button>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { unstable_rethrow } from 'next/navigation';
-import type { CreateWorkoutLogRequest, NextTarget, UpdateWorkoutLogRequest } from '@coaching/shared';
+import type { CreateWorkoutLogRequest, NextTarget, UpdateWorkoutLogRequest, VideoableSetDto } from '@coaching/shared';
 import { workoutLogsApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
 
@@ -10,6 +10,8 @@ export interface SubmittedWorkout {
   logId: string;
   /** Engine calls after this session; empty when they could not be read yet. */
   targets: NextTarget[];
+  /** The working sets just saved, so clips can be attached from the finish screen. */
+  clipSets: VideoableSetDto[];
 }
 
 /**
@@ -26,7 +28,12 @@ export async function submitWorkoutLog(request: CreateWorkoutLogRequest): Promis
       .nextTargets(log.id)
       .then((r) => r.targets)
       .catch(() => []);
-    return { ok: true, data: { logId: log.id, targets } };
+    const clipSets: VideoableSetDto[] = log.exerciseLogs.flatMap((el) =>
+      el.sets
+        .filter((s) => !s.isWarmup)
+        .map((s) => ({ setLogId: s.id, exerciseName: el.exercise.name, performedAt: log.performedAt, setNumber: s.setNumber, reps: s.reps, weightKg: s.weightKg, taken: [] })),
+    );
+    return { ok: true, data: { logId: log.id, targets, clipSets } };
   } catch (err) {
     unstable_rethrow(err);
     return toActionError(err);

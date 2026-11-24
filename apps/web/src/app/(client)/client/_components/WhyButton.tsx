@@ -58,7 +58,7 @@ export function WhyButton({ recommendationId, exerciseName, unit, coachName, ove
         type="button"
         onClick={openSheet}
         aria-label={`Why this target for ${exerciseName}?`}
-        className={clsx(buttonClass('ghost', 'w-8 px-0', 'sm'), className)}
+        className={clsx(buttonClass('ghost', 'w-8 px-0 text-primary hover:text-primary', 'sm'), className)}
       >
         <Icon icon={Info} />
         <span className="sr-only">{label}</span>
@@ -70,7 +70,7 @@ export function WhyButton({ recommendationId, exerciseName, unit, coachName, ove
           variant="bottom"
           title={sheetTitle(load, exerciseName, unit, override)}
         >
-          <div className="space-y-8">
+          <div className="space-y-6">
             {override ? (
               <OverrideBody load={load} override={override} unit={unit} onRetry={start} />
             ) : (
@@ -124,7 +124,7 @@ function Status({ load, onRetry }: { load: Load; onRetry: () => void }) {
 const ICONS: Record<BulletIcon, LucideIcon> = { check: CircleCheck, effort: Gauge, trend: TrendingUp };
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="mb-3 border-b border-line pb-2 font-mono text-micro uppercase text-muted">{children}</h3>;
+  return <h3 className="mb-3 border-b border-line pb-2 font-mono text-label-sm uppercase text-muted">{children}</h3>;
 }
 
 function CallBody({ load, exerciseName, unit, coachName, onRetry }: { load: Load; exerciseName: string; unit: WeightUnit; coachName: string | null; onRetry: () => void }) {
@@ -137,8 +137,12 @@ function CallBody({ load, exerciseName, unit, coachName, onRetry }: { load: Load
   return (
     <>
       {target ? (
-        <div>
-          {e.status === 'PENDING' && !e.override ? <p className="font-mono text-micro uppercase text-amber">Proposed, not approved yet</p> : null}
+        <div className={clsx('rounded-sm border p-4', ACTION_META[e.action].box)}>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="font-mono text-label-sm uppercase text-muted">Engine Verdict</span>
+            <ActionBadge action={e.action} />
+          </div>
+          {e.status === 'PENDING' && !e.override ? <p className="font-mono text-label-sm uppercase text-amber">Proposed, awaiting coach approval</p> : null}
           <p className={clsx('font-mono text-metric', ACTION_META[e.action].text)}>{target}</p>
         </div>
       ) : null}
@@ -147,10 +151,10 @@ function CallBody({ load, exerciseName, unit, coachName, onRetry }: { load: Load
         <ul className="divide-y divide-line border-b border-line">
           {bullets.map((b) => (
             <li key={b.text} className="flex items-start gap-3 py-2.5">
-              <span className="mt-0.5 shrink-0 text-muted">
+              <span className="mt-0.5 shrink-0 text-primary">
                 <Icon icon={ICONS[b.icon]} />
               </span>
-              <span className="text-ui">{b.text}</span>
+              <span className="text-ui text-ink">{b.text}</span>
             </li>
           ))}
         </ul>
@@ -158,18 +162,22 @@ function CallBody({ load, exerciseName, unit, coachName, onRetry }: { load: Load
       {mini.points.length > 0 ? (
         <section>
           <SectionTitle>Last {mini.points.length === 1 ? 'session' : `${mini.points.length} sessions`}</SectionTitle>
-          <p className="mb-2 font-mono text-ui">{mini.weights}</p>
-          <svg viewBox="0 0 300 72" className="h-16 w-full" role="img" aria-label={`${exerciseName} top-set weight over the last ${mini.points.length} sessions: ${mini.weights}`}>
-            <polyline fill="none" className="stroke-muted" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />
-            {pts.map((p, i) => (
-              <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 3 : 2} className={i === pts.length - 1 ? 'fill-ink' : 'fill-muted'} />
-            ))}
-          </svg>
-          <ol className="flex items-start justify-between gap-2 font-mono text-meta text-faint">
-            {mini.labels.map((l) => (
-              <li key={l}>{l}</li>
-            ))}
-          </ol>
+          <div className="rounded-sm border border-line bg-canvas-low p-3">
+            <p className="mb-2 font-mono text-label-md text-ink">{mini.weights}</p>
+            <svg viewBox="0 0 300 72" className="h-16 w-full" role="img" aria-label={`${exerciseName} top-set weight over the last ${mini.points.length} sessions: ${mini.weights}`}>
+              <polyline fill="none" stroke="#C6FF00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" points={pts.map((p) => `${p.x},${p.y}`).join(' ')} />
+              {pts.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 3.5 : 2.5} fill="#C6FF00" />
+              ))}
+            </svg>
+            <ol className="flex items-start justify-between gap-2 pt-1 font-mono text-label-sm text-muted">
+              {mini.labels.map((l, idx) => (
+                <li key={l} className={idx === mini.labels.length - 1 ? 'text-primary' : undefined}>
+                  {l}
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
       ) : null}
       <p className="text-meta text-muted">{setByLine(e, coachName)}</p>
@@ -184,21 +192,21 @@ function OverrideBody({ load, override, unit, onRetry }: { load: Load; override:
   const at = o.at;
   return (
     <>
-      <section className="border-l-2 border-l-ink bg-raised px-3 py-3">
+      <section className="rounded-sm border border-primary/40 bg-primary-container p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-mono text-micro uppercase text-ink">Overridden by coach</span>
-          <span className="font-mono text-meta text-muted">{[at ? shortDate(at) : null, byName].filter(Boolean).join(' · ')}</span>
+          <span className="font-mono text-label-sm uppercase text-primary">Overridden by coach</span>
+          <span className="font-mono text-label-sm text-muted">{[at ? shortDate(at) : null, byName].filter(Boolean).join(' · ')}</span>
         </div>
-        {o.note ? <p className="mt-1 text-ui">&ldquo;{o.note}&rdquo;</p> : <p className="mt-1 text-ui text-muted">Your coach adjusted this target without a note.</p>}
+        {o.note ? <p className="mt-1 text-ui text-ink">&ldquo;{o.note}&rdquo;</p> : <p className="mt-1 text-ui text-muted">Your coach adjusted this target without a note.</p>}
       </section>
       {data ? (
         <section>
           <SectionTitle>Engine original call</SectionTitle>
           <div className="mb-2 flex items-center justify-between gap-2">
             <ActionBadge action={data.action} />
-            <span className="font-mono text-ui">{targetOf(data.proposed, unit)}</span>
+            <span className="font-mono text-ui text-ink">{targetOf(data.proposed, unit)}</span>
           </div>
-          <p className="text-ui">{data.reason}</p>
+          <p className="text-ui text-muted">{data.reason}</p>
         </section>
       ) : (
         <Status load={load} onRetry={onRetry} />

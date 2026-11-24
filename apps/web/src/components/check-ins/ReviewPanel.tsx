@@ -32,7 +32,7 @@ export function ReviewPanel({ id, reviewed, reply }: { id: string; reviewed: boo
         maxLength={CHECK_IN_LIMITS.maxReply}
         rows={3}
         placeholder="Great week. Keep protein where it is and add a rest day."
-        className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 text-ui text-ink placeholder:text-faint hover:border-faint"
+        className="block w-full rounded-sm border border-line bg-canvas-low px-3.5 py-2.5 text-ui text-ink placeholder:text-muted transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
       />
       <FormError>{error}</FormError>
       <div className="flex flex-wrap gap-2">
