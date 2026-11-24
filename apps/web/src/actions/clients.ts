@@ -77,6 +77,7 @@ export async function createInvite(
   const email = formString(formData, 'email').trim().toLowerCase();
   const phone = formString(formData, 'phone').trim();
   const programId = formString(formData, 'programId');
+  const leadId = formString(formData, 'leadId');
   const startDate = formString(formData, 'startDate');
   const unit = formString(formData, 'weightUnit');
   if (!name || !email) return { ok: false, error: 'Name and email are required.' };
@@ -86,12 +87,14 @@ export async function createInvite(
     name,
     email,
     ...(phone ? { phone } : {}),
+    ...(leadId ? { leadId } : {}),
     ...(programId ? { programId, ...(startDate ? { startDate } : {}) } : {}),
     ...(unit === 'KG' || unit === 'LB' ? { weightUnit: unit as WeightUnit } : {}),
   };
   try {
     const data = await clientsApi.createInvite(body);
     revalidatePath('/coach/clients');
+    if (leadId) revalidatePath('/coach/leads');
     return { ok: true, data };
   } catch (err) {
     unstable_rethrow(err);

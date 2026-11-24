@@ -3,10 +3,10 @@
 import clsx from 'clsx';
 import { Copy, UserPlus } from 'lucide-react';
 import { useActionState, useRef, useState } from 'react';
-import type { CreateInviteResponse, ProgramSummaryDto, WeightUnit } from '@coaching/shared';
+import type { CreateInviteResponse, LeadDto, ProgramSummaryDto, WeightUnit } from '@coaching/shared';
 import { createInvite } from '@/actions/clients';
 import type { ActionResult } from '@/lib/action-result';
-import { Button } from '@/components/ui/Button';
+import { Button, type ButtonVariant } from '@/components/ui/Button';
 import { FormError, Input, Label, Select } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { Sheet } from '@/components/ui/Sheet';
@@ -20,20 +20,31 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function InviteClientModal({ templates, label = 'Invite client' }: { templates: ProgramSummaryDto[]; label?: string }) {
+/** With `lead`, the form starts filled from the lead and the invite converts that lead when accepted. */
+export function InviteClientModal({
+  templates,
+  label = 'Invite client',
+  lead,
+  variant,
+}: {
+  templates: ProgramSummaryDto[];
+  label?: string;
+  lead?: Pick<LeadDto, 'id' | 'name' | 'email' | 'phone'>;
+  variant?: ButtonVariant;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)}>
+      <Button size="sm" variant={variant} onClick={() => setOpen(true)}>
         <Icon icon={UserPlus} />
         {label}
       </Button>
-      {open ? <InviteSheet templates={templates} onClose={() => setOpen(false)} /> : null}
+      {open ? <InviteSheet templates={templates} lead={lead} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
 
-function InviteSheet({ templates, onClose }: { templates: ProgramSummaryDto[]; onClose: () => void }) {
+function InviteSheet({ templates, lead, onClose }: { templates: ProgramSummaryDto[]; lead?: Pick<LeadDto, 'id' | 'name' | 'email' | 'phone'>; onClose: () => void }) {
   const [state, action] = useActionState<ActionResult<CreateInviteResponse> | null, FormData>(createInvite, null);
   const [step, setStep] = useState<1 | 2>(1);
   const [delivery, setDelivery] = useState<Delivery>('send');
@@ -140,17 +151,18 @@ function InviteSheet({ templates, onClose }: { templates: ProgramSummaryDto[]; o
           Step {step} / 2
         </p>
         <div ref={step1} hidden={step !== 1} className="space-y-4">
+          {lead ? <input type="hidden" name="leadId" value={lead.id} /> : null}
           <div>
             <Label htmlFor="invite-name">Full name</Label>
-            <Input id="invite-name" name="name" required maxLength={100} autoComplete="off" />
+            <Input id="invite-name" name="name" required maxLength={100} autoComplete="off" defaultValue={lead?.name} />
           </div>
           <div>
             <Label htmlFor="invite-email">Email address</Label>
-            <Input id="invite-email" name="email" type="email" required autoComplete="off" />
+            <Input id="invite-email" name="email" type="email" required autoComplete="off" defaultValue={lead?.email} />
           </div>
           <div>
             <Label htmlFor="invite-phone">Phone (optional)</Label>
-            <Input id="invite-phone" name="phone" type="tel" maxLength={30} autoComplete="off" placeholder="+1 (555) 014-8920" />
+            <Input id="invite-phone" name="phone" type="tel" maxLength={30} autoComplete="off" placeholder="+1 (555) 014-8920" defaultValue={lead?.phone ?? undefined} />
           </div>
           <fieldset>
             <legend className="mb-1.5 font-mono text-micro uppercase text-muted">Delivery method</legend>

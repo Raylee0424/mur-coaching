@@ -28,6 +28,10 @@ export class CreateInviteDto implements CreateInviteRequest {
   programId?: string;
 
   @IsOptional()
+  @IsString()
+  leadId?: string;
+
+  @IsOptional()
   @IsDateString({ strict: true })
   startDate?: string;
 

@@ -18,6 +18,9 @@ import { TodayModule } from './modules/today/today.module';
 import { ClientGroupsModule } from './modules/client-groups/client-groups.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
 import { SessionFeedbackModule } from './modules/session-feedback/session-feedback.module';
+import { LeadsModule } from './modules/leads/leads.module';
+import { ResourcesModule } from './modules/resources/resources.module';
+import { RoadmapsModule } from './modules/roadmaps/roadmaps.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { EntitlementGuard } from './modules/billing/entitlement.guard';
 import { PrismaModule } from './prisma/prisma.module';
@@ -29,7 +32,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     PrismaModule,
     // Limits are per route via @RateLimit; no global ThrottlerGuard.
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 60 }], errorMessage: 'Too many requests. Wait a few minutes and try again.' }),
-    BillingModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule],
+    BillingModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule, LeadsModule, ResourcesModule, RoadmapsModule],
   providers: [
     // Order matters: authenticate first, then authorize by role.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

@@ -203,6 +203,17 @@ model User {
   receivedPayments    Payment[]            @relation("CoachPayments")
   madePayments        Payment[]            @relation("ClientPayments")
 
+  // Pipeline, vault, roadmaps
+  brand           CoachBrand?
+  intakeForm      IntakeForm?
+  leads           Lead[]          @relation("CoachLeads")
+  convertedFrom   Lead?           @relation("ConvertedLead")
+  resources       Resource[]
+  resourceShares  ResourceShare[]
+  coachedRoadmaps ClientRoadmap[] @relation("CoachRoadmaps")
+  roadmap         ClientRoadmap?  @relation("ClientRoadmap")
+  events          ClientEvent[]
+
   @@index([role])
 }
 
@@ -237,6 +248,8 @@ model Invite {
   email      String
   phone      String?
   programId  String?
+  /// Pipeline lead this invite converts; the lead turns ACTIVE when the invite is accepted.
+  leadId     String?
   startDate  DateTime?  @db.Date
   weightUnit WeightUnit @default(KG)
   tokenHash  String     @unique
@@ -246,6 +259,7 @@ model Invite {
 
   coach   User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
   program Program? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  lead    Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   @@index([coachId, acceptedAt])
 }
@@ -345,12 +359,13 @@ model Program {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  coach       User                   @relation(fields: [coachId], references: [id], onDelete: Cascade)
-  workouts    Workout[]
-  assignments ProgramAssignment[]
-  invites     Invite[]
-  mesocycles  Mesocycle[]
-  sports      ProgramSportCategory[]
+  coach         User                   @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  workouts      Workout[]
+  assignments   ProgramAssignment[]
+  invites       Invite[]
+  mesocycles    Mesocycle[]
+  sports        ProgramSportCategory[]
+  roadmapPhases RoadmapPhase[]
 
   @@index([coachId])
 }
@@ -986,4 +1001,203 @@ model Payment {
   clientSubscription ClientSubscription? @relation(fields: [clientSubscriptionId], references: [id], onDelete: SetNull)
 
   @@index([coachId, paidAt])
+}
+
+// ─────────────── Lead pipeline ───────────────
+
+enum LeadStage {
+  NEW
+  INTAKE_SENT
+  CALL_BOOKED
+  /// Converted: the lead accepted an invite and is a client.
+  ACTIVE
+  LOST
+}
+
+enum LeadSource {
+  WEB_FORM
+  MANUAL
+}
+
+/// Public landing identity for a coach's intake form (`/apply/<slug>`).
+model CoachBrand {
+  id             String   @id @default(cuid())
+  coachId        String   @unique
+  slug           String   @unique
+  headline       String   @db.VarChar(120)
+  intro          String   @default("") @db.VarChar(500)
+  acceptingLeads Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  coach User @relation(fields: [coachId], references: [id], onDelete: Cascade)
+}
+
+/// The coach's custom questions, shown after the fixed fields (name, email, goal, days, experience).
+model IntakeForm {
+  id        String   @id @default(cuid())
+  coachId   String   @unique
+  /// IntakeQuestion[] (see @coaching/shared).
+  questions Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach     User             @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  responses IntakeResponse[]
+}
+
+model Lead {
+  id                String     @id @default(cuid())
+  coachId           String
+  name              String     @db.VarChar(100)
+  email             String
+  phone             String?    @db.VarChar(40)
+  goal              String?    @db.VarChar(80)
+  trainingDays      Int?
+  experienceYears   Int?
+  source            LeadSource
+  stage             LeadStage  @default(NEW)
+  monthlyValueCents Int?
+  callAt            DateTime?
+  notes             String?    @db.VarChar(2000)
+  convertedClientId String?    @unique
+  convertedAt       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  coach           User             @relation("CoachLeads", fields: [coachId], references: [id], onDelete: Cascade)
+  convertedClient User?            @relation("ConvertedLead", fields: [convertedClientId], references: [id], onDelete: SetNull)
+  responses       IntakeResponse[]
+  invites         Invite[]
+
+  /// One lead per coach and email: a repeat application adds a response instead of a card.
+  @@unique([coachId, email])
+  @@index([coachId, stage])
+}
+
+/// One submission of the intake form. Answers keep the question text so later form edits never orphan them.
+model IntakeResponse {
+  id        String   @id @default(cuid())
+  leadId    String
+  formId    String?
+  /// { question: string; answer: string }[]
+  answers   Json
+  createdAt DateTime @default(now())
+
+  lead Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  form IntakeForm? @relation(fields: [formId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+}
+
+// ─────────────── Resource vault ───────────────
+
+enum ResourceKind {
+  GUIDE
+  VIDEO
+  SHEET
+  OTHER
+}
+
+/// A file in the coach's library, stored in Cloudflare R2 under `storageKey`. `uploadedAt` is null until the
+/// browser's direct upload is confirmed; unconfirmed rows are never listed.
+model Resource {
+  id          String       @id @default(cuid())
+  coachId     String
+  title       String       @db.VarChar(120)
+  description String?      @db.VarChar(500)
+  kind        ResourceKind
+  fileName    String       @db.VarChar(200)
+  contentType String
+  sizeBytes   Int
+  storageKey  String       @unique
+  uploadedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  coach  User            @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  shares ResourceShare[]
+
+  @@index([coachId, createdAt])
+}
+
+model ResourceShare {
+  id         String   @id @default(cuid())
+  resourceId String
+  clientId   String
+  createdAt  DateTime @default(now())
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  client   User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, clientId])
+  @@index([clientId])
+}
+
+// ─────────────── Client roadmaps ───────────────
+
+/// One multi-month plan per client: phases on a timeline, numeric goals, and dated events (meets).
+model ClientRoadmap {
+  id        String   @id @default(cuid())
+  coachId   String
+  clientId  String   @unique
+  title     String   @db.VarChar(120)
+  notes     String?  @db.VarChar(1000)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach  User           @relation("CoachRoadmaps", fields: [coachId], references: [id], onDelete: Cascade)
+  client User           @relation("ClientRoadmap", fields: [clientId], references: [id], onDelete: Cascade)
+  phases RoadmapPhase[]
+  goals  RoadmapGoal[]
+  events ClientEvent[]
+
+  @@index([coachId])
+}
+
+model RoadmapPhase {
+  id        String   @id @default(cuid())
+  roadmapId String
+  position  Int
+  name      String   @db.VarChar(60)
+  focus     String?  @db.VarChar(120)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  programId String?
+
+  roadmap ClientRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  program Program?      @relation(fields: [programId], references: [id], onDelete: SetNull)
+
+  @@index([roadmapId, position])
+}
+
+model RoadmapGoal {
+  id           String    @id @default(cuid())
+  roadmapId    String
+  position     Int
+  label        String    @db.VarChar(60)
+  unit         String    @db.VarChar(12)
+  targetValue  Decimal   @db.Decimal(8, 2)
+  currentValue Decimal?  @db.Decimal(8, 2)
+  dueDate      DateTime? @db.Date
+
+  roadmap ClientRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapId, position])
+}
+
+model ClientEvent {
+  id        String   @id @default(cuid())
+  roadmapId String
+  clientId  String
+  name      String   @db.VarChar(80)
+  date      DateTime @db.Date
+  location  String?  @db.VarChar(120)
+  notes     String?  @db.VarChar(500)
+
+  roadmap ClientRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  client  User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, date])
 }
