@@ -21,7 +21,9 @@ export class StorageService {
     return { url: this.sign('PUT', key, UPLOAD_TTL_SECONDS, {}, headers), headers };
   }
 
-  readUrl(key: string, fileName: string): string {
+  /** `fileName` sets the download name; omit it for inline images. */
+  readUrl(key: string, fileName?: string): string {
+    if (!fileName) return this.sign('GET', key, READ_TTL_SECONDS);
     const safeName = fileName.replace(/["\\\r\n]/g, '_');
     return this.sign('GET', key, READ_TTL_SECONDS, { 'response-content-disposition': `inline; filename="${safeName}"` });
   }
@@ -34,6 +36,15 @@ export class StorageService {
     if (!res.ok) throw new ServiceUnavailableException('File storage refused the request.');
     const length = Number(res.headers.get('content-length'));
     return Number.isFinite(length) ? length : null;
+  }
+
+  /** First `bytes` bytes of the object (ranged GET), or null when it is missing. */
+  async head(key: string, bytes: number): Promise<Uint8Array | null> {
+    const res = await fetch(this.sign('GET', key, CONTROL_TTL_SECONDS), { headers: { Range: `bytes=0-${bytes - 1}` } }).catch(() => null);
+    if (!res) throw new ServiceUnavailableException('File storage is unreachable. Try again shortly.');
+    if (res.status === 404) return null;
+    if (!res.ok) throw new ServiceUnavailableException('File storage refused the request.');
+    return new Uint8Array(await res.arrayBuffer()).slice(0, bytes);
   }
 
   /** Best effort: an orphaned object costs storage but never leaks, since reads need a signed URL. */

@@ -214,6 +214,18 @@ model User {
   roadmap         ClientRoadmap?  @relation("ClientRoadmap")
   events          ClientEvent[]
 
+  // Messaging, check-ins, body
+  coachConversations  Conversation[]    @relation("CoachConversations")
+  clientConversations Conversation[]    @relation("ClientConversations")
+  sentMessages        Message[]
+  messageReads        MessageRead[]
+  checkInTemplates    CheckInTemplate[]
+  checkInSchedules    CheckInSchedule[]
+  checkInResponses    CheckInResponse[]
+  bodyweightEntries   BodyweightEntry[]
+  bodyGoal            BodyGoal?
+  progressPhotos      ProgressPhoto[]
+
   @@index([role])
 }
 
@@ -1200,4 +1212,178 @@ model ClientEvent {
   client  User          @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId, date])
+}
+
+// ─────────────── Messaging ───────────────
+
+/// One thread per coach–client pair. Created on first open. A client who changes coach starts a new thread.
+model Conversation {
+  id            String    @id @default(cuid())
+  coachId       String
+  clientId      String
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  coach    User          @relation("CoachConversations", fields: [coachId], references: [id], onDelete: Cascade)
+  client   User          @relation("ClientConversations", fields: [clientId], references: [id], onDelete: Cascade)
+  messages Message[]
+  reads    MessageRead[]
+
+  @@unique([coachId, clientId])
+  @@index([coachId, lastMessageAt])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String   @db.VarChar(4000)
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt, id])
+}
+
+/// Read pointer per participant: every message at or before `lastReadAt` counts as read.
+model MessageRead {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+// ─────────────── Check-ins ───────────────
+
+enum CheckInQuestionKind {
+  NUMBER
+  SCALE
+  TEXT
+}
+
+enum CheckInCadence {
+  WEEKLY
+  ONCE
+}
+
+model CheckInTemplate {
+  id        String   @id @default(cuid())
+  coachId   String
+  title     String   @db.VarChar(80)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach     User              @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  questions CheckInQuestion[]
+  schedules CheckInSchedule[]
+
+  @@index([coachId])
+}
+
+model CheckInQuestion {
+  id         String              @id @default(cuid())
+  templateId String
+  position   Int
+  prompt     String              @db.VarChar(200)
+  kind       CheckInQuestionKind
+  required   Boolean             @default(true)
+  /// NUMBER only, e.g. "kg" or "hrs".
+  unit       String?             @db.VarChar(12)
+
+  template CheckInTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, position])
+}
+
+/// Assigns a template to a client. WEEKLY repeats on `weekday` (0 = Sunday); ONCE is due on `dueDate`.
+model CheckInSchedule {
+  id         String         @id @default(cuid())
+  templateId String
+  clientId   String
+  cadence    CheckInCadence
+  weekday    Int?
+  dueDate    DateTime?      @db.Date
+  startDate  DateTime       @db.Date
+  active     Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+
+  template  CheckInTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  client    User              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  responses CheckInResponse[]
+
+  @@unique([templateId, clientId])
+  @@index([clientId, active])
+}
+
+/// One answer set per schedule period. `answers` snapshots each prompt so template edits never rewrite history.
+model CheckInResponse {
+  id          String    @id @default(cuid())
+  scheduleId  String
+  clientId    String
+  periodDate  DateTime  @db.Date
+  answers     Json
+  submittedAt DateTime  @default(now())
+  reviewedAt  DateTime?
+  coachReply  String?   @db.VarChar(2000)
+  repliedAt   DateTime?
+
+  schedule CheckInSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  client   User            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, periodDate])
+  @@index([clientId, submittedAt])
+}
+
+// ─────────────── Body ───────────────
+
+model BodyweightEntry {
+  id        String   @id @default(cuid())
+  clientId  String
+  date      DateTime @db.Date
+  weightKg  Decimal  @db.Decimal(5, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, date])
+}
+
+model BodyGoal {
+  id         String    @id @default(cuid())
+  clientId   String    @unique
+  targetKg   Decimal   @db.Decimal(5, 2)
+  targetDate DateTime? @db.Date
+  updatedAt  DateTime  @updatedAt
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+enum PhotoPose {
+  FRONT
+  SIDE
+  BACK
+}
+
+/// Private to the client until `sharedWithCoach`. Hidden until `uploadedAt` (object checked, metadata-free). Delete is hard.
+model ProgressPhoto {
+  id              String    @id @default(cuid())
+  clientId        String
+  pose            PhotoPose
+  takenOn         DateTime  @db.Date
+  sizeBytes       Int
+  storageKey      String    @unique
+  sharedWithCoach Boolean   @default(false)
+  uploadedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, takenOn])
 }
