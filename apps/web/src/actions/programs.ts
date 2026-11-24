@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import type { ClientProgramConflictsDto, ProgramDto, ProgramTreeInput } from '@coaching/shared';
-import { programsApi } from '@/lib/api/endpoints';
+import type { ClientProgramConflictsDto, ClientGroupDto, GroupAssignOutcome, ProgramDto, ProgramTreeInput } from '@coaching/shared';
+import { clientGroupsApi, programSharingApi, programsApi } from '@/lib/api/endpoints';
 import { toActionError, type ActionResult } from '@/lib/action-result';
 
 function refresh(programId?: string): void {
@@ -94,6 +94,68 @@ export async function duplicateProgram(programId: string): Promise<ActionResult<
     const data = await programsApi.duplicate(programId, {});
     refresh(data.id);
     return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+/** Mints a new read-only preview link (the old one stops working). The token is returned once. */
+export async function createShareLink(programId: string): Promise<ActionResult<{ token: string }>> {
+  try {
+    const data = await programSharingApi.create(programId);
+    revalidatePath(`/coach/programs/${programId}`);
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+export async function revokeShareLink(programId: string): Promise<ActionResult> {
+  try {
+    await programSharingApi.revoke(programId);
+    revalidatePath(`/coach/programs/${programId}`);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+/** Bulk assign: one assignment per group member, each replacing that client's current program. */
+export async function assignProgramToGroup(
+  programId: string,
+  groupId: string,
+  startDate: string,
+): Promise<ActionResult<GroupAssignOutcome[]>> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return { ok: false, error: 'Choose a start date.' };
+  try {
+    const data = await clientGroupsApi.assign(groupId, { programId, startDate });
+    revalidatePath('/coach/clients');
+    refresh(programId);
+    return { ok: true, data };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+export async function saveClientGroup(id: string | null, name: string, memberIds: string[]): Promise<ActionResult<ClientGroupDto>> {
+  if (!name.trim()) return { ok: false, error: 'Name the group.' };
+  try {
+    const body = { name: name.trim(), memberIds };
+    return { ok: true, data: id ? await clientGroupsApi.replace(id, body) : await clientGroupsApi.create(body) };
+  } catch (err) {
+    unstable_rethrow(err);
+    return toActionError(err);
+  }
+}
+
+export async function deleteClientGroup(id: string): Promise<ActionResult> {
+  try {
+    await clientGroupsApi.remove(id);
+    return { ok: true, data: undefined };
   } catch (err) {
     unstable_rethrow(err);
     return toActionError(err);

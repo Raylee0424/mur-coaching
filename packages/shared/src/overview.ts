@@ -1,6 +1,6 @@
 import type { DecimalString, IsoDateString } from './common';
 
-export type CalendarDayStatus = 'COMPLETED' | 'MISSED' | 'HIGH_RPE' | 'SCHEDULED' | 'TODAY';
+export type CalendarDayStatus = 'COMPLETED' | 'MISSED' | 'HIGH_RPE' | 'SCHEDULED' | 'TODAY' | 'SKIPPED';
 
 export interface StatWithDelta {
   value: number | null;
@@ -23,6 +23,8 @@ export interface CalendarDay {
   /** Null on rest days. */
   workoutName: string | null;
   workoutId: string | null;
+  /** Calendar row to move or skip; null on rest days and ad-hoc sessions. */
+  scheduledWorkoutId: string | null;
   /** Null on rest days. */
   status: CalendarDayStatus | null;
   /** Logged session for this slot (or an ad-hoc session on this date). */

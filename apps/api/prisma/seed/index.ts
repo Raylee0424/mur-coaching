@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
-import { Prisma, PrismaClient, Role } from '@prisma/client';
+import { Prisma, PrismaClient, Role, ScheduledStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { EXERCISES, seedMuscles, type ExerciseSeed } from './exercises';
+import { SPORTS } from './sports';
 import {
   CLIENT_PLANS,
   EXTRA_CLIENTS,
@@ -172,6 +173,9 @@ async function main(): Promise<void> {
   const startDate = programStartDate(new Date());
 
   await wipeDemoData();
+  for (const sport of SPORTS) {
+    await prisma.sportCategory.upsert({ where: { id: sport.id }, update: { name: sport.name, group: sport.group }, create: sport });
+  }
   const exerciseIds = await upsertGlobalExercises();
   const exerciseId = (name: string): string => {
     const id = exerciseIds.get(name);
@@ -294,6 +298,23 @@ async function main(): Promise<void> {
         });
       }
     }
+
+    // The calendar: every program day dated by the (week, day) formula; days the client logged are done.
+    const logged = new Set(
+      (await prisma.workoutLog.findMany({ where: { assignmentId: assignment.id }, select: { workoutId: true } })).flatMap((l) => (l.workoutId ? [l.workoutId] : [])),
+    );
+    await prisma.scheduledWorkout.createMany({
+      data: [...workoutIds.entries()].map(([slot, workoutId]) => {
+        const [week = 1, day = 1] = slot.split(':').map(Number);
+        return {
+          assignmentId: assignment.id,
+          clientId: client.id,
+          workoutId,
+          date: new Date(startDate.getTime() + ((week - 1) * 7 + (day - 1)) * DAY_MS),
+          status: logged.has(workoutId) ? ScheduledStatus.COMPLETED : ScheduledStatus.PLANNED,
+        };
+      }),
+    });
   };
 
   // Alex leaves the last session of the current week unlogged so the client "Today" screen has a workout.

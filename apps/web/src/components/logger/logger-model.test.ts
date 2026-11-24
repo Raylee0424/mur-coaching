@@ -296,6 +296,14 @@ describe('set flow', () => {
     expect(plans[b!.key]?.weightStep).toBe(5);
   });
 
+  it('carries the coach cues of each lift into its plan', () => {
+    const cue = { feedbackId: 'f1', body: 'Brace harder', setNumber: 3, fromDate: '2026-11-20' };
+    const withCue = { ...today, exercises: today.exercises.map((e) => (e.exerciseId === 'squat' ? { ...e, carryForward: [cue] } : e)) };
+    const { draft, plans } = startFromToday(withCue, {}, NOW_LOCAL, 'KG');
+    expect(plans[draft.exercises[0]!.key]?.carryForward).toEqual([cue]);
+    expect(plans[draft.exercises[1]!.key]?.carryForward).toEqual([]);
+  });
+
   it('logs sets, defaults the next one to the previous set, edits and validates', () => {
     const { draft: start, plans } = startFromToday(today, { squat: 2.5 }, NOW_LOCAL, 'KG');
     const key = start.exercises[0]!.key;

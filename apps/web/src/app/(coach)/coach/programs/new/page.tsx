@@ -6,11 +6,11 @@ import { loadBuilderData } from '../load';
 
 export default async function NewProgramPage() {
   await requireUser(Role.COACH);
-  const { library, clients } = await loadBuilderData();
+  const { library, clients, sports, groups } = await loadBuilderData();
   return (
     <>
       <PageHeader title="New program" />
-      <ProgramBuilder program={null} library={library} clients={clients} />
+      <ProgramBuilder program={null} library={library} clients={clients} sports={sports} groups={groups} />
     </>
   );
 }

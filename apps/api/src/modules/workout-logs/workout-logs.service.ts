@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ProgressionService } from '../progression/progression.service';
+import { RecordsService } from '../records/records.service';
+import { ScheduleService } from '../schedule/schedule.service';
 import { formatSwapReason } from '@coaching/shared';
 import { isAccessibleLink } from '../clients/link-status';
 import { exerciseScope } from '../exercises/exercise-visibility';
@@ -36,6 +38,8 @@ export class WorkoutLogsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly progression: ProgressionService,
+    private readonly records: RecordsService,
+    private readonly schedule: ScheduleService,
   ) {}
 
   async create(clientId: string, dto: CreateWorkoutLogDto): Promise<WorkoutLogView> {
@@ -54,6 +58,7 @@ export class WorkoutLogsService {
       include: logInclude,
     });
 
+    await this.reconcileSchedule(log.assignmentId, log.workoutId);
     await this.refreshProgression(clientId, this.exerciseIds(dto.exerciseLogs));
     return log;
   }
@@ -118,6 +123,7 @@ export class WorkoutLogsService {
   async remove(clientId: string, id: string): Promise<void> {
     const existing = await this.findOwned(clientId, id);
     await this.prisma.workoutLog.delete({ where: { id } });
+    await this.reconcileSchedule(existing.assignmentId, existing.workoutId);
     await this.refreshProgression(clientId, existing.exerciseLogs.map((e) => e.exerciseId));
   }
 
@@ -130,13 +136,27 @@ export class WorkoutLogsService {
     return log;
   }
 
-  /** Runs after the write has committed; a failing engine must never undo or fail the log. */
+  /** Marks the calendar row done (or open again); like the engine refresh, it must never fail the log. */
+  private async reconcileSchedule(assignmentId: string | null, workoutId: string | null): Promise<void> {
+    try {
+      await this.schedule.reconcileCompletion(assignmentId, workoutId);
+    } catch (err) {
+      this.logger.error(`Calendar update failed for assignment ${assignmentId}, workout ${workoutId}`, err);
+    }
+  }
+
+  /** Runs after the write has committed; a failing engine or record rebuild must never undo or fail the log. */
   private async refreshProgression(clientId: string, exerciseIds: readonly string[]): Promise<void> {
     for (const exerciseId of new Set(exerciseIds)) {
       try {
         await this.progression.refreshExercise(clientId, exerciseId);
       } catch (err) {
         this.logger.error(`Progression refresh failed for client ${clientId}, exercise ${exerciseId}`, err);
+      }
+      try {
+        await this.records.rebuild(clientId, exerciseId);
+      } catch (err) {
+        this.logger.error(`Record rebuild failed for client ${clientId}, exercise ${exerciseId}`, err);
       }
     }
   }

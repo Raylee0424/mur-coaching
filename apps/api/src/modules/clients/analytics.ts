@@ -29,6 +29,10 @@ export interface ScheduledSlot {
   workoutId: string;
   name: string;
   weekNumber: number;
+  /** Calendar row id, when the slot comes from a ScheduledWorkout. */
+  scheduledId?: string;
+  /** Coach skipped it: shown on the calendar, never counted in adherence or streaks. */
+  skipped?: boolean;
 }
 
 export interface SlotStatus extends ScheduledSlot {
@@ -47,6 +51,34 @@ export function scheduleSlots(startDate: Date, workouts: readonly ScheduleWorkou
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+export interface ScheduledRow {
+  id: string;
+  date: Date;
+  status: string;
+  workout: { id: string; name: string; weekNumber: number };
+}
+
+/**
+ * An assignment's slots. The calendar rows are the schedule (coaches move and skip them); an assignment without rows
+ * falls back to the (week, day) formula. A skipped row keeps its slot but is flagged so adherence can leave it out.
+ */
+export function assignmentSlots(startDate: Date, workouts: readonly ScheduleWorkout[], rows: readonly ScheduledRow[]): ScheduledSlot[] {
+  if (rows.length === 0) return scheduleSlots(startDate, workouts);
+  return rows
+    .map((r): ScheduledSlot => ({
+      date: dayKey(r.date),
+      workoutId: r.workout.id,
+      name: r.workout.name,
+      weekNumber: r.workout.weekNumber,
+      scheduledId: r.id,
+      ...(r.status === 'SKIPPED' ? { skipped: true } : {}),
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Slots that count toward adherence and streaks: everything the coach has not skipped. */
+export const countedSlots = (slots: readonly ScheduledSlot[]): ScheduledSlot[] => slots.filter((s) => !s.skipped);
 
 /** A slot is completed when the client logged a session against that workout (any date). */
 export function markCompleted(slots: readonly ScheduledSlot[], loggedWorkoutIds: ReadonlySet<string>): SlotStatus[] {
@@ -159,18 +191,20 @@ export function buildCalendar(
     const date = `${month}-${String(i + 1).padStart(2, '0')}`;
     const slot = slotByDate.get(date);
     const empty: CalendarDay = {
-      date, workoutName: null, workoutId: null, status: null, workoutLogId: null, performedAt: null, topSet: null, notes: null,
+      date, workoutName: null, workoutId: null, scheduledWorkoutId: null, status: null, workoutLogId: null, performedAt: null, topSet: null, notes: null,
     };
     if (slot) {
       const log = logByWorkout.get(slot.workoutId);
       let status: CalendarDayStatus;
       if (log) status = log.avgRpe !== null && log.avgRpe > rpeCap ? 'HIGH_RPE' : 'COMPLETED';
+      else if (slot.skipped) status = 'SKIPPED';
       else if (date < today) status = 'MISSED';
       else status = date === today ? 'TODAY' : 'SCHEDULED';
       return {
         ...empty,
         workoutName: slot.name,
         workoutId: slot.workoutId,
+        scheduledWorkoutId: slot.scheduledId ?? null,
         status,
         workoutLogId: log?.id ?? null,
         performedAt: log?.performedAt.toISOString() ?? null,

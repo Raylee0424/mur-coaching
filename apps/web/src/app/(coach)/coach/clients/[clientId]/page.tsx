@@ -72,6 +72,7 @@ export default async function ClientDetailPage({
             exerciseNames={exerciseNames}
             unit={user.weightUnit}
             hasProgram={client.activeAssignment !== null}
+            today={new Date().toISOString().slice(0, 10)}
           />
         ) : null}
         {tab === 'overview' ? (
@@ -96,7 +97,7 @@ export default async function ClientDetailPage({
         ) : null}
         {tab === 'history' && logs ? (
           <section aria-label="Session history" className="space-y-4">
-            <WorkoutLogList logs={logs.items} unit={user.weightUnit} />
+            <WorkoutLogList logs={logs.items} unit={user.weightUnit} reviewBase={`/coach/clients/${clientId}/sessions`} />
             <div className="flex gap-2">
               {cursor ? (
                 <Link href={`/coach/clients/${clientId}?tab=history`} className={buttonClass('secondary', undefined, 'sm')}>

@@ -1,5 +1,6 @@
 import { TEMPLATE_LIMITS, TEMPO_PATTERN, WORKOUT_LOG_LIMITS } from '@coaching/shared';
 import type {
+  CarryForwardCue,
   CreateWorkoutLogRequest,
   ExerciseLogInput,
   LimitationFlag,
@@ -337,6 +338,8 @@ export interface ExercisePlan {
   original?: ExercisePlan;
   /** Active limitation on this exercise (advisory; never blocks logging). */
   limitation?: LimitationFlag | null;
+  /** Coach comments pinned from the last session of this lift. */
+  carryForward?: CarryForwardCue[];
 }
 
 export type Plans = Record<string, ExercisePlan>;
@@ -480,6 +483,7 @@ export interface TodayWorkoutInput {
     restSeconds: number | null;
     target: { weightKg: string | number | null; repsMin: number | null; repsMax: number | null; rpe: string | number | null };
     limitation?: LimitationFlag | null;
+    carryForward?: CarryForwardCue[];
   }>;
 }
 
@@ -506,6 +510,7 @@ export function startFromToday(
       previous: [],
       weightStep: weightStepFor(incrementKg[e.exerciseId] ?? 2.5, unit),
       limitation: e.limitation ?? null,
+      carryForward: e.carryForward ?? [],
     };
     return { key, exerciseId: e.exerciseId, workoutExerciseId: e.workoutExerciseId, sets: [] };
   });
