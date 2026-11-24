@@ -21,7 +21,7 @@ export function safeNext(next: string | null | undefined, role: Role): string | 
 }
 
 /** String key so server layouts can pass nav to client components; `shell/nav-icons.ts` maps it to an icon. */
-export type NavIconKey = 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'tools' | 'user';
+export type NavIconKey = 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'tools' | 'user' | 'billing';
 
 export interface NavItem {
   href: string;
@@ -37,6 +37,7 @@ export const COACH_NAV: readonly NavItem[] = [
   { href: '/coach/exercises', label: 'Exercise library', icon: 'dumbbell' },
   { href: '/coach/programs', label: 'Programs', icon: 'calendar-range' },
   { href: '/coach/settings', label: 'Engine rules', icon: 'sliders' },
+  { href: '/coach/billing', label: 'Billing', icon: 'billing' },
 ];
 
 /** Phone bottom tab bar (and desktop sidebar). Lift detail pages count as History. */

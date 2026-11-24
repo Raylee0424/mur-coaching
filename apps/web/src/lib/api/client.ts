@@ -1,6 +1,8 @@
 import 'server-only';
+import { headers as requestHeaders } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { API_URL } from '@/lib/env';
+import { API_URL, CLIENT_IP_HEADER } from '@/lib/env';
+import { trustedClientIp } from '@/lib/client-ip';
 import { getSessionToken } from '@/lib/session';
 
 export class ApiError extends Error {
@@ -47,6 +49,19 @@ function toMessages(body: unknown, fallback: string): string[] {
 }
 
 /**
+ * Visitor IP from the edge proxy's header (CLIENT_IP_HEADER), passed on so the API's per-IP rate limits see
+ * the visitor instead of this server. Never relays the browser-writable X-Forwarded-For. Null outside a request.
+ */
+async function visitorIp(): Promise<string | null> {
+  try {
+    const h = await requestHeaders();
+    return trustedClientIp((name) => h.get(name), CLIENT_IP_HEADER);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Server-only typed fetch. Attaches the session cookie as a bearer token.
  * 401 on an authenticated call clears the session via /auth/signout; any other
  * failure throws ApiError. Never cached: every response is per-user.
@@ -56,6 +71,9 @@ export async function apiFetch<T>(path: `/${string}`, opts: ApiFetchOptions = {}
 
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const clientIp = await visitorIp();
+  // Exactly one hop, set by us: the API's TRUST_PROXY trusts this server, so req.ip becomes the visitor IP.
+  if (clientIp) headers['X-Forwarded-For'] = clientIp;
   if (auth) {
     const token = await getSessionToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;

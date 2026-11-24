@@ -2,13 +2,15 @@ import {
   BadRequestException,
   ConflictException,
   HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { AuthTokenType, CoachClientStatus, Prisma, Role as PrismaRole } from '@prisma/client';
+import { AuthTokenType, BillingEventType, CoachClientStatus, Prisma, Role as PrismaRole, SubscriptionStatus } from '@prisma/client';
+import { PlanId, planById } from '@coaching/shared';
 import type { AuthTokenResponse, AuthUser, JwtPayload, Role } from '@coaching/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
@@ -27,8 +29,22 @@ import {
   isLocked,
   isUsable,
   lockMinutesLeft,
+  resendWaitSeconds,
+  RESEND_WINDOW_MS,
 } from './token-utils';
 import { isAccessibleLink } from '../clients/link-status';
+
+/** New coaches start the plan's free trial: no card, full features, plan seat count. */
+function coachTrial(role: Role): Pick<Prisma.UserCreateInput, 'subscription' | 'billingEvents'> {
+  const plan = planById(PlanId.COACH);
+  if (role !== PrismaRole.COACH || !plan) return {};
+  return {
+    subscription: {
+      create: { planId: plan.id, status: SubscriptionStatus.TRIALING, trialEndsAt: new Date(Date.now() + plan.trialDays * 24 * 60 * 60 * 1000) },
+    },
+    billingEvents: { create: { type: BillingEventType.TRIAL_STARTED, planId: plan.id, status: SubscriptionStatus.TRIALING } },
+  };
+}
 
 @Injectable()
 export class AuthService {
@@ -70,7 +86,7 @@ export class AuthService {
     let user;
     try {
       user = await this.prisma.user.create({
-        data: { email: dto.email, name: dto.name, role: dto.role as PrismaRole, passwordHash },
+        data: { email: dto.email, name: dto.name, role: dto.role as PrismaRole, passwordHash, ...coachTrial(dto.role) },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -115,13 +131,28 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true, emailVerifiedAt: true } });
     if (!user) throw new UnauthorizedException();
     if (user.emailVerifiedAt) return;
+    const wait = resendWaitSeconds(await this.recentTokenTimes(userId, AuthTokenType.EMAIL_VERIFY));
+    if (wait > 0) {
+      throw new HttpException(`Wait ${wait} seconds before requesting another code.`, HttpStatus.TOO_MANY_REQUESTS);
+    }
     await this.issueVerificationCode(userId, user.email);
+  }
+
+  /** Creation times of this account's tokens of one type in the resend window. */
+  private async recentTokenTimes(userId: string, type: AuthTokenType): Promise<Date[]> {
+    const rows = await this.prisma.authToken.findMany({
+      where: { userId, type, createdAt: { gt: new Date(Date.now() - RESEND_WINDOW_MS) } },
+      select: { createdAt: true },
+    });
+    return rows.map((r) => r.createdAt);
   }
 
   /** Always resolves: whether the email exists is never revealed. */
   async forgotPassword(email: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email }, select: { id: true, email: true } });
     if (!user) return;
+    // Throttled silently per account: a 429 here would reveal that the email exists.
+    if (resendWaitSeconds(await this.recentTokenTimes(user.id, AuthTokenType.PASSWORD_RESET)) > 0) return;
     const raw = generateToken();
     await this.prisma.$transaction([
       this.prisma.authToken.updateMany({

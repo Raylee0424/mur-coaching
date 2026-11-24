@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
+import { safeNext } from '@/lib/routes';
 import { SESSION_COOKIE } from '@/lib/claims';
 import { middleware } from './middleware';
 
@@ -28,6 +29,13 @@ describe('middleware', () => {
     expect(middleware(request('/coach/clients')).headers.get('location')).toBe(
       'http://localhost:3000/login?next=%2Fcoach%2Fclients',
     );
+  });
+
+  it('keeps the query in next so a copied offer link survives sign-in', () => {
+    expect(middleware(request('/client/billing?offer=o1')).headers.get('location')).toBe(
+      'http://localhost:3000/login?next=%2Fclient%2Fbilling%3Foffer%3Do1',
+    );
+    expect(safeNext('/client/billing?offer=o1', 'CLIENT')).toBe('/client/billing?offer=o1');
   });
 
   it('keeps sign-in, sign-up, forgot, reset and invite pages public', () => {

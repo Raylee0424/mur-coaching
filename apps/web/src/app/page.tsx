@@ -2,6 +2,7 @@ import { CallToAction } from '@/components/marketing/CallToAction';
 import { EngineRules } from '@/components/marketing/EngineRules';
 import { Hero } from '@/components/marketing/Hero';
 import { Loop } from '@/components/marketing/Loop';
+import { Pricing } from '@/components/marketing/Pricing';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
 import { Workspaces } from '@/components/marketing/Workspaces';
@@ -16,6 +17,7 @@ export default function Home() {
         <EngineRules />
         <Loop />
         <Workspaces />
+        <Pricing />
         <CallToAction />
       </main>
       <MarketingFooter />

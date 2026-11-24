@@ -18,14 +18,24 @@ import { TodayModule } from './modules/today/today.module';
 import { ClientGroupsModule } from './modules/client-groups/client-groups.module';
 import { ScheduleModule } from './modules/schedule/schedule.module';
 import { SessionFeedbackModule } from './modules/session-feedback/session-feedback.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { EntitlementGuard } from './modules/billing/entitlement.guard';
 import { PrismaModule } from './prisma/prisma.module';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule],
+  imports: [
+    ConfigModule,
+    PrismaModule,
+    // Limits are per route via @RateLimit; no global ThrottlerGuard.
+    ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 60 }], errorMessage: 'Too many requests. Wait a few minutes and try again.' }),
+    BillingModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule],
   providers: [
     // Order matters: authenticate first, then authorize by role.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Then plan features (@RequiresFeature), answering 402.
+    { provide: APP_GUARD, useExisting: EntitlementGuard },
   ],
 })
 export class AppModule {}

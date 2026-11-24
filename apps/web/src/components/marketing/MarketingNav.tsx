@@ -10,6 +10,7 @@ const ANCHORS = [
   { href: '#loop', label: 'How it works' },
   { href: '#coaches', label: 'Coaches' },
   { href: '#athletes', label: 'Athletes' },
+  { href: '#pricing', label: 'Pricing' },
 ] as const;
 
 const LINK = 'text-ui text-muted transition-colors hover:text-ink';
