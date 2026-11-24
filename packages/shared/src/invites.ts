@@ -7,6 +7,8 @@ export interface CreateInviteRequest {
   email: string;
   phone?: string;
   programId?: string;
+  /** Pipeline lead this invite converts; the lead turns active when the invite is accepted. */
+  leadId?: string;
   /** `YYYY-MM-DD`; defaults to the acceptance day when a program is set. */
   startDate?: string;
   weightUnit?: WeightUnit;

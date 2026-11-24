@@ -21,7 +21,7 @@ export function safeNext(next: string | null | undefined, role: Role): string | 
 }
 
 /** String key so server layouts can pass nav to client components; `shell/nav-icons.ts` maps it to an icon. */
-export type NavIconKey = 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'tools' | 'user' | 'billing';
+export type NavIconKey = 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'tools' | 'user' | 'billing' | 'inbox' | 'folder' | 'message' | 'clipboard';
 
 export interface NavItem {
   href: string;
@@ -33,9 +33,13 @@ export interface NavItem {
 
 export const COACH_NAV: readonly NavItem[] = [
   { href: '/coach/clients', label: 'Roster', icon: 'users' },
+  { href: '/coach/leads', label: 'Leads', icon: 'inbox' },
+  { href: '/coach/messages', label: 'Messages', icon: 'message' },
+  { href: '/coach/check-ins', label: 'Check-ins', icon: 'clipboard' },
   { href: '/coach/progression', label: 'Progression queue', icon: 'queue' },
   { href: '/coach/exercises', label: 'Exercise library', icon: 'dumbbell' },
   { href: '/coach/programs', label: 'Programs', icon: 'calendar-range' },
+  { href: '/coach/resources', label: 'Resources', icon: 'folder' },
   { href: '/coach/settings', label: 'Engine rules', icon: 'sliders' },
   { href: '/coach/billing', label: 'Billing', icon: 'billing' },
 ];

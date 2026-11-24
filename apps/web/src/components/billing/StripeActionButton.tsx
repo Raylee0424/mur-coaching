@@ -18,6 +18,7 @@ export function StripeActionButton({
   variant = 'primary',
   size = 'md',
   disabledReason,
+  pendingLabel = 'Opening Stripe…',
   className,
 }: {
   action: RedirectAction;
@@ -27,6 +28,8 @@ export function StripeActionButton({
   size?: ButtonSize;
   /** Disables the button and explains why (shown as text, not only a tooltip). */
   disabledReason?: string | null;
+  /** Shown while the redirect is being prepared. */
+  pendingLabel?: string;
   className?: string;
 }) {
   const [state, formAction] = useActionState(action, null);
@@ -35,7 +38,7 @@ export function StripeActionButton({
       {Object.entries(fields ?? {}).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <SubmitButton variant={variant} size={size} pendingLabel="Opening Stripe…" disabled={Boolean(disabledReason)} className="w-full">
+      <SubmitButton variant={variant} size={size} pendingLabel={pendingLabel} disabled={Boolean(disabledReason)} className="w-full">
         {label}
       </SubmitButton>
       {disabledReason ? <p className="mt-1.5 text-meta text-muted">{disabledReason}</p> : null}

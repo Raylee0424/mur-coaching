@@ -1,5 +1,40 @@
 import 'server-only';
 import type {
+  BodyTrendDto,
+  CheckInInboxDto,
+  CheckInResponseDto,
+  CheckInTemplateDto,
+  ClientCheckInsDto,
+  ClientPhotosDto,
+  CoachInboxDto,
+  CoachProgressDto,
+  CreateCheckInScheduleRequest,
+  CreateProgressPhotoRequest,
+  CreateProgressPhotoResponse,
+  LogBodyweightRequest,
+  MessageDto,
+  MessageThreadDto,
+  ReviewCheckInRequest,
+  SaveBodyGoalRequest,
+  SaveCheckInTemplateRequest,
+  SubmitCheckInRequest,
+  ThreadQuery,
+  ClientResourceDto,
+  CreateLeadRequest,
+  CreateResourceRequest,
+  CreateResourceResponse,
+  IntakeFormDto,
+  LeadBoardDto,
+  LeadDto,
+  PublicIntakeDto,
+  ResourceDto,
+  ResourceLibraryDto,
+  RoadmapDto,
+  RoadmapInput,
+  SaveIntakeFormRequest,
+  ShareResourceRequest,
+  SubmitIntakeRequest,
+  UpdateLeadRequest,
   CheckoutRequest,
   ClientOffersDto,
   CoachBillingDto,
@@ -343,4 +378,74 @@ export const billingApi = {
   archiveOffer: (id: string) => apiFetch<void>(`/coach/offers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   clientOffers: () => apiFetch<ClientOffersDto>('/me/offers'),
   checkoutOffer: (id: string) => apiFetch<RedirectUrlDto>(`/me/offers/${encodeURIComponent(id)}/checkout`, { method: 'POST' }),
+};
+
+export const leadsApi = {
+  board: () => apiFetch<LeadBoardDto>('/coach/leads'),
+  create: (body: CreateLeadRequest) => apiFetch<LeadDto>('/coach/leads', { method: 'POST', body }),
+  update: (id: string, body: UpdateLeadRequest) => apiFetch<LeadDto>(idPath('/coach/leads', id), { method: 'PATCH', body }),
+  remove: (id: string) => apiFetch<void>(idPath('/coach/leads', id), { method: 'DELETE' }),
+  form: () => apiFetch<IntakeFormDto>('/coach/intake-form'),
+  saveForm: (body: SaveIntakeFormRequest) => apiFetch<IntakeFormDto>('/coach/intake-form', { method: 'PUT', body }),
+};
+
+/** Public: the application form a visitor opens at /apply/<slug>. */
+export const intakeApi = {
+  preview: (slug: string) => apiFetch<PublicIntakeDto>(idPath('/intake', slug), { auth: false }),
+  submit: (slug: string, body: SubmitIntakeRequest) =>
+    apiFetch<{ received: true }>(idPath('/intake', slug), { method: 'POST', body, auth: false }),
+};
+
+export const resourcesApi = {
+  library: () => apiFetch<ResourceLibraryDto>('/coach/resources'),
+  create: (body: CreateResourceRequest) => apiFetch<CreateResourceResponse>('/coach/resources', { method: 'POST', body }),
+  complete: (id: string) => apiFetch<ResourceDto>(`${idPath('/coach/resources', id)}/complete`, { method: 'POST' }),
+  share: (id: string, body: ShareResourceRequest) => apiFetch<ResourceDto>(`${idPath('/coach/resources', id)}/shares`, { method: 'PUT', body }),
+  url: (id: string) => apiFetch<RedirectUrlDto>(`${idPath('/coach/resources', id)}/url`),
+  remove: (id: string) => apiFetch<void>(idPath('/coach/resources', id), { method: 'DELETE' }),
+  mine: () => apiFetch<ClientResourceDto[]>('/me/resources'),
+  mineUrl: (id: string) => apiFetch<RedirectUrlDto>(`${idPath('/me/resources', id)}/url`),
+};
+
+export const roadmapApi = {
+  forClient: (clientId: string) => apiFetch<RoadmapDto | null>(`${idPath('/clients', clientId)}/roadmap`),
+  save: (clientId: string, body: RoadmapInput) => apiFetch<RoadmapDto>(`${idPath('/clients', clientId)}/roadmap`, { method: 'PUT', body }),
+  remove: (clientId: string) => apiFetch<void>(`${idPath('/clients', clientId)}/roadmap`, { method: 'DELETE' }),
+  mine: () => apiFetch<RoadmapDto | null>('/me/roadmap'),
+};
+
+export const messagingApi = {
+  inbox: () => apiFetch<CoachInboxDto>('/coach/conversations'),
+  thread: (clientId: string, query: ThreadQuery = {}) => apiFetch<MessageThreadDto>(`${idPath('/coach/conversations', clientId)}/messages`, { query: { ...query } }),
+  send: (clientId: string, body: string) => apiFetch<MessageDto>(`${idPath('/coach/conversations', clientId)}/messages`, { method: 'POST', body: { body } }),
+  read: (clientId: string) => apiFetch<void>(`${idPath('/coach/conversations', clientId)}/read`, { method: 'POST' }),
+  myThread: (query: ThreadQuery = {}) => apiFetch<MessageThreadDto>('/me/conversation/messages', { query: { ...query } }),
+  sendMine: (body: string) => apiFetch<MessageDto>('/me/conversation/messages', { method: 'POST', body: { body } }),
+  readMine: () => apiFetch<void>('/me/conversation/read', { method: 'POST' }),
+};
+
+export const checkInsApi = {
+  inbox: () => apiFetch<CheckInInboxDto>('/coach/check-ins'),
+  review: (id: string, body: ReviewCheckInRequest) => apiFetch<void>(idPath('/coach/check-ins', id), { method: 'PATCH', body }),
+  createTemplate: (body: SaveCheckInTemplateRequest) => apiFetch<CheckInTemplateDto>('/coach/check-in-templates', { method: 'POST', body }),
+  updateTemplate: (id: string, body: SaveCheckInTemplateRequest) => apiFetch<CheckInTemplateDto>(idPath('/coach/check-in-templates', id), { method: 'PUT', body }),
+  removeTemplate: (id: string) => apiFetch<void>(idPath('/coach/check-in-templates', id), { method: 'DELETE' }),
+  assign: (body: CreateCheckInScheduleRequest) => apiFetch<CheckInTemplateDto>('/coach/check-in-schedules', { method: 'POST', body }),
+  unassign: (id: string) => apiFetch<void>(idPath('/coach/check-in-schedules', id), { method: 'DELETE' }),
+  mine: () => apiFetch<ClientCheckInsDto>('/me/check-ins'),
+  submit: (scheduleId: string, body: SubmitCheckInRequest) => apiFetch<CheckInResponseDto>(idPath('/me/check-ins', scheduleId), { method: 'POST', body }),
+};
+
+export const bodyApi = {
+  trend: () => apiFetch<BodyTrendDto>('/me/body'),
+  log: (body: LogBodyweightRequest) => apiFetch<void>('/me/body/entries', { method: 'PUT', body }),
+  removeEntry: (date: string) => apiFetch<void>(idPath('/me/body/entries', date), { method: 'DELETE' }),
+  saveGoal: (body: SaveBodyGoalRequest) => apiFetch<void>('/me/body/goal', { method: 'PUT', body }),
+  removeGoal: () => apiFetch<void>('/me/body/goal', { method: 'DELETE' }),
+  photos: () => apiFetch<ClientPhotosDto>('/me/progress-photos'),
+  reservePhoto: (body: CreateProgressPhotoRequest) => apiFetch<CreateProgressPhotoResponse>('/me/progress-photos', { method: 'POST', body }),
+  completePhoto: (id: string) => apiFetch<void>(`${idPath('/me/progress-photos', id)}/complete`, { method: 'POST' }),
+  sharePhoto: (id: string, sharedWithCoach: boolean) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'PATCH', body: { sharedWithCoach } }),
+  removePhoto: (id: string) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'DELETE' }),
+  clientProgress: (clientId: string) => apiFetch<CoachProgressDto>(`${idPath('/clients', clientId)}/progress`),
 };

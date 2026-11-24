@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import clsx from 'clsx';
 import { Role } from '@coaching/shared';
@@ -93,7 +93,18 @@ export default async function ClientHome() {
 
   return (
     <>
-      <PageHeader title="Today" meta={meta} />
+      <PageHeader
+        title="Today"
+        meta={meta}
+        actions={
+          today.coachName ? (
+            <Link href="/client/messages" className={buttonClass('secondary', undefined, 'sm')}>
+              <Icon icon={MessageSquare} />
+              Ask my coach
+            </Link>
+          ) : undefined
+        }
+      />
       <div className="max-w-xl space-y-6">
         {banner ? (
           <section aria-label="Target update" className={clsx('border-l-2 bg-card px-4 py-3', ACTION_META[banner.action].rule)}>
