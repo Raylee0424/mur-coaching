@@ -29,6 +29,8 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1).optional(),
   R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   R2_BUCKET: z.string().min(1).optional(),
+  /** How often the automation worker checks triggers. 0 = off (fire only through "Run now"). */
+  AUTOMATIONS_INTERVAL_MINUTES: z.coerce.number().int().min(0).max(1440).default(5),
 });
 
 export type Env = z.infer<typeof envSchema>;

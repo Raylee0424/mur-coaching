@@ -36,6 +36,8 @@ export interface WorkoutLogDto {
   workoutId: string | null;
   performedAt: IsoDateString;
   notes: string | null;
+  /** Set when a coach logged the session for the client (live or in person). */
+  loggedById: string | null;
   createdAt: IsoDateString;
   exerciseLogs: ExerciseLogDto[];
 }

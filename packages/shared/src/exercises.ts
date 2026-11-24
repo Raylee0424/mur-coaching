@@ -23,6 +23,8 @@ export interface ExerciseDto {
   rpeCap: DecimalString | null;
   repsMin: number | null;
   repsMax: number | null;
+  /** https link to a demo video, or null. */
+  demoUrl: string | null;
   /** Always null in list results (archived exercises are hidden). */
   archivedAt: IsoDateString | null;
   /**
@@ -55,6 +57,8 @@ export interface CreateExerciseRequest {
   /** Both rep bounds are set together or both null. */
   repsMin?: number | null;
   repsMax?: number | null;
+  /** https URL, max 300 chars; null clears it. */
+  demoUrl?: string | null;
 }
 
 export type UpdateExerciseRequest = Partial<CreateExerciseRequest>;
