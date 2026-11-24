@@ -2,210 +2,302 @@
 
 import clsx from 'clsx';
 import { Lock } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState, useTransition } from 'react';
+import {
+  CYCLE_LIMITS,
+  CYCLE_PHASE_META,
+  CYCLE_SYMPTOMS,
+  CYCLE_SYMPTOM_LABELS,
+  READINESS_BAND_LABELS,
+  READINESS_LIMITS,
+  readinessBand,
+  readinessScore,
+} from '@coaching/shared';
+import type { CycleContextDto, CycleSymptom, ReadinessDto, ReadinessInput } from '@coaching/shared';
+import { saveCycleEntry, saveReadiness, setCycleSharing } from '@/actions/readiness';
 import { Button } from '@/components/ui/Button';
+import { FormError, Input, Label } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 
-const READINESS_KEY = 'mur:daily-readiness';
-const CYCLE_KEY = 'mur:cycle-context';
+type Scale = 'sleepQuality' | 'soreness' | 'stress' | 'motivation';
 
-interface ReadinessState {
-  sleep: number;
-  soreness: number;
-  stress: number;
+const SCALES: { key: Scale; label: string; hint: string }[] = [
+  { key: 'sleepQuality', label: 'Sleep Quality', hint: '5 = Restorative' },
+  { key: 'soreness', label: 'Muscle Soreness', hint: '1 = Fresh' },
+  { key: 'stress', label: 'Mental Stress', hint: '1 = Low' },
+  { key: 'motivation', label: 'Motivation', hint: '5 = Eager' },
+];
+
+const BAND_CLASS = { READY: 'border-emerald/40 bg-emerald-bg text-emerald', MODERATE: 'border-amber/40 bg-amber-bg text-amber', LOW: 'border-rose/40 bg-rose-bg text-rose' };
+
+/** Pre-workout readiness (saved per day) + privacy-locked cycle context (encrypted server-side, owner-only). */
+export function ReadinessCyclePanel({ today, readiness, cycle }: { today: string; readiness: ReadinessDto | null; cycle: CycleContextDto | null }) {
+  return (
+    <section className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+      <ReadinessSurvey today={today} saved={readiness} />
+      <CycleContext today={today} cycle={cycle} />
+    </section>
+  );
 }
 
-type CyclePhase = 'FOLLICULAR' | 'OVULATORY' | 'LUTEAL' | 'MENSTRUAL';
-
-interface CycleState {
-  phase: CyclePhase;
-  notes: string;
-}
-
-const PHASE_META: Record<CyclePhase, { label: string; badge: string }> = {
-  FOLLICULAR: { label: 'Follicular Phase', badge: 'Rising Recovery' },
-  OVULATORY: { label: 'Ovulatory Window', badge: 'High Force Output' },
-  LUTEAL: { label: 'Luteal Phase', badge: 'Steady Effort Cap' },
-  MENSTRUAL: { label: 'Early Follicular / Menstrual', badge: 'Auto-Regulate RIR' },
-};
-
-export function ReadinessCyclePanel() {
+function ReadinessSurvey({ today, saved }: { today: string; saved: ReadinessDto | null }) {
   const toast = useToast();
-  const [readiness, setReadiness] = useState<ReadinessState>({ sleep: 4, soreness: 2, stress: 2 });
-  const [cycle, setCycle] = useState<CycleState>({ phase: 'OVULATORY', notes: '' });
-  const [editingNotes, setEditingNotes] = useState(false);
+  const [v, setV] = useState<ReadinessInput>(() => ({
+    sleepQuality: saved?.sleepQuality ?? 3,
+    soreness: saved?.soreness ?? 2,
+    stress: saved?.stress ?? 2,
+    motivation: saved?.motivation ?? 3,
+    sleepHours: saved?.sleepHours ? Number(saved.sleepHours) : null,
+  }));
+  const [hours, setHours] = useState(saved?.sleepHours ?? '');
+  const [error, setError] = useState<string>();
+  const [pending, start] = useTransition();
+  const parsedHours = hours.trim() === '' ? null : Number(hours);
+  const score = readinessScore({ ...v, sleepHours: parsedHours !== null && Number.isFinite(parsedHours) ? parsedHours : null });
+  const band = readinessBand(score);
 
-  useEffect(() => {
-    try {
-      const r = window.localStorage.getItem(READINESS_KEY);
-      if (r) {
-        const parsed = JSON.parse(r) as Partial<ReadinessState>;
-        setReadiness((prev) => ({
-          sleep: typeof parsed.sleep === 'number' ? parsed.sleep : prev.sleep,
-          soreness: typeof parsed.soreness === 'number' ? parsed.soreness : prev.soreness,
-          stress: typeof parsed.stress === 'number' ? parsed.stress : prev.stress,
-        }));
-      }
-      const c = window.localStorage.getItem(CYCLE_KEY);
-      if (c) {
-        const parsed = JSON.parse(c) as Partial<CycleState>;
-        if (parsed.phase && parsed.phase in PHASE_META) {
-          setCycle({ phase: parsed.phase, notes: typeof parsed.notes === 'string' ? parsed.notes : '' });
-        }
-      }
-    } catch {
-      // Ignore malformed browser storage.
+  function save(): void {
+    if (parsedHours !== null && !(parsedHours >= READINESS_LIMITS.minSleepHours && parsedHours <= READINESS_LIMITS.maxSleepHours)) {
+      return setError(`Sleep hours must be between 0 and ${READINESS_LIMITS.maxSleepHours}.`);
     }
-  }, []);
-
-  // Sleep higher is better (1..5), soreness & stress lower is better (1..5).
-  const score = Math.round(((readiness.sleep + (6 - readiness.soreness) + (6 - readiness.stress)) / 15) * 100);
-
-  function saveReadiness() {
-    window.localStorage.setItem(READINESS_KEY, JSON.stringify(readiness));
-    toast.show({ message: `Readiness saved (${score}/100)`, tone: 'ok' });
-  }
-
-  function saveCycle(next: CycleState) {
-    setCycle(next);
-    window.localStorage.setItem(CYCLE_KEY, JSON.stringify(next));
+    setError(undefined);
+    start(async () => {
+      const res = await saveReadiness({ date: today, ...v, sleepHours: parsedHours === null ? null : Math.round(parsedHours * 10) / 10 });
+      if (!res.ok) return setError(res.error);
+      toast.show({ message: `Readiness saved (${res.data.score}/100)`, tone: 'ok' });
+    });
   }
 
   return (
-    <section className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
-      {/* Left: Pre-Workout Readiness Survey */}
-      <div className="flex h-full flex-col justify-between gap-5 rounded-md border border-line bg-card p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <span className="font-mono text-label-sm uppercase text-primary">PRE-WORKOUT SURVEY</span>
-              <h2 className="font-display text-title-md text-ink">Daily Readiness Check</h2>
-            </div>
-            <span
-              className={clsx(
-                'rounded-full border px-3 py-1 font-mono text-label-sm',
-                score >= 75 ? 'border-emerald/40 bg-emerald-bg text-emerald' : 'border-amber/40 bg-amber-bg text-amber',
-              )}
-            >
-              Score: {score} / 100
-            </span>
+    <div className="flex h-full flex-col justify-between gap-5 rounded-md border border-line bg-card p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <span className="font-mono text-label-sm uppercase text-primary">PRE-WORKOUT SURVEY</span>
+            <h2 className="font-display text-title-md text-ink">Daily Readiness Check</h2>
           </div>
+          <span className={clsx('rounded-full border px-3 py-1 font-mono text-label-sm', BAND_CLASS[band])} aria-live="polite">
+            Score: {score} / 100
+          </span>
+        </div>
+        <p className="text-label-md text-muted">
+          {saved ? `Saved today at ${saved.score}/100 · ` : 'Not saved today · '}
+          {READINESS_BAND_LABELS[band]}
+        </p>
 
-          <div className="flex flex-col gap-3">
-            {[
-              { key: 'sleep' as const, label: 'Sleep Quality', hint: '5 = Restorative' },
-              { key: 'soreness' as const, label: 'Muscle Soreness', hint: '1 = Fresh' },
-              { key: 'stress' as const, label: 'Mental Stress', hint: '1 = Low' },
-            ].map((row) => (
-              <div key={row.key} className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-line bg-canvas-low px-4 py-3">
-                <div>
-                  <span className="block font-sans text-label-md font-semibold text-ink">{row.label}</span>
-                  <span className="text-label-sm text-muted">{row.hint}</span>
-                </div>
-                <div className="inline-flex gap-1" role="group" aria-label={row.label}>
-                  {[1, 2, 3, 4, 5].map((n) => {
-                    const active = readiness[row.key] === n;
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => setReadiness((prev) => ({ ...prev, [row.key]: n }))}
-                        className={clsx(
-                          'size-8 rounded-full border font-mono text-label-sm transition-colors',
-                          active ? 'border-primary bg-primary text-primary-ink' : 'border-line bg-card text-muted hover:text-ink',
-                        )}
-                      >
-                        {n}
-                      </button>
-                    );
-                  })}
-                </div>
+        <div className="flex flex-col gap-3">
+          {SCALES.map((row) => (
+            <div key={row.key} className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-line bg-canvas-low px-4 py-3">
+              <div>
+                <span className="block font-sans text-label-md font-semibold text-ink">{row.label}</span>
+                <span className="text-label-sm text-muted">{row.hint}</span>
               </div>
-            ))}
+              <div className="inline-flex gap-1" role="radiogroup" aria-label={row.label}>
+                {[1, 2, 3, 4, 5].map((n) => {
+                  const active = v[row.key] === n;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      aria-label={`${row.label} ${n} of 5`}
+                      onClick={() => setV((prev) => ({ ...prev, [row.key]: n }))}
+                      className={clsx(
+                        'size-8 rounded-full border font-mono text-label-sm transition-colors',
+                        active ? 'border-primary bg-primary text-primary-ink' : 'border-line bg-card text-muted hover:text-ink',
+                      )}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center justify-between gap-3 rounded-sm border border-line bg-canvas-low px-4 py-3">
+            <Label htmlFor="rd-hours" className="mb-0 normal-case tracking-normal text-ink">
+              Sleep hours (optional)
+            </Label>
+            <Input id="rd-hours" className="w-24" type="number" inputMode="decimal" min={0} max={READINESS_LIMITS.maxSleepHours} step={0.1} value={hours} onChange={(e) => setHours(e.target.value)} />
           </div>
         </div>
-
-        <Button size="lg" className="w-full" onClick={saveReadiness}>
-          Save Today&apos;s Readiness
-        </Button>
+        <FormError>{error}</FormError>
       </div>
 
-      {/* Right: Privacy-Locked Menstrual Cycle Training-Context Log */}
-      <div className="flex h-full flex-col justify-between gap-5 rounded-md border border-line bg-card p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Icon icon={Lock} size={16} className="text-primary" />
-              <h2 className="font-display text-title-md text-ink">Cycle Training Context</h2>
-            </div>
-            <span className="rounded-full border border-line bg-raised px-2.5 py-0.5 font-mono text-label-sm text-muted">
-              Private · Local Only
-            </span>
-          </div>
+      <Button size="lg" className="w-full" onClick={save} disabled={pending} aria-busy={pending}>
+        {pending ? 'Saving…' : saved ? 'Update Today’s Readiness' : 'Save Today’s Readiness'}
+      </Button>
+    </div>
+  );
+}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-line bg-canvas-low p-4">
-            <div>
-              <span className="font-mono text-label-sm uppercase text-sky">CURRENT PHASE</span>
-              <p className="mt-0.5 font-display text-title-md text-ink">{PHASE_META[cycle.phase].label}</p>
-            </div>
-            <span className="rounded-full border border-emerald/40 bg-emerald-bg px-2.5 py-0.5 font-mono text-label-sm text-emerald">
-              {PHASE_META[cycle.phase].badge}
-            </span>
-          </div>
+function CycleContext({ today, cycle }: { today: string; cycle: CycleContextDto | null }) {
+  const toast = useToast();
+  const todays = cycle?.entries.find((e) => e.date === today) ?? null;
+  const [editing, setEditing] = useState(false);
+  const [periodStart, setPeriodStart] = useState(todays?.periodStart ?? false);
+  const [length, setLength] = useState(String(todays?.cycleLengthDays ?? cycle?.summary?.cycleLengthDays ?? CYCLE_LIMITS.defaultLength));
+  const [symptoms, setSymptoms] = useState<CycleSymptom[]>(todays?.symptoms ?? []);
+  const [note, setNote] = useState(todays?.note ?? '');
+  const [error, setError] = useState<string>();
+  const [pending, start] = useTransition();
 
-          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Cycle phase">
-            {(Object.keys(PHASE_META) as CyclePhase[]).map((p) => {
-              const active = cycle.phase === p;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => {
-                    saveCycle({ ...cycle, phase: p });
-                    toast.show({ message: `Cycle context set to ${PHASE_META[p].label}`, tone: 'ok' });
-                  }}
-                  className={clsx(
-                    'rounded-full border px-3 py-1 font-sans text-label-sm transition-colors',
-                    active ? 'border-primary bg-primary-container text-primary' : 'border-line bg-canvas-low text-muted hover:text-ink',
-                  )}
-                >
-                  {PHASE_META[p].label}
-                </button>
-              );
-            })}
-          </div>
+  if (!cycle || !cycle.configured) {
+    return (
+      <div className="flex h-full flex-col gap-3 rounded-md border border-line bg-card p-6">
+        <div className="flex items-center gap-2">
+          <Icon icon={Lock} className="text-primary" />
+          <h2 className="font-display text-title-md text-ink">Cycle Training Context</h2>
+        </div>
+        <p className="text-body-md text-muted">Cycle logging is unavailable on this server right now. Nothing is stored in your browser.</p>
+      </div>
+    );
+  }
 
-          <div className="flex items-center justify-between gap-3 rounded-sm border border-line bg-canvas-low p-4">
-            <div>
-              <p className="font-sans text-label-md font-semibold text-ink">Share phase context with coach</p>
-              <p className="text-label-sm text-muted">Off by default. Stored locally in your browser.</p>
-            </div>
-            <span className="rounded-full border border-line bg-raised px-3 py-1 font-mono text-label-sm text-muted">OFF</span>
-          </div>
+  const summary = cycle.summary;
+  const shared = cycle.sharedWithCoach;
 
-          {editingNotes ? (
-            <textarea
-              rows={2}
-              value={cycle.notes}
-              onChange={(e) => saveCycle({ ...cycle, notes: e.target.value })}
-              placeholder="Private symptoms or energy notes (stays in browser storage)..."
-              className="w-full rounded-sm border border-line bg-canvas-low px-3.5 py-2 text-body-md text-ink placeholder:text-faint focus:border-primary focus:outline-none"
-            />
+  function save(): void {
+    const n = Number(length);
+    if (periodStart && !(Number.isInteger(n) && n >= CYCLE_LIMITS.minLength && n <= CYCLE_LIMITS.maxLength)) {
+      return setError(`Cycle length must be a whole number from ${CYCLE_LIMITS.minLength} to ${CYCLE_LIMITS.maxLength} days.`);
+    }
+    setError(undefined);
+    start(async () => {
+      const res = await saveCycleEntry({ date: today, periodStart, cycleLengthDays: periodStart ? n : null, symptoms, note: note.trim() || null });
+      if (!res.ok) return setError(res.error);
+      toast.show({ message: 'Private cycle log saved', tone: 'ok' });
+      setEditing(false);
+    });
+  }
+
+  function toggleShare(): void {
+    start(async () => {
+      const res = await setCycleSharing(!shared);
+      toast.show(res.ok ? { message: shared ? 'Coach can no longer see your phase' : 'Coach can now see your phase and cycle day only', tone: 'ok' } : { message: res.error, tone: 'error' });
+    });
+  }
+
+  return (
+    <div className="flex h-full flex-col justify-between gap-5 rounded-md border border-line bg-card p-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Icon icon={Lock} className="text-primary" />
+            <h2 className="font-display text-title-md text-ink">Cycle Training Context</h2>
+          </div>
+          <span className="rounded-full border border-line bg-raised px-2.5 py-0.5 font-mono text-label-sm text-muted">{shared ? 'Phase shared · Encrypted' : 'Private · Encrypted'}</span>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-line bg-canvas-low p-4">
+          <div>
+            <span className="font-mono text-label-sm uppercase text-sky">CURRENT PHASE</span>
+            <p className="mt-0.5 font-display text-title-md text-ink">
+              {summary ? `Day ${summary.dayOfCycle} · ${CYCLE_PHASE_META[summary.phase].label}` : 'Log a period start to see your phase'}
+            </p>
+            {summary?.overdue ? <p className="text-label-sm text-amber">Past your usual {summary.cycleLengthDays}-day length. Log the next start when it comes.</p> : null}
+          </div>
+          {summary ? (
+            <span className="rounded-full border border-emerald/40 bg-emerald-bg px-2.5 py-0.5 font-mono text-label-sm text-emerald">{CYCLE_PHASE_META[summary.phase].cue}</span>
           ) : null}
         </div>
 
+        <div className="flex items-center justify-between gap-3 rounded-sm border border-line bg-canvas-low p-4">
+          <div>
+            <p id="share-label" className="font-sans text-label-md font-semibold text-ink">
+              Share phase context with coach
+            </p>
+            <p id="share-hint" className="text-label-sm text-muted">
+              Off by default. Your coach sees phase and cycle day only, never symptoms or notes.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={shared}
+            aria-labelledby="share-label"
+            aria-describedby="share-hint"
+            disabled={pending || cycle.entries.length === 0}
+            onClick={toggleShare}
+            className={clsx(
+              'shrink-0 rounded-full border px-3 py-1 font-mono text-label-sm transition-colors disabled:opacity-50',
+              shared ? 'border-primary bg-primary-container text-primary' : 'border-line bg-raised text-muted hover:text-ink',
+            )}
+          >
+            {shared ? 'ON' : 'OFF'}
+          </button>
+        </div>
+
+        {editing ? (
+          <fieldset className="flex flex-col gap-3 rounded-sm border border-line bg-canvas-low p-4">
+            <legend className="px-1 font-sans text-label-sm uppercase tracking-wider text-muted">Today · private</legend>
+            <label className="flex items-center gap-2 text-label-md text-ink">
+              <input type="checkbox" checked={periodStart} onChange={(e) => setPeriodStart(e.target.checked)} className="size-4 accent-primary" />
+              Period started today
+            </label>
+            {periodStart ? (
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="cy-length" className="mb-0 normal-case tracking-normal text-ink">
+                  Usual cycle length (days)
+                </Label>
+                <Input id="cy-length" className="w-24" type="number" inputMode="numeric" min={CYCLE_LIMITS.minLength} max={CYCLE_LIMITS.maxLength} value={length} onChange={(e) => setLength(e.target.value)} />
+              </div>
+            ) : null}
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Symptoms">
+              {CYCLE_SYMPTOMS.map((s) => {
+                const on = symptoms.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setSymptoms((list) => (on ? list.filter((x) => x !== s) : [...list, s]))}
+                    className={clsx(
+                      'rounded-full border px-3 py-1 font-sans text-label-sm transition-colors',
+                      on ? 'border-primary bg-primary-container text-primary' : 'border-line bg-card text-muted hover:text-ink',
+                    )}
+                  >
+                    {CYCLE_SYMPTOM_LABELS[s]}
+                  </button>
+                );
+              })}
+            </div>
+            <label htmlFor="cy-note" className="sr-only">
+              Private note
+            </label>
+            <textarea
+              id="cy-note"
+              rows={2}
+              maxLength={CYCLE_LIMITS.maxNote}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Private energy or symptom notes (encrypted, never shown to your coach)"
+              className="w-full rounded-sm border border-line bg-card px-3.5 py-2 text-body-md text-ink placeholder:text-faint focus:border-primary focus:outline-none"
+            />
+            <FormError>{error}</FormError>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={pending}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={save} disabled={pending} aria-busy={pending}>
+                {pending ? 'Saving…' : 'Save private log'}
+              </Button>
+            </div>
+          </fieldset>
+        ) : null}
+      </div>
+
+      {!editing ? (
         <button
           type="button"
-          onClick={() => setEditingNotes((v) => !v)}
+          onClick={() => setEditing(true)}
           className="w-full rounded-full border border-line bg-canvas-low py-2.5 font-sans text-label-md font-semibold text-ink transition-colors hover:border-primary"
         >
-          {editingNotes ? 'Done Editing Private Notes' : 'Log Cycle Symptoms & Notes'}
+          {todays ? 'Edit Today’s Cycle Log' : 'Log Cycle Symptoms & Notes'}
         </button>
-      </div>
-    </section>
+      ) : null}
+    </div>
   );
 }

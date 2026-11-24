@@ -10,7 +10,7 @@ import { Panel } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
-import { bodyApi, meApi } from '@/lib/api/endpoints';
+import { bodyApi, meApi, readinessApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { formatWeight, kgToDisplay, unitLabel } from '@/lib/units';
@@ -20,7 +20,13 @@ const day = (iso: string): string => formatDate(`${iso}T00:00:00Z`);
 export default async function BodyPage() {
   const user = await requireUser(Role.CLIENT);
   const unit = user.weightUnit;
-  const [trend, photos, today] = await Promise.all([bodyApi.trend(), bodyApi.photos(), meApi.today()]);
+  const [trend, photos, today, readiness, cycle] = await Promise.all([
+    bodyApi.trend(),
+    bodyApi.photos(),
+    meApi.today(),
+    readinessApi.history().catch(() => null),
+    readinessApi.cycle().catch(() => null),
+  ]);
   const todayIso = new Date().toISOString().slice(0, 10);
   const s = summarizeBodyweight(trend.entries, trend.goal, todayIso);
   const w = (kg: number): string => formatWeight(kg, unit);
@@ -117,7 +123,7 @@ export default async function BodyPage() {
         </section>
 
         {/* Bottom 2-Column Split: Readiness Survey + Privacy-Locked Cycle Context */}
-        <ReadinessCyclePanel />
+        <ReadinessCyclePanel today={todayIso} readiness={readiness?.today ?? null} cycle={cycle} />
 
         {/* Progress Photos */}
         <section aria-labelledby="photos-heading" className="space-y-4">

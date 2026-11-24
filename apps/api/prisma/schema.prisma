@@ -250,6 +250,8 @@ model User {
   foodFavorites   FoodFavorite[]
   coachMealPlans  MealPlan[]        @relation("CoachMealPlans")
   clientMealPlans MealPlan[]        @relation("ClientMealPlans")
+  ReadinessSurvey ReadinessSurvey[]
+  CycleLog        CycleLog[]
 
   @@index([role])
 }
@@ -1826,4 +1828,44 @@ model MealPlanItem {
   food Food         @relation(fields: [foodId], references: [id], onDelete: Cascade)
 
   @@index([mealId])
+}
+
+// ─────────────── Readiness & Cycle Context ───────────────
+
+/// One pre-workout survey per client per day (resubmitting the day replaces it). Scales are 1–5 (CHECK in migration).
+model ReadinessSurvey {
+  id           String   @id @default(cuid())
+  clientId     String
+  date         DateTime @db.Date
+  sleepQuality Int
+  sleepHours   Decimal? @db.Decimal(3, 1)
+  soreness     Int
+  stress       Int
+  motivation   Int
+  /// Shared `readinessScore`, 0–100, stored so history never shifts if the formula changes.
+  score        Int
+  note         String?  @db.VarChar(280)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, date])
+}
+
+/// Owner-only cycle day. `ciphertext` is AES-256-GCM (iv.tag.data, base64) of the day's JSON, with clientId+date as
+/// associated data. Only the owner's routes decrypt it; a coach gets a phase summary, and only while `sharedWithCoach`.
+model CycleLog {
+  id              String   @id @default(cuid())
+  clientId        String
+  date            DateTime @db.Date
+  ciphertext      String   @db.Text
+  keyVersion      Int      @default(1)
+  sharedWithCoach Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, date])
 }

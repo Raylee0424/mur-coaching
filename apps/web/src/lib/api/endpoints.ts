@@ -1,5 +1,11 @@
 import 'server-only';
 import type {
+  CycleContextDto,
+  MuscleAnalyticsDto,
+  ReadinessDto,
+  ReadinessHistoryDto,
+  SaveCycleEntryRequest,
+  SaveReadinessRequest,
   CoachNutritionDto,
   FoodDto,
   LogMealRequest,
@@ -561,4 +567,20 @@ export const nutritionApi = {
     apiFetch<MealPlanDto>(`${idPath('/clients', clientId)}/meal-plans/${encodeURIComponent(planId)}`, { method: 'PUT', body }),
   removePlan: (clientId: string, planId: string) =>
     apiFetch<void>(`${idPath('/clients', clientId)}/meal-plans/${encodeURIComponent(planId)}`, { method: 'DELETE' }),
+};
+
+export const analyticsApi = {
+  /** 402 without MUSCLE_ANALYTICS (Pro). */
+  muscles: (from: string, to: string) => apiFetch<MuscleAnalyticsDto>('/me/analytics/muscles', { query: { from, to } }),
+  forClient: (clientId: string, from: string, to: string) =>
+    apiFetch<MuscleAnalyticsDto>(`${idPath('/clients', clientId)}/analytics/muscles`, { query: { from, to } }),
+};
+
+export const readinessApi = {
+  history: () => apiFetch<ReadinessHistoryDto>('/me/readiness'),
+  save: (body: SaveReadinessRequest) => apiFetch<ReadinessDto>('/me/readiness', { method: 'PUT', body }),
+  cycle: () => apiFetch<CycleContextDto>('/me/cycle'),
+  saveCycle: (body: SaveCycleEntryRequest) => apiFetch<void>('/me/cycle/entries', { method: 'PUT', body }),
+  removeCycle: (date: string) => apiFetch<void>(idPath('/me/cycle/entries', date), { method: 'DELETE' }),
+  shareCycle: (sharedWithCoach: boolean) => apiFetch<void>('/me/cycle/sharing', { method: 'PUT', body: { sharedWithCoach } }),
 };

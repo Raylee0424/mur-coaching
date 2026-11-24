@@ -13,6 +13,7 @@ import {
 } from '@/components/records/records-model';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { buttonClass } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Segmented } from '@/components/ui/Segmented';
 import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
@@ -39,7 +40,11 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
   if (records.exercises.length === 0) {
     return (
       <>
-        <PageHeader title="Personal Records & Net Progression" meta={<Badge tone="signal">PRO</Badge>} />
+        <PageHeader title="Personal Records & Net Progression" meta={<Badge tone="signal">PRO</Badge>} actions={
+          <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
+            Muscle Map
+          </Link>
+        } />
         <div className="max-w-xl">
           <EmptyState title="No records yet">Log a session and your heaviest working sets show up here. Warm-ups never count.</EmptyState>
         </div>
@@ -55,6 +60,11 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
       <PageHeader
         title="Personal Records & Net Progression"
         meta={<Badge tone="signal">PRO</Badge>}
+        actions={
+          <Link href="/client/analytics/muscles" className={buttonClass('secondary', undefined, 'sm')}>
+            Muscle Map
+          </Link>
+        }
       />
 
       <div className="space-y-6">

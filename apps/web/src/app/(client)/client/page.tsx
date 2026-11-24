@@ -9,9 +9,9 @@ import { buttonClass } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { bodyApi, checkInsApi, liveApi, meApi, nutritionApi } from '@/lib/api/endpoints';
+import { bodyApi, checkInsApi, liveApi, meApi, nutritionApi, readinessApi } from '@/lib/api/endpoints';
 import { dayTotals, fmt, litres, waterTotal } from '@/components/nutrition/nutrition-model';
-import { NUTRITION_LIMITS } from '@coaching/shared';
+import { NUTRITION_LIMITS, READINESS_BAND_LABELS, readinessBand } from '@coaching/shared';
 import { requireUser } from '@/lib/auth';
 import { formatClock } from '@/components/logger/logger-model';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
@@ -80,12 +80,13 @@ function ExerciseRow({ index, exercise, unit, coachName }: { index: number; exer
 export default async function ClientHome() {
   const user = await requireUser(Role.CLIENT);
   // Side-rail telemetry (live session, check-ins, bodyweight, nutrition) is best-effort and never blocks Today.
-  const [today, live, checkIns, body, food] = await Promise.all([
+  const [today, live, checkIns, body, food, readiness] = await Promise.all([
     meApi.today(),
     liveApi.mine().then((r) => r.session).catch(() => null),
     checkInsApi.mine().catch(() => ({ due: [], recent: [] })),
     bodyApi.trend().catch(() => null),
     nutritionApi.day().catch(() => null),
+    readinessApi.history().catch(() => null),
   ]);
 
   const unit = user.weightUnit;
@@ -104,6 +105,7 @@ export default async function ClientHome() {
   const fuel = food ? dayTotals(food.entries) : null;
   const waterMl = food ? waterTotal(food.water) : 0;
   const waterGoalMl = food?.target?.waterMl ?? NUTRITION_LIMITS.defaultWaterMl;
+  const ready = readiness?.today ?? null;
   const fuelLogged = (food?.entries.length ?? 0) > 0 || waterMl > 0;
 
   const secondary =
@@ -276,10 +278,10 @@ export default async function ClientHome() {
                   <p className="mt-0.5 font-display text-title-md text-ink">Templates</p>
                   <p className="font-mono text-label-sm text-emerald">Travel &amp; Rack</p>
                 </Link>
-                <Link href="/client/tools" className="rounded-sm border border-line bg-canvas-low p-3 transition-colors hover:border-primary/40">
-                  <span className="font-mono text-label-sm uppercase text-muted">MACROS &amp; 1RM</span>
-                  <p className="mt-0.5 font-display text-title-md text-sky">9 Tools</p>
-                  <p className="font-mono text-label-sm text-muted">Plate loader</p>
+                <Link href="/client/analytics/muscles" className="rounded-sm border border-line bg-canvas-low p-3 transition-colors hover:border-primary/40">
+                  <span className="font-mono text-label-sm uppercase text-muted">MUSCLE MAP · PRO</span>
+                  <p className="mt-0.5 font-display text-title-md text-sky">2D Heatmap</p>
+                  <p className="font-mono text-label-sm text-muted">Weekly sets</p>
                 </Link>
                 <Link href="/client/videos" className="rounded-sm border border-line bg-canvas-low p-3 transition-colors hover:border-primary/40">
                   <span className="font-mono text-label-sm uppercase text-muted">FORM CHECKS</span>
@@ -295,7 +297,7 @@ export default async function ClientHome() {
             <div className="flex flex-col gap-4 rounded-md border border-line bg-card p-5">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="font-display text-title-md text-ink">Body &amp; Pre-Workout Readiness</h2>
-                <Badge tone="emerald">{latestWeight ? formatWeight(latestWeight, unit) : 'Ready'}</Badge>
+                <Badge tone={ready && ready.score < 50 ? 'red' : ready && ready.score < 75 ? 'amber' : 'emerald'}>{ready ? `Readiness ${ready.score}` : latestWeight ? formatWeight(latestWeight, unit) : 'Check in'}</Badge>
               </div>
               <div className="flex flex-col gap-2.5">
                 <div className="flex items-center justify-between rounded-sm border border-line bg-canvas-low px-3.5 py-2.5">
@@ -309,8 +311,10 @@ export default async function ClientHome() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-sm border border-line bg-canvas-low px-3.5 py-2.5">
-                  <span className="text-label-md text-muted">Cycle &amp; Readiness</span>
-                  <span className="font-mono text-label-md text-primary">Private Log</span>
+                  <span className="text-label-md text-muted">Readiness</span>
+                  <span className={clsx('font-mono text-label-md', !ready ? 'text-muted' : ready.score >= 75 ? 'text-emerald' : ready.score >= 50 ? 'text-amber' : 'text-rose')}>
+                    {ready ? `${ready.score} / 100 · ${READINESS_BAND_LABELS[readinessBand(ready.score)]}` : 'Not checked in'}
+                  </span>
                 </div>
               </div>
               <Link
