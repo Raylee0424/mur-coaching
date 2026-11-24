@@ -24,3 +24,6 @@ export * from './billing';
 export * from './leads';
 export * from './resources';
 export * from './roadmap';
+export * from './messaging';
+export * from './check-ins';
+export * from './body';

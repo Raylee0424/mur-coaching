@@ -6,7 +6,7 @@ import type { ClientResourceDto, CreateResourceResponse, RedirectUrlDto, Resourc
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACCESSIBLE_LINK_STATUSES } from '../clients/link-status';
 import type { CreateResourceDto } from './dto/resources.dto';
-import { StorageService } from './storage.service';
+import { StorageService } from '../storage/storage.service';
 
 const resourceInclude = { shares: { select: { clientId: true } } } satisfies Prisma.ResourceInclude;
 

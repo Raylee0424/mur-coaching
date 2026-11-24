@@ -1,5 +1,24 @@
 import 'server-only';
 import type {
+  BodyTrendDto,
+  CheckInInboxDto,
+  CheckInResponseDto,
+  CheckInTemplateDto,
+  ClientCheckInsDto,
+  ClientPhotosDto,
+  CoachInboxDto,
+  CoachProgressDto,
+  CreateCheckInScheduleRequest,
+  CreateProgressPhotoRequest,
+  CreateProgressPhotoResponse,
+  LogBodyweightRequest,
+  MessageDto,
+  MessageThreadDto,
+  ReviewCheckInRequest,
+  SaveBodyGoalRequest,
+  SaveCheckInTemplateRequest,
+  SubmitCheckInRequest,
+  ThreadQuery,
   ClientResourceDto,
   CreateLeadRequest,
   CreateResourceRequest,
@@ -393,4 +412,40 @@ export const roadmapApi = {
   save: (clientId: string, body: RoadmapInput) => apiFetch<RoadmapDto>(`${idPath('/clients', clientId)}/roadmap`, { method: 'PUT', body }),
   remove: (clientId: string) => apiFetch<void>(`${idPath('/clients', clientId)}/roadmap`, { method: 'DELETE' }),
   mine: () => apiFetch<RoadmapDto | null>('/me/roadmap'),
+};
+
+export const messagingApi = {
+  inbox: () => apiFetch<CoachInboxDto>('/coach/conversations'),
+  thread: (clientId: string, query: ThreadQuery = {}) => apiFetch<MessageThreadDto>(`${idPath('/coach/conversations', clientId)}/messages`, { query: { ...query } }),
+  send: (clientId: string, body: string) => apiFetch<MessageDto>(`${idPath('/coach/conversations', clientId)}/messages`, { method: 'POST', body: { body } }),
+  read: (clientId: string) => apiFetch<void>(`${idPath('/coach/conversations', clientId)}/read`, { method: 'POST' }),
+  myThread: (query: ThreadQuery = {}) => apiFetch<MessageThreadDto>('/me/conversation/messages', { query: { ...query } }),
+  sendMine: (body: string) => apiFetch<MessageDto>('/me/conversation/messages', { method: 'POST', body: { body } }),
+  readMine: () => apiFetch<void>('/me/conversation/read', { method: 'POST' }),
+};
+
+export const checkInsApi = {
+  inbox: () => apiFetch<CheckInInboxDto>('/coach/check-ins'),
+  review: (id: string, body: ReviewCheckInRequest) => apiFetch<void>(idPath('/coach/check-ins', id), { method: 'PATCH', body }),
+  createTemplate: (body: SaveCheckInTemplateRequest) => apiFetch<CheckInTemplateDto>('/coach/check-in-templates', { method: 'POST', body }),
+  updateTemplate: (id: string, body: SaveCheckInTemplateRequest) => apiFetch<CheckInTemplateDto>(idPath('/coach/check-in-templates', id), { method: 'PUT', body }),
+  removeTemplate: (id: string) => apiFetch<void>(idPath('/coach/check-in-templates', id), { method: 'DELETE' }),
+  assign: (body: CreateCheckInScheduleRequest) => apiFetch<CheckInTemplateDto>('/coach/check-in-schedules', { method: 'POST', body }),
+  unassign: (id: string) => apiFetch<void>(idPath('/coach/check-in-schedules', id), { method: 'DELETE' }),
+  mine: () => apiFetch<ClientCheckInsDto>('/me/check-ins'),
+  submit: (scheduleId: string, body: SubmitCheckInRequest) => apiFetch<CheckInResponseDto>(idPath('/me/check-ins', scheduleId), { method: 'POST', body }),
+};
+
+export const bodyApi = {
+  trend: () => apiFetch<BodyTrendDto>('/me/body'),
+  log: (body: LogBodyweightRequest) => apiFetch<void>('/me/body/entries', { method: 'PUT', body }),
+  removeEntry: (date: string) => apiFetch<void>(idPath('/me/body/entries', date), { method: 'DELETE' }),
+  saveGoal: (body: SaveBodyGoalRequest) => apiFetch<void>('/me/body/goal', { method: 'PUT', body }),
+  removeGoal: () => apiFetch<void>('/me/body/goal', { method: 'DELETE' }),
+  photos: () => apiFetch<ClientPhotosDto>('/me/progress-photos'),
+  reservePhoto: (body: CreateProgressPhotoRequest) => apiFetch<CreateProgressPhotoResponse>('/me/progress-photos', { method: 'POST', body }),
+  completePhoto: (id: string) => apiFetch<void>(`${idPath('/me/progress-photos', id)}/complete`, { method: 'POST' }),
+  sharePhoto: (id: string, sharedWithCoach: boolean) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'PATCH', body: { sharedWithCoach } }),
+  removePhoto: (id: string) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'DELETE' }),
+  clientProgress: (clientId: string) => apiFetch<CoachProgressDto>(`${idPath('/clients', clientId)}/progress`),
 };
