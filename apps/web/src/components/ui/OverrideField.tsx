@@ -8,7 +8,7 @@ import { FieldError, Input, Label } from './Field';
 /** Tag shown wherever a value differs from what would otherwise apply. */
 export function OverriddenTag() {
   return (
-    <Badge tone="neutral" icon={PenLine}>
+    <Badge tone="signal" icon={PenLine}>
       Overridden
     </Badge>
   );
@@ -34,7 +34,7 @@ export function OverrideField({ label, value, onChange, defaultLabel, min, max, 
   const overridden = value.trim() !== '';
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-2">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
         <Label htmlFor={id} className="mb-0">
           {label}
           {suffix ? ` (${suffix})` : ''}
@@ -44,7 +44,7 @@ export function OverrideField({ label, value, onChange, defaultLabel, min, max, 
             <OverriddenTag />
             <button
               type="button"
-              className="text-meta font-medium text-muted underline hover:text-ink"
+              className="text-meta font-semibold text-muted underline hover:text-ink"
               onClick={() => onChange('')}
             >
               Reset

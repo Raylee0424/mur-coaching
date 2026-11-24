@@ -2,19 +2,19 @@ import clsx from 'clsx';
 import type { ComponentProps } from 'react';
 
 const CONTROL =
-  'block w-full rounded border border-line-strong bg-canvas-low px-3 text-ink placeholder:text-faint ' +
-  'transition-colors hover:border-faint aria-[invalid=true]:border-danger';
+  'block w-full rounded-sm border border-line bg-canvas-low px-3.5 text-ink placeholder:text-muted ' +
+  'transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary aria-[invalid=true]:border-danger';
 
 type ControlSize = 'md' | 'lg';
-const CONTROL_SIZE: Record<ControlSize, string> = { md: 'h-9 text-ui', lg: 'h-11 text-body' };
+const CONTROL_SIZE: Record<ControlSize, string> = { md: 'h-10 text-label-lg font-normal', lg: 'h-11 text-body' };
 
 export function Label({ className, ...rest }: ComponentProps<'label'>) {
-  return <label className={clsx('mb-1.5 block font-mono text-micro uppercase text-muted', className)} {...rest} />;
+  return <label className={clsx('mb-1.5 block font-sans text-label-sm uppercase tracking-wider text-muted', className)} {...rest} />;
 }
 
 export function Input({ className, size, ...rest }: Omit<ComponentProps<'input'>, 'size'> & { size?: ControlSize }) {
   const numeric = rest.type === 'number' || rest.inputMode === 'decimal' || rest.inputMode === 'numeric';
-  return <input className={clsx(CONTROL, CONTROL_SIZE[size ?? 'md'], numeric && 'font-mono', className)} {...rest} />;
+  return <input className={clsx(CONTROL, CONTROL_SIZE[size ?? 'md'], numeric && 'font-mono tabular-nums', className)} {...rest} />;
 }
 
 export function Select({ className, size, ...rest }: Omit<ComponentProps<'select'>, 'size'> & { size?: ControlSize }) {
@@ -34,7 +34,7 @@ export function FieldError({ id, children }: { id?: string; children?: string })
 export function FormError({ children }: { children?: string }) {
   if (!children) return null;
   return (
-    <p role="alert" className="rounded border-l-2 border-danger bg-danger-bg px-3 py-2 text-ui text-danger">
+    <p role="alert" className="rounded-sm border border-danger/40 bg-danger-bg px-3.5 py-2.5 text-ui text-danger">
       {children}
     </p>
   );

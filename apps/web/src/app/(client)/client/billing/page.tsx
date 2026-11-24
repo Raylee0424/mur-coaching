@@ -32,31 +32,32 @@ export default async function ClientBillingPage({ searchParams }: { searchParams
     <>
       {checkout === 'success' ? <ToastOnMount message="Payment received. It can take a few seconds to show here." tone="ok" /> : null}
       {checkout === 'cancelled' ? <ToastOnMount message="Checkout cancelled. Nothing was charged." /> : null}
-      <PageHeader title="Billing" back={{ href: '/client/profile', label: 'Profile' }} />
+      <PageHeader title="Plan & Billing" back={{ href: '/client/profile', label: 'Settings' }} />
       <div className="max-w-5xl space-y-8">
-        <Panel
-          title="Your plan"
-          meta={ent.status ? <Badge tone={STATUS_TONE[ent.status]}>{STATUS_LABEL[ent.status]}</Badge> : undefined}
-          actions={
-            ent.canManageBilling ? <StripeActionButton action={openBillingPortal} label="Manage billing" variant="secondary" size="sm" /> : undefined
-          }
-        >
-          <div className="space-y-1 p-4">
-            <p className="text-ui">{planStateLine(ent)}</p>
+        <section className="flex flex-wrap items-start justify-between gap-4 rounded-md border border-primary/40 bg-card p-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <span className="font-mono text-label-sm uppercase text-primary">CURRENT ENTITLEMENT</span>
+              {ent.status ? <Badge tone={STATUS_TONE[ent.status]}>{STATUS_LABEL[ent.status]}</Badge> : null}
+            </div>
+            <h2 className="font-display text-title-lg text-ink">{planStateLine(ent)}</h2>
             {ownPro && ent.currentPeriodEnd ? (
-              <p className="text-meta text-muted">
+              <p className="font-mono text-label-sm text-muted">
                 {ent.cancelAtPeriodEnd ? 'Access ends' : 'Next renewal'}: {formatDate(ent.currentPeriodEnd)}
               </p>
             ) : null}
             {ent.canManageBilling ? (
-              <p className="text-meta text-muted">Card, invoices and receipts live in the Stripe billing portal.</p>
+              <p className="text-label-md text-muted">Card, PDF invoices, and receipts live in the Stripe billing portal.</p>
             ) : null}
           </div>
-        </Panel>
+          {ent.canManageBilling ? (
+            <StripeActionButton action={openBillingPortal} label="Manage Billing Portal" variant="secondary" size="sm" />
+          ) : null}
+        </section>
 
         <section aria-labelledby="plans-heading" className="space-y-3">
-          <h2 id="plans-heading" className="text-ui font-semibold">
-            Plans
+          <h2 id="plans-heading" className="font-display text-title-lg text-ink">
+            Athlete Plans
           </h2>
           <PlanCards
             plans={ATHLETE_PLANS}
@@ -65,7 +66,7 @@ export default async function ClientBillingPage({ searchParams }: { searchParams
               if (plan.id === PlanId.ATHLETE_FREE) {
                 return <p className="text-meta text-muted">{ownPro ? 'Cancel Pro in the billing portal to return here. Logs stay.' : 'Included for everyone.'}</p>;
               }
-              if (ownPro) return <p className="text-meta text-muted">You are on Pro.</p>;
+              if (ownPro) return <p className="font-mono text-label-sm text-primary">You are on MUR Coaching Pro.</p>;
               return (
                 <StripeActionButton
                   action={startCheckout}
@@ -79,7 +80,7 @@ export default async function ClientBillingPage({ searchParams }: { searchParams
         </section>
 
         {linkedMissing ? (
-          <p role="status" className="text-ui text-amber">
+          <p role="status" className="rounded-md border border-amber/40 bg-amber-bg px-4 py-3 text-ui text-amber">
             The offer in that link is no longer available{offers.coachName ? '' : ', or you are not coached by the coach who shared it'}.
           </p>
         ) : null}
@@ -98,16 +99,16 @@ export default async function ClientBillingPage({ searchParams }: { searchParams
                       id={`offer-${o.id}`}
                       aria-current={linked ? 'true' : undefined}
                       className={clsx(
-                        'flex scroll-mt-20 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between',
-                        linked && 'bg-signal-bg ring-1 ring-inset ring-primary',
+                        'flex scroll-mt-20 flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between',
+                        linked && 'bg-primary-container/60 ring-1 ring-inset ring-primary',
                       )}
                     >
                       <div className="min-w-0">
-                        <p className="flex items-center gap-2 text-ui font-medium">
+                        <p className="flex flex-wrap items-center gap-2 font-display text-title-md text-ink">
                           {o.name}
                           {linked ? <Badge tone="signal">From your coach&apos;s link</Badge> : null}
                         </p>
-                        <p className="text-meta text-muted">
+                        <p className="mt-0.5 font-mono text-label-sm text-muted">
                           {formatMoney(o.priceCents, o.currency)}
                           {o.interval === 'MONTH' ? ' / month' : ' one-time'}
                           {o.description ? ` · ${o.description}` : ''}
@@ -131,7 +132,7 @@ export default async function ClientBillingPage({ searchParams }: { searchParams
         ) : null}
 
         {offers.subscriptions.length > 0 ? (
-          <Panel title="Coaching subscriptions">
+          <Panel title="Coaching Subscriptions">
             <SubscriptionsTable rows={offers.subscriptions} showClient={false} />
           </Panel>
         ) : null}

@@ -21,6 +21,7 @@ const lastLog: WorkoutLogDto = {
   workoutId: 'w1',
   performedAt: '2026-11-14T10:00:00.000Z',
   notes: 'old note',
+  loggedById: null,
   createdAt: '2026-11-14T10:00:00.000Z',
   exerciseLogs: [
     {

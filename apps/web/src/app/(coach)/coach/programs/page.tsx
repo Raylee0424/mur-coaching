@@ -40,19 +40,21 @@ export default async function ProgramsPage({ searchParams }: { searchParams: Sea
           </Link>
         }
       />
-      <nav aria-label="Program lists" className="mb-6 flex h-10 gap-1 border-b border-line">
+      <nav aria-label="Program lists" className="mb-6 flex items-center gap-6 border-b border-line">
         {tabs.map((t) => (
           <Link
             key={t.key}
             href={t.href}
             aria-current={t.key === tab ? 'page' : undefined}
             className={clsx(
-              'inline-flex items-center gap-1.5 px-3 text-ui focus-visible:-outline-offset-2',
-              t.key === tab ? 'text-ink shadow-[inset_0_-2px_0_theme(colors.ink)]' : 'text-muted hover:text-ink',
+              'inline-flex items-center gap-2 border-b-2 pb-3 font-sans text-label-lg transition-colors',
+              t.key === tab ? 'border-primary text-ink' : 'border-transparent text-muted hover:text-ink',
             )}
           >
             {t.label}
-            <span className="font-mono text-micro text-faint">{t.count}</span>
+            <span className="rounded-full border border-line bg-card px-2 py-0.5 font-mono text-label-sm text-muted tabular-nums">
+              {t.count}
+            </span>
           </Link>
         ))}
       </nav>

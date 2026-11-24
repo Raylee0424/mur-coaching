@@ -223,8 +223,9 @@ export function ProgramBuilder({ program, library, clients, conflicts = [], spor
           </div>
           {sports.length > 0 ? <SportPicker sports={sports} selected={draft.sportIds} onChange={(sportIds) => update({ ...draft, sportIds })} /> : null}
           {affected.length > 0 ? (
-            <p role="status" className="border-l-2 border-l-sky bg-sky-bg px-3 py-2 text-ui text-sky">
-              Live synced · saving updates the future sessions of {affected.length} {affected.length === 1 ? 'athlete' : 'athletes'} ({affected.map((c) => c.name).join(', ')}). Sessions already logged never change.
+            <p role="status" className="inline-flex items-center gap-2 rounded-full border border-emerald/40 bg-emerald-bg px-3.5 py-1.5 font-sans text-label-sm text-emerald">
+              <span className="size-2 rounded-full bg-emerald" aria-hidden="true" />
+              Live synced · saving updates future sessions of {affected.length} {affected.length === 1 ? 'athlete' : 'athletes'} ({affected.map((c) => c.name).join(', ')}). Logged sessions never change.
             </p>
           ) : null}
           <FormError>{formError}</FormError>
@@ -251,18 +252,17 @@ export function ProgramBuilder({ program, library, clients, conflicts = [], spor
                 aria-selected={w === week}
                 onClick={() => selectWeek(w)}
                 className={clsx(
-                  'relative flex h-9 shrink-0 items-center justify-between gap-3 rounded px-3 font-mono text-ui transition-colors',
-                  w === week ? 'bg-raised text-ink' : 'text-muted hover:bg-raised/60 hover:text-ink',
+                  'relative flex h-10 shrink-0 items-center justify-between gap-3 rounded-sm border px-3.5 font-mono text-label-md transition-colors',
+                  w === week ? 'border-primary bg-raised text-ink' : 'border-transparent text-muted hover:bg-card hover:text-ink',
                 )}
               >
-                {w === week ? <span aria-hidden="true" className="absolute inset-y-2 left-0 hidden w-0.5 rounded-full bg-signal lg:block" /> : null}
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-2">
                   {weekBlock(draft.mesocycles, w) ? (
-                    <span aria-hidden="true" className={clsx('size-2 rounded-sm', blockTone(weekBlock(draft.mesocycles, w)!.mesoIndex).split(' ')[0])} />
+                    <span aria-hidden="true" className={clsx('size-2 rounded-full', blockTone(weekBlock(draft.mesocycles, w)!.mesoIndex).split(' ')[0])} />
                   ) : null}
                   W{w}
                 </span>
-                <span className="text-micro text-faint">{daysOfWeek(draft, w).length} d</span>
+                <span className={clsx('text-micro', w === week ? 'text-primary' : 'text-muted')}>{daysOfWeek(draft, w).length} d</span>
               </button>
             ))}
           </div>
@@ -270,13 +270,13 @@ export function ProgramBuilder({ program, library, clients, conflicts = [], spor
 
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
+            <h2 className="font-display text-title-md text-ink">
               Week {week}
               {block ? (
-                <span className="ml-2 normal-case text-faint">
+                <span className="ml-2.5 font-sans text-label-md font-normal text-primary">
                   {block.mesoName}
                   {block.microLabel ? ` · ${block.microLabel}` : ''}
-                  {block.isDeload ? ' · deload' : ''}
+                  {block.isDeload ? ' · DELOAD' : ''}
                   {block.rpe ? ` · RPE ${block.rpe}` : ''}
                 </span>
               ) : null}

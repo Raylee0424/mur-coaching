@@ -1,3 +1,7 @@
+> [!WARNING] SUPERSEDED — DO NOT APPLY
+> This spec is obsolete. MUR Coaching uses the Stitch `ApexMetric` design system: `design/stitch/apexmetric_design_system.md` and `design/stitch/<folder>/code.html`. Primary/accent is electric lime `#C6FF00` on `#0A0C10` canvas and `#131720` card; fonts are `Plus Jakarta Sans`, `Instrument Sans`, `Source Code Pro`; pill CTAs/badges. Tokens live in `apps/web/tailwind.config.ts`.
+> Do NOT apply the chalk `#ECEBE7`, orange `#FF6A1F`, `Archivo`, or "reject Stitch lime/pill/bolt" instructions below. Only §4 (accessibility rules) is still valid; it is kept because `MUR Coaching - Architecture` and `MUR Coaching - Stitch Screens` link to it.
+
 # MUR Coaching: design overhaul spec
 
 Status: ready to execute. Author: design/eng audit, 2026-11-24. Execute in 4 phases, one commit per phase (more is fine). Do not ask questions; every decision is made below. If something here conflicts with the code, the code's **behaviour** wins and this spec's **styling** wins.

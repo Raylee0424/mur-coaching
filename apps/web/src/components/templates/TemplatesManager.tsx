@@ -1,9 +1,9 @@
 'use client';
 
 import clsx from 'clsx';
-import { ArrowDown, ArrowUp, FolderPlus, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Folder, FolderOpen, FolderPlus, Pencil, Plus, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { TEMPLATE_LIMITS } from '@coaching/shared';
 import type { ExerciseDto, TemplateFolderDto, WorkoutTemplateDto } from '@coaching/shared';
 import {
@@ -14,6 +14,13 @@ import {
   renameTemplateFolder,
   updateWorkoutTemplate,
 } from '@/actions/templates';
+import {
+  GYM_PROFILES,
+  GYM_PROFILE_STORAGE_KEY,
+  countEligibleMovements,
+  isEquipmentEligible,
+  type GymProfileId,
+} from '@/components/onboarding/client-onboarding-model';
 import { ExercisePicker } from '@/components/programs/ExercisePicker';
 import { Button, buttonClass } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -47,16 +54,38 @@ interface Props {
 type TemplateEditing = { mode: 'new' } | { mode: 'edit'; template: WorkoutTemplateDto };
 type FolderEditing = { mode: 'new' } | { mode: 'rename'; folder: TemplateFolderDto };
 
-/** Folders on the left, template cards on the right. Start Session opens the logger on that template. */
+const GYM_SHORT_LABEL: Record<GymProfileId, string> = {
+  COMMERCIAL: 'Commercial Gym',
+  HOTEL_DB: 'Hotel / Travel',
+  HOME_RACK: 'Home Rack',
+};
+
+/** Gym Mode switcher + Folders on the left, template cards on the right. */
 export function TemplatesManager({ folders, templates, folderId, catalog }: Props) {
   const { folder: selected, items } = visibleTemplates(templates, folders, folderId ?? undefined);
   const folderName = (id: string | null): string | null => folders.find((f) => f.id === id)?.name ?? null;
+  const catalogById = useMemo(() => new Map(catalog.map((e) => [e.id, e])), [catalog]);
 
+  const [gymProfile, setGymProfile] = useState<GymProfileId>('COMMERCIAL');
   const [editing, setEditing] = useState<TemplateEditing | null>(null);
   const [folderEditing, setFolderEditing] = useState<FolderEditing | null>(null);
   const [removing, setRemoving] = useState<{ kind: 'template'; template: WorkoutTemplateDto } | { kind: 'folder'; folder: TemplateFolderDto } | null>(null);
   const [pending, startTransition] = useTransition();
   const toast = useToast();
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(GYM_PROFILE_STORAGE_KEY);
+    if (raw === 'COMMERCIAL' || raw === 'HOME_RACK' || raw === 'HOTEL_DB') setGymProfile(raw);
+  }, []);
+
+  function selectGym(id: GymProfileId) {
+    setGymProfile(id);
+    window.localStorage.setItem(GYM_PROFILE_STORAGE_KEY, id);
+    toast.show({ message: `Gym mode switched to ${GYM_SHORT_LABEL[id]}`, tone: 'ok' });
+  }
+
+  const activeGym = GYM_PROFILES.find((p) => p.id === gymProfile) ?? GYM_PROFILES[0]!;
+  const eligibleCount = useMemo(() => countEligibleMovements(catalog, gymProfile), [catalog, gymProfile]);
 
   function confirmRemove(): void {
     if (!removing) return;
@@ -75,35 +104,76 @@ export function TemplatesManager({ folders, templates, folderId, catalog }: Prop
   const folderLink = (id: string | null): string => (id ? `/client/templates?folder=${id}` : '/client/templates');
   const rowClass = (active: boolean): string =>
     clsx(
-      'flex h-10 items-center justify-between gap-2 rounded-sm px-3 text-ui',
-      active ? 'bg-raised text-ink shadow-[inset_2px_0_0_theme(colors.signal.DEFAULT)]' : 'text-muted hover:bg-raised/60 hover:text-ink',
+      'flex items-center justify-between gap-2 rounded-sm px-3 py-2.5 font-sans text-label-md transition-colors',
+      active ? 'border border-line bg-raised text-primary' : 'text-muted hover:bg-raised/60 hover:text-ink',
     );
 
   return (
-    <>
-      <div className="grid gap-6 lg:grid-cols-[14rem_1fr]">
-        <nav aria-label="Template folders" className="space-y-1">
-          <p className="px-3 font-mono text-micro uppercase text-muted">Folders</p>
+    <div className="space-y-6">
+      {/* Top Current Gym / Travel Equipment Profile Switcher (`athlete_web_templates_gym_mode`) */}
+      <section className="flex flex-wrap items-center justify-between gap-6 rounded-md border border-line bg-card p-6">
+        <div>
+          <span className="font-mono text-label-sm uppercase text-primary">CURRENT GYM / TRAVEL EQUIPMENT PROFILE</span>
+          <p className="mt-1 text-body-md text-muted">{activeGym.description}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="inline-flex gap-1 rounded-sm border border-line bg-canvas-low p-1" role="radiogroup" aria-label="Equipment Profile">
+            {(['COMMERCIAL', 'HOTEL_DB', 'HOME_RACK'] as const).map((id) => {
+              const active = gymProfile === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => selectGym(id)}
+                  className={clsx(
+                    'rounded-sm px-4 py-2 font-sans text-label-md font-semibold transition-colors',
+                    active ? 'bg-primary text-primary-ink' : 'text-muted hover:text-ink',
+                  )}
+                >
+                  {GYM_SHORT_LABEL[id]}
+                </button>
+              );
+            })}
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald/40 bg-emerald-bg px-3.5 py-1.5 font-mono text-label-md text-emerald">
+            {eligibleCount} / {catalog.length} eligible
+          </span>
+        </div>
+      </section>
+
+      {/* Two-Column Folder Tree + Main Template Card Grid */}
+      <div className="grid items-start gap-6 lg:grid-cols-12">
+        <aside aria-label="Template folders" className="flex flex-col gap-2 rounded-md border border-line bg-card p-4 lg:col-span-3">
+          <span className="px-2 pb-1 font-mono text-label-sm uppercase text-muted">FOLDERS</span>
           <Link href={folderLink(null)} aria-current={selected ? undefined : 'page'} className={rowClass(!selected)}>
-            <span>All templates</span>
-            <span className="font-mono text-micro text-faint">{templates.length}</span>
+            <span className="flex items-center gap-2">
+              <Icon icon={FolderOpen} size={16} />
+              All Templates
+            </span>
+            <span className="font-mono text-label-sm">{templates.length}</span>
           </Link>
           {folders.map((f) => (
             <Link key={f.id} href={folderLink(f.id)} aria-current={selected?.id === f.id ? 'page' : undefined} className={rowClass(selected?.id === f.id)}>
-              <span className="truncate">{f.name}</span>
-              <span className="font-mono text-micro text-faint">{f.templateCount}</span>
+              <span className="flex min-w-0 items-center gap-2 truncate">
+                <Icon icon={Folder} size={16} />
+                <span className="truncate">{f.name}</span>
+              </span>
+              <span className="font-mono text-label-sm">{f.templateCount}</span>
             </Link>
           ))}
           <Button variant="ghost" size="sm" className="mt-1 w-full justify-start" onClick={() => setFolderEditing({ mode: 'new' })}>
             <Icon icon={FolderPlus} />
-            New folder
+            New Folder
           </Button>
-        </nav>
+        </aside>
 
-        <section aria-label={selected ? selected.name : 'All templates'} className="min-w-0 space-y-4">
+        <section aria-label={selected ? selected.name : 'All templates'} className="min-w-0 space-y-4 lg:col-span-9">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-display text-title font-semibold">{selected ? selected.name : 'All templates'}</h2>
-            <div className="flex gap-2">
+            <h2 className="font-display text-title-lg text-ink">{selected ? selected.name : 'All Templates'}</h2>
+            <div className="flex flex-wrap gap-2">
               {selected ? (
                 <>
                   <Button variant="ghost" size="sm" onClick={() => setFolderEditing({ mode: 'rename', folder: selected })}>
@@ -112,49 +182,67 @@ export function TemplatesManager({ folders, templates, folderId, catalog }: Prop
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setRemoving({ kind: 'folder', folder: selected })}>
                     <Icon icon={Trash2} />
-                    Delete folder
+                    Delete Folder
                   </Button>
                 </>
               ) : null}
               <Button size="sm" onClick={() => setEditing({ mode: 'new' })}>
                 <Icon icon={Plus} />
-                New template
+                New Template
               </Button>
             </div>
           </div>
 
           {items.length === 0 ? (
-            <EmptyState title="No templates here" action={<Button onClick={() => setEditing({ mode: 'new' })}>New template</Button>}>
+            <EmptyState title="No templates here" action={<Button onClick={() => setEditing({ mode: 'new' })}>New Template</Button>}>
               Build one here, or finish a session and use Save as template in the logger.
             </EmptyState>
           ) : (
-            <ul className="grid gap-3 md:grid-cols-2">
-              {items.map((t) => (
-                <li key={t.id} className="flex flex-col gap-3 rounded-md border border-line bg-card p-4">
-                  <div className="min-w-0">
-                    <p className="font-mono text-micro uppercase text-muted">{folderName(t.folderId) ?? 'No folder'}</p>
-                    <h3 className="mt-1 break-words text-body font-semibold">{t.name}</h3>
-                    <p className="mt-1 font-mono text-meta text-faint">
-                      {t.exercises.length} {t.exercises.length === 1 ? 'exercise' : 'exercises'} · {totalSets(t)} sets
-                    </p>
-                    <p className="mt-2 text-meta text-muted">{exerciseSummary(t)}</p>
-                    {t.notes ? <p className="mt-2 text-meta text-faint">{t.notes}</p> : null}
-                  </div>
-                  <div className="mt-auto flex items-center justify-between gap-2">
-                    <Link href={`/client/log?template=${t.id}`} className={buttonClass('primary', undefined, 'sm')}>
-                      Start session
-                    </Link>
-                    <span className="flex">
-                      <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Edit ${t.name}`} onClick={() => setEditing({ mode: 'edit', template: t })}>
-                        <Icon icon={Pencil} />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Delete ${t.name}`} onClick={() => setRemoving({ kind: 'template', template: t })}>
-                        <Icon icon={Trash2} />
-                      </Button>
-                    </span>
-                  </div>
-                </li>
-              ))}
+            <ul className="grid gap-5 md:grid-cols-2">
+              {items.map((t, idx) => {
+                const sets = totalSets(t);
+                const estMin = Math.max(25, Math.round(sets * 3.8));
+                const compatible = t.exercises.every((ex) => {
+                  const item = catalogById.get(ex.exerciseId);
+                  return isEquipmentEligible(item?.equipment ?? null, gymProfile);
+                });
+
+                return (
+                  <li key={t.id} className="flex flex-col justify-between gap-4 rounded-md border border-line bg-card p-6 transition-colors hover:bg-raised/60">
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <span className="font-mono text-label-sm uppercase text-primary">{folderName(t.folderId) ?? 'TEMPLATE'}</span>
+                          <h3 className="mt-1 break-words font-display text-title-lg text-ink">{t.name}</h3>
+                        </div>
+                        <span className="shrink-0 font-mono text-label-sm text-muted">~{estMin} min</span>
+                      </div>
+                      <p className="mt-2 text-body-md text-muted">{exerciseSummary(t)}</p>
+                      <p className="mt-1 font-mono text-label-sm text-faint">
+                        {t.exercises.length} {t.exercises.length === 1 ? 'exercise' : 'exercises'} · {sets} sets
+                      </p>
+                      {t.notes ? <p className="mt-2 text-meta text-muted">{t.notes}</p> : null}
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                      <span className={clsx('font-mono text-label-sm', compatible ? 'text-emerald' : 'text-amber')}>
+                        {compatible ? `Compatible with ${GYM_SHORT_LABEL[gymProfile]}` : `Needs swap for ${GYM_SHORT_LABEL[gymProfile]}`}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Edit ${t.name}`} onClick={() => setEditing({ mode: 'edit', template: t })}>
+                          <Icon icon={Pencil} />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Delete ${t.name}`} onClick={() => setRemoving({ kind: 'template', template: t })}>
+                          <Icon icon={Trash2} />
+                        </Button>
+                        <Link href={`/client/log?template=${t.id}`} className={buttonClass(idx === 0 ? 'primary' : 'secondary', undefined, 'sm')}>
+                          Start Session
+                        </Link>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
@@ -188,7 +276,7 @@ export function TemplatesManager({ folders, templates, folderId, catalog }: Prop
           <p className="text-ui text-muted">This cannot be undone.</p>
         </Sheet>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -342,19 +430,19 @@ function TemplateSheet({
               maxLength={1000}
               value={draft.notes}
               onChange={(e) => patch({ notes: e.target.value })}
-              className="block w-full rounded border border-line-strong bg-canvas-low px-3 py-2 font-sans text-body text-ink placeholder:text-faint hover:border-faint"
+              className="block w-full rounded-sm border border-line bg-canvas-low px-3 py-2 font-sans text-body text-ink placeholder:text-faint focus:border-primary focus:outline-none"
             />
           </div>
 
           <fieldset className="space-y-3">
-            <legend className="font-mono text-micro uppercase text-muted">Exercises ({draft.exercises.length})</legend>
+            <legend className="font-mono text-label-sm uppercase text-muted">Exercises ({draft.exercises.length})</legend>
             {draft.exercises.map((e, i) => {
               const err = (k: string): string | undefined => errors[`ex.${i}.${k}`];
               const id = (k: string): string => `tpl-${e.key}-${k}`;
               return (
-                <div key={e.key} className="space-y-2 rounded-md border border-line p-3">
+                <div key={e.key} className="space-y-2 rounded-md border border-line bg-canvas-low p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 break-words text-ui font-medium">{e.name}</span>
+                    <span className="min-w-0 break-words text-ui font-medium text-ink">{e.name}</span>
                     <span className="flex shrink-0">
                       <Button variant="ghost" size="sm" className="w-8 px-0" aria-label={`Move ${e.name} up`} disabled={i === 0} onClick={() => setDraft((d) => moveExercise(d, e.key, -1))}>
                         <Icon icon={ArrowUp} />

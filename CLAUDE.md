@@ -25,6 +25,12 @@ pnpm build
 - Decimals and dates are strings on the wire.
 - Every coach route enforces `CoachClient` tenancy.
 
+## Design System (ApexMetric)
+- `design/stitch/apexmetric_design_system.md` and `design/stitch/<folder>/code.html` are the single UI source of truth. Never bulk-read `design/stitch/`; open only the folders `docs/brain/MUR Coaching - Stitch Screens.md` maps to the task.
+- Palette: `#0A0C10` canvas, `#131720` card, `#C6FF00` electric-lime primary/accent. Fonts: `Plus Jakarta Sans` display, `Instrument Sans` UI/body, `Source Code Pro` tabular telemetry. Pill CTAs and badges.
+- New Phase 3+ screens use the semantic tokens in `apps/web/tailwind.config.ts`, not raw hex or Stitch CDN config.
+- `docs/DESIGN_OVERHAUL_SPEC.md` is superseded (chalk/orange/`Archivo`): never apply it. Only its §4 accessibility rules stand.
+
 ## Low-Token Context Protocol
 Brain: `docs/brain/` (symlink to `/Users/raylee/Documents/Obsidian Vault/Project Brain/Projects/MUR Coaching/`, gitignored).
 

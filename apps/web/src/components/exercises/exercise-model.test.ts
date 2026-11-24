@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ExerciseDto } from '@coaching/shared';
-import { EMPTY_DRAFT, draftFromExercise, formatMuscles, formatOverrides, formatRepRange, isOwnExercise, nextMuscleRole, validateExercise } from './exercise-model';
+import { EMPTY_DRAFT, demoUrlProblem, draftFromExercise, formatMuscles, formatOverrides, formatRepRange, isOwnExercise, nextMuscleRole, validateExercise } from './exercise-model';
 
 const good = { ...EMPTY_DRAFT, name: ' Romanian Deadlift ', muscleGroup: 'HAMSTRINGS' as const };
 
@@ -9,7 +9,7 @@ describe('validateExercise', () => {
     const r = validateExercise(good);
     expect(r).toEqual({
       ok: true,
-      body: { name: 'Romanian Deadlift', muscleGroup: 'HAMSTRINGS', muscles: [], equipment: null, pattern: null, profile: null, position: null, loadIncrementKg: 2.5, rpeCap: null, repsMin: null, repsMax: null },
+      body: { name: 'Romanian Deadlift', muscleGroup: 'HAMSTRINGS', muscles: [], equipment: null, pattern: null, profile: null, position: null, loadIncrementKg: 2.5, rpeCap: null, repsMin: null, repsMax: null, demoUrl: null },
     });
   });
 
@@ -72,5 +72,23 @@ describe('display helpers', () => {
     expect(formatOverrides(0)).toBe('0');
     expect(formatOverrides(1)).toBe('1 client');
     expect(formatOverrides(3)).toBe('3 clients');
+  });
+});
+
+describe('demoUrlProblem', () => {
+  it('allows empty and https links', () => {
+    expect(demoUrlProblem('')).toBeNull();
+    expect(demoUrlProblem(' https://youtu.be/abc ')).toBeNull();
+  });
+  it('rejects http, garbage and long links', () => {
+    expect(demoUrlProblem('http://example.com')).toMatch(/https/);
+    expect(demoUrlProblem('javascript:alert(1)')).toMatch(/https/);
+    expect(demoUrlProblem('not a url')).toMatch(/full link/);
+    expect(demoUrlProblem(`https://a.co/${'x'.repeat(300)}`)).toMatch(/300/);
+  });
+  it('sends the trimmed link, or null, in the request body', () => {
+    expect(validateExercise({ ...good, demoUrl: ' https://youtu.be/abc ' })).toMatchObject({ ok: true, body: { demoUrl: 'https://youtu.be/abc' } });
+    expect(validateExercise(good)).toMatchObject({ ok: true, body: { demoUrl: null } });
+    expect(validateExercise({ ...good, demoUrl: 'ftp://x' })).toMatchObject({ ok: false });
   });
 });

@@ -1,32 +1,35 @@
-import { ArrowRight } from 'lucide-react';
-import { Icon } from '@/components/ui/Icon';
 import { Section } from './Section';
 
 const STEPS = [
-  { title: 'Client logs', body: 'Weight, reps and RPE for every working set, from the gym floor.', artifact: '155 kg × 5 @ 8.0' },
-  { title: 'Engine evaluates', body: 'Reads the last 3 sessions per lift against your rules.', artifact: 'avg RPE 7.8 < cap 8.5 → increase load' },
-  { title: 'Coach decides', body: 'Accept, edit or dismiss. Accepted calls become the next targets.', artifact: 'accepted · 157.5 kg × 5 next' },
+  {
+    n: '01',
+    title: 'Log the Session',
+    body: 'Client records weight, reps, and RPE for every working set directly from the gym floor.',
+  },
+  {
+    n: '02',
+    title: 'Engine Evaluates',
+    body: 'Reads the last 3 logs per exercise against deterministic progression rules and RPE caps.',
+  },
+  {
+    n: '03',
+    title: 'Coach & Client Align',
+    body: "Accept or dismiss recommendations in one click to lock in the next session's exact targets.",
+  },
 ] as const;
 
 export function Loop() {
   return (
-    <Section id="loop" title="One loop per session.">
-      <ol className="grid grid-cols-1 divide-y divide-line border-y border-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-        {STEPS.map((s, i) => (
-          <li key={s.title} className="relative px-0 py-6 lg:px-6 lg:first:pl-0 lg:last:pr-0">
-            <h3 className="font-sans text-ui font-semibold" style={{ fontStretch: '100%', letterSpacing: 0 }}>
-              {s.title}
-            </h3>
-            <p className="mt-1 max-w-[40ch] text-meta text-muted">{s.body}</p>
-            <p className="mt-4 font-mono text-ui text-ink">{s.artifact}</p>
-            {i < STEPS.length - 1 ? (
-              <span className="absolute -right-2 top-1/2 hidden -translate-y-1/2 bg-canvas text-faint lg:block">
-                <Icon icon={ArrowRight} />
-              </span>
-            ) : null}
-          </li>
+    <Section id="how-it-works" eyebrow="WORKFLOW" title="How It Works">
+      <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
+        {STEPS.map((s) => (
+          <article key={s.n} className="flex h-full flex-col gap-4 rounded-md border border-line bg-card p-6">
+            <span className="font-display text-metric-xl-mobile lg:text-metric-xl text-muted tabular-nums">{s.n}</span>
+            <h3 className="font-display text-title-lg text-ink">{s.title}</h3>
+            <p className="text-pretty font-sans text-body-md text-muted">{s.body}</p>
+          </article>
         ))}
-      </ol>
+      </div>
     </Section>
   );
 }

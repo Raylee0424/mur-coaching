@@ -7,7 +7,7 @@ export default async function ToolsPage() {
   const user = await requireUser(Role.CLIENT);
   return (
     <>
-      <PageHeader title="Calculators" meta="Training and nutrition, computed in your browser" />
+      <PageHeader title="Training & Nutrition Calculators" meta="9 browser-native tools · Computed locally" />
       <CalculatorsHub unit={user.weightUnit} />
     </>
   );

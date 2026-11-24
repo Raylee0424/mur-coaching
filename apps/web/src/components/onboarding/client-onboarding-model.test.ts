@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { MeProfileDto, ProgramDto } from '@coaching/shared';
+import { Equipment, type MeProfileDto, type ProgramDto } from '@coaching/shared';
 import {
+  countEligibleMovements,
   initialAnswers,
   liftsToInput,
   pickBaselineLifts,
@@ -56,6 +57,24 @@ describe('client onboarding model', () => {
   it('resumes at the first unanswered step', () => {
     expect(resumeStep(empty)).toBe(0);
     expect(resumeStep({ ...empty, profile: { ...empty.profile, goals: ['Strength'], experience: 'BEGINNER' } })).toBe(2);
+    expect(
+      resumeStep({
+        ...empty,
+        profile: { ...empty.profile, goals: ['Strength'], experience: 'BEGINNER', limitations: ['None'] },
+      }),
+    ).toBe(4);
+  });
+
+  it('counts eligible movements by gym equipment profile', () => {
+    const library = [
+      { equipment: Equipment.BARBELL },
+      { equipment: Equipment.MACHINE },
+      { equipment: Equipment.DUMBBELL },
+      { equipment: Equipment.BODYWEIGHT },
+    ];
+    expect(countEligibleMovements(library, 'COMMERCIAL')).toBe(4);
+    expect(countEligibleMovements(library, 'HOME_RACK')).toBe(3);
+    expect(countEligibleMovements(library, 'HOTEL_DB')).toBe(2);
   });
 
   it('makes None exclusive', () => {
@@ -68,7 +87,7 @@ describe('client onboarding model', () => {
       { exerciseId: 'squat', name: 'Squat' },
       { exerciseId: 'bench', name: 'Bench' },
     ]);
-    expect(Object.keys(validateStep(3, a))).toEqual(['lift.squat.weight', 'lift.bench.weight']);
+    expect(Object.keys(validateStep(4, a))).toEqual(['lift.squat.weight', 'lift.bench.weight']);
     const filled = {
       ...a,
       lifts: [
@@ -76,7 +95,7 @@ describe('client onboarding model', () => {
         { ...a.lifts[1]!, unknown: true },
       ],
     };
-    expect(validateStep(3, filled)).toEqual({});
+    expect(validateStep(4, filled)).toEqual({});
     expect(liftsToInput(filled)).toEqual([
       { exerciseId: 'squat', weightKg: 102.05, reps: 5, unknown: false },
       { exerciseId: 'bench', weightKg: null, reps: null, unknown: true },

@@ -21,10 +21,10 @@ export function SessionReview({ review, unit }: { review: SessionReviewDto; unit
     <div className="space-y-6">
       <StatStrip label="Session totals" items={stats} />
       {review.clientNotes ? (
-        <p className="border-l-2 border-l-line-strong px-3 py-1 text-ui text-muted">
-          <span className="font-mono text-micro uppercase text-faint">{review.clientName} wrote</span>
-          <span className="mt-0.5 block text-ink">{review.clientNotes}</span>
-        </p>
+        <div className="rounded-md border border-primary/40 bg-primary-container/50 p-4">
+          <span className="font-sans text-label-sm uppercase tracking-wider text-primary">{review.clientName} wrote</span>
+          <p className="mt-1 font-sans text-body-md text-ink">{review.clientNotes}</p>
+        </div>
       ) : null}
 
       <Panel title="Session feedback" meta="Overall comments">

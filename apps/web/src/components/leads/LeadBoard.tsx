@@ -17,35 +17,39 @@ function callLabel(iso: string): string {
 function LeadCard({ lead, templates, onOpen }: { lead: LeadDto; templates: ProgramSummaryDto[]; onOpen: () => void }) {
   const canInvite = lead.stage !== 'ACTIVE' && lead.stage !== 'LOST';
   return (
-    <li className="rounded border border-line bg-card">
-      <button type="button" onClick={onOpen} className="block w-full px-3 pt-3 text-left focus-visible:-outline-offset-2">
+    <li className="flex flex-col gap-2.5 rounded-sm border border-line bg-card p-3.5 transition-colors hover:bg-raised">
+      <button type="button" onClick={onOpen} className="block w-full text-left focus-visible:-outline-offset-2">
         <span className="flex items-start justify-between gap-2">
-          <span className="min-w-0 truncate text-ui font-medium">{lead.name}</span>
-          <span className="shrink-0 font-mono text-micro text-faint">{ageLabel(lead.createdAt)}</span>
+          <span className="min-w-0 truncate font-sans text-label-md text-ink">{lead.name}</span>
+          <Badge tone="sky">{LEAD_SOURCE_LABELS[lead.source]}</Badge>
         </span>
-        <span className="mt-0.5 block truncate text-meta text-muted">{leadSummary(lead) || lead.email}</span>
-        <span className="mt-2 flex flex-wrap items-center gap-1.5">
-          <Badge>{LEAD_SOURCE_LABELS[lead.source]}</Badge>
-          {lead.invitePending ? <Badge tone="sky">Invite pending</Badge> : null}
-          {lead.monthlyValueCents != null ? <span className="font-mono text-meta text-ink">{formatMoney(lead.monthlyValueCents)}/mo</span> : null}
+        <span className="mt-0.5 block truncate font-sans text-label-sm font-normal text-muted">{leadSummary(lead) || lead.email}</span>
+        <span className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5 font-mono text-label-sm text-muted">
+          <span className="text-ink">{lead.monthlyValueCents != null ? `${formatMoney(lead.monthlyValueCents)}/mo` : '—'}</span>
+          <span>{ageLabel(lead.createdAt)}</span>
         </span>
+        {lead.invitePending ? (
+          <span className="mt-2 inline-flex">
+            <Badge tone="amber">Invite pending</Badge>
+          </span>
+        ) : null}
         {lead.callAt && lead.stage === 'CALL_BOOKED' ? (
-          <span className="mt-2 flex items-center gap-1 font-mono text-meta text-amber">
+          <span className="mt-2 flex items-center gap-1 font-mono text-label-sm text-amber">
             <Icon icon={CalendarClock} size={14} />
             {callLabel(lead.callAt)}
           </span>
         ) : null}
       </button>
-      <div className="flex min-h-11 items-center px-2 pb-2 pt-2">
-        {canInvite ? (
-          <InviteClientModal templates={templates} lead={lead} label={lead.invitePending ? 'Resend invite' : 'Invite'} variant="secondary" />
-        ) : null}
-      </div>
+      {canInvite ? (
+        <div className="pt-1">
+          <InviteClientModal templates={templates} lead={lead} label={lead.invitePending ? 'Resend invite' : 'Send Invite'} variant="secondary" />
+        </div>
+      ) : null}
     </li>
   );
 }
 
-/** Four-column pipeline. Stages change from each lead's detail sheet; ACTIVE is set by invite acceptance. */
+/** Stitch 4-column Kanban pipeline (`coach_web_onboarding_intake_lead_pipeline`). */
 export function LeadBoard({ leads, templates }: { leads: LeadDto[]; templates: ProgramSummaryDto[] }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const { columns, lost } = boardColumns(leads);
@@ -53,17 +57,21 @@ export function LeadBoard({ leads, templates }: { leads: LeadDto[]; templates: P
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid items-start gap-3.5 md:grid-cols-2 xl:grid-cols-4">
         {columns.map((col) => (
-          <section key={col.stage} aria-label={LEAD_STAGE_LABELS[col.stage]} className="min-w-0">
-            <h2 className="mb-2 flex items-baseline justify-between border-b border-line pb-2 font-mono text-micro uppercase text-muted">
-              {LEAD_STAGE_LABELS[col.stage]}
-              <span className="text-faint">{col.leads.length}</span>
-            </h2>
+          <section key={col.stage} aria-label={LEAD_STAGE_LABELS[col.stage]} className="flex min-w-0 flex-col gap-3 rounded-md border border-line bg-canvas-low p-3.5">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="font-display text-label-lg text-ink">{LEAD_STAGE_LABELS[col.stage]}</h2>
+              <span className="rounded-full border border-line bg-raised px-2.5 py-0.5 font-mono text-label-sm text-muted tabular-nums">
+                {col.leads.length}
+              </span>
+            </div>
             {col.leads.length === 0 ? (
-              <p className="rounded border border-dashed border-line px-3 py-6 text-meta text-faint">Nobody here.</p>
+              <p className="rounded-sm border border-dashed border-line px-3 py-6 text-center font-sans text-label-sm text-muted">
+                No prospects in stage
+              </p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {col.leads.map((l) => (
                   <LeadCard key={l.id} lead={l} templates={templates} onOpen={() => setOpenId(l.id)} />
                 ))}
@@ -74,14 +82,16 @@ export function LeadBoard({ leads, templates }: { leads: LeadDto[]; templates: P
       </div>
 
       {lost.length > 0 ? (
-        <details className="mt-8 rounded border border-line">
-          <summary className="cursor-pointer px-4 py-3 font-mono text-micro uppercase text-muted">Lost ({lost.length})</summary>
+        <details className="mt-6 rounded-md border border-line bg-card">
+          <summary className="cursor-pointer px-4 py-3 font-sans text-label-sm uppercase tracking-wider text-muted">
+            Lost ({lost.length})
+          </summary>
           <ul className="divide-y divide-line border-t border-line">
             {lost.map((l) => (
               <li key={l.id}>
-                <button type="button" onClick={() => setOpenId(l.id)} className="flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-ui hover:bg-raised">
-                  <span className="truncate">{l.name}</span>
-                  <span className="font-mono text-micro text-faint">{ageLabel(l.createdAt)}</span>
+                <button type="button" onClick={() => setOpenId(l.id)} className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-ui hover:bg-raised">
+                  <span className="truncate font-medium text-ink">{l.name}</span>
+                  <span className="font-mono text-label-sm text-muted">{ageLabel(l.createdAt)}</span>
                 </button>
               </li>
             ))}

@@ -18,23 +18,23 @@ function initials(name: string): string {
     .join('');
 }
 
-/** `startLabel` is the pre-formatted program/start line, or null when the invite has no program. */
+/** `summary` is the pre-formatted program/start line, or null when the invite has no program. */
 export function InviteForm({ token, preview, summary }: { token: string; preview: InvitePreviewDto; summary: string | null }) {
   const [state, action] = useActionState<ActionResult | null, FormData>(acceptInvite, null);
   const [password, setPassword] = useState('');
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4 border-y border-line py-4">
-        <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-md bg-raised font-mono text-ui text-ink">
+    <div className="space-y-5">
+      <div className="flex items-center gap-3.5 rounded-md border border-line bg-card p-4">
+        <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-raised font-sans text-label-md text-primary">
           {initials(preview.coachName)}
         </span>
         <div className="min-w-0">
-          <p className="text-ui font-medium">{preview.coachName} invited you to train</p>
-          {summary ? <p className="text-meta text-muted">{summary}</p> : null}
+          <p className="font-display text-title-md text-ink">{preview.coachName} invited you to train</p>
+          {summary ? <p className="mt-0.5 font-sans text-label-sm text-muted">{summary}</p> : null}
         </div>
       </div>
-      <form action={action} className="space-y-5">
+      <form action={action} className="flex flex-col gap-4">
         <input type="hidden" name="token" value={token} />
         <div>
           <Label htmlFor="invite-name">Full name</Label>
@@ -46,12 +46,21 @@ export function InviteForm({ token, preview, summary }: { token: string; preview
         </div>
         <div>
           <Label htmlFor="invite-password">Create password</Label>
-          <PasswordInput size="lg" id="invite-password" name="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" />
+          <PasswordInput
+            size="lg"
+            id="invite-password"
+            name="password"
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="At least 8 characters"
+          />
           <PasswordMeter password={password} />
         </div>
         <FormError>{state?.ok === false ? state.error : undefined}</FormError>
         <SubmitButton size="lg" className="w-full" pendingLabel="Creating account…">
-          Accept and continue
+          Accept &amp; Continue
         </SubmitButton>
       </form>
     </div>

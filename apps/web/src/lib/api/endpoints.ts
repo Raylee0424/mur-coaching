@@ -1,5 +1,28 @@
 import 'server-only';
 import type {
+  AutomationCandidateDto,
+  AutomationRuleDto,
+  AutomationsDto,
+  AvailabilityDto,
+  BookingDto,
+  ClientCallsDto,
+  ClientVideosDto,
+  CoachLiveDto,
+  CoachScheduleDto,
+  CreateAnnotationRequest,
+  CreateBookingRequest,
+  CreateReviewAudioRequest,
+  CreateSetVideoRequest,
+  FormCheckQueueDto,
+  LiveSessionDto,
+  LogLiveSetRequest,
+  RunAutomationsResultDto,
+  SaveAutomationRuleRequest,
+  SaveAvailabilityRequest,
+  StartLiveSessionRequest,
+  UpdateBookingRequest,
+  UploadTicketDto,
+  VideoAnnotationDto,
   BodyTrendDto,
   CheckInInboxDto,
   CheckInResponseDto,
@@ -448,4 +471,52 @@ export const bodyApi = {
   sharePhoto: (id: string, sharedWithCoach: boolean) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'PATCH', body: { sharedWithCoach } }),
   removePhoto: (id: string) => apiFetch<void>(idPath('/me/progress-photos', id), { method: 'DELETE' }),
   clientProgress: (clientId: string) => apiFetch<CoachProgressDto>(`${idPath('/clients', clientId)}/progress`),
+};
+
+export const videosApi = {
+  mine: () => apiFetch<ClientVideosDto>('/me/set-videos'),
+  reserve: (body: CreateSetVideoRequest) => apiFetch<UploadTicketDto>('/me/set-videos', { method: 'POST', body }),
+  complete: (id: string) => apiFetch<void>(`${idPath('/me/set-videos', id)}/complete`, { method: 'POST' }),
+  requestReview: (id: string) => apiFetch<void>(`${idPath('/me/set-videos', id)}/form-check`, { method: 'POST' }),
+  remove: (id: string) => apiFetch<void>(idPath('/me/set-videos', id), { method: 'DELETE' }),
+};
+
+export const formChecksApi = {
+  queue: () => apiFetch<FormCheckQueueDto>('/coach/form-checks'),
+  annotate: (id: string, body: CreateAnnotationRequest) => apiFetch<VideoAnnotationDto>(`${idPath('/coach/form-checks', id)}/annotations`, { method: 'POST', body }),
+  removeAnnotation: (id: string, annotationId: string) => apiFetch<void>(idPath(`${idPath('/coach/form-checks', id)}/annotations`, annotationId), { method: 'DELETE' }),
+  reserveAudio: (id: string, body: CreateReviewAudioRequest) => apiFetch<UploadTicketDto>(`${idPath('/coach/form-checks', id)}/audio`, { method: 'POST', body }),
+  completeAudio: (id: string, assetId: string) => apiFetch<void>(`${idPath(`${idPath('/coach/form-checks', id)}/audio`, assetId)}/complete`, { method: 'POST' }),
+  submit: (id: string, summary: string) => apiFetch<void>(`${idPath('/coach/form-checks', id)}/submit`, { method: 'POST', body: { summary } }),
+};
+
+export const callsApi = {
+  schedule: () => apiFetch<CoachScheduleDto>('/coach/schedule'),
+  saveAvailability: (body: SaveAvailabilityRequest) => apiFetch<AvailabilityDto>('/coach/availability', { method: 'PUT', body }),
+  book: (body: CreateBookingRequest) => apiFetch<BookingDto>('/coach/bookings', { method: 'POST', body }),
+  update: (id: string, body: UpdateBookingRequest) => apiFetch<BookingDto>(idPath('/coach/bookings', id), { method: 'PATCH', body }),
+  cancel: (id: string) => apiFetch<void>(`${idPath('/coach/bookings', id)}/cancel`, { method: 'POST' }),
+  mine: () => apiFetch<ClientCallsDto>('/me/calls'),
+  bookMine: (body: CreateBookingRequest) => apiFetch<BookingDto>('/me/bookings', { method: 'POST', body }),
+  moveMine: (id: string, startsAt: string) => apiFetch<BookingDto>(idPath('/me/bookings', id), { method: 'PATCH', body: { startsAt } }),
+  cancelMine: (id: string) => apiFetch<void>(`${idPath('/me/bookings', id)}/cancel`, { method: 'POST' }),
+};
+
+export const automationsApi = {
+  overview: () => apiFetch<AutomationsDto>('/coach/automations'),
+  create: (body: SaveAutomationRuleRequest) => apiFetch<AutomationRuleDto>('/coach/automations', { method: 'POST', body }),
+  update: (id: string, body: SaveAutomationRuleRequest) => apiFetch<AutomationRuleDto>(idPath('/coach/automations', id), { method: 'PUT', body }),
+  remove: (id: string) => apiFetch<void>(idPath('/coach/automations', id), { method: 'DELETE' }),
+  dryRun: (id: string) => apiFetch<AutomationCandidateDto[]>(`${idPath('/coach/automations', id)}/dry-run`, { method: 'POST' }),
+  run: () => apiFetch<RunAutomationsResultDto>('/coach/automations/run', { method: 'POST' }),
+};
+
+export const liveApi = {
+  view: () => apiFetch<CoachLiveDto>('/coach/live-sessions'),
+  start: (body: StartLiveSessionRequest) => apiFetch<LiveSessionDto>('/coach/live-sessions', { method: 'POST', body }),
+  get: (id: string) => apiFetch<LiveSessionDto>(idPath('/coach/live-sessions', id)),
+  logSet: (id: string, body: LogLiveSetRequest) => apiFetch<LiveSessionDto>(`${idPath('/coach/live-sessions', id)}/sets`, { method: 'POST', body }),
+  removeSet: (id: string, setLogId: string) => apiFetch<LiveSessionDto>(idPath(`${idPath('/coach/live-sessions', id)}/sets`, setLogId), { method: 'DELETE' }),
+  end: (id: string) => apiFetch<void>(`${idPath('/coach/live-sessions', id)}/end`, { method: 'POST' }),
+  mine: () => apiFetch<{ session: LiveSessionDto | null }>('/me/live-session'),
 };

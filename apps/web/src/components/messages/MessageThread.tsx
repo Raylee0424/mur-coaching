@@ -141,13 +141,13 @@ export function MessageThread({ clientId, initial }: { clientId: string | null; 
                 <span className="sr-only">{m.mine ? 'You' : initial.otherName}:</span>
                 <p
                   className={clsx(
-                    'max-w-[80%] whitespace-pre-wrap break-words rounded-md px-3 py-2 text-ui',
-                    m.mine ? 'bg-raised text-ink' : 'border border-line bg-card text-ink',
+                    'max-w-[80%] whitespace-pre-wrap break-words rounded-md px-4 py-2.5 font-sans text-body-md',
+                    m.mine ? 'border border-primary/40 bg-primary-container text-ink' : 'border border-line bg-canvas-low text-ink',
                   )}
                 >
                   {m.body}
                 </p>
-                <span className="mt-1 flex items-center gap-1 font-mono text-micro text-faint">
+                <span className="mt-1 flex items-center gap-1 font-mono text-micro text-muted">
                   {formatMessageTime(m.createdAt)}
                   {i === receiptAt ? (
                     isReadByOther(m, otherReadAt) ? (
@@ -164,9 +164,9 @@ export function MessageThread({ clientId, initial }: { clientId: string | null; 
           );
         })}
       </ol>
-      <form onSubmit={submit} className="border-t border-line px-4 py-3">
+      <form onSubmit={submit} className="border-t border-line bg-canvas-low/50 p-4">
         <FormError>{error}</FormError>
-        <div className="flex items-end gap-2">
+        <div className="flex items-end gap-2.5">
           <label htmlFor="message-draft" className="sr-only">
             Message {initial.otherName}
           </label>
@@ -177,15 +177,15 @@ export function MessageThread({ clientId, initial }: { clientId: string | null; 
             onKeyDown={onKeyDown}
             maxLength={MESSAGE_LIMITS.maxBody}
             rows={2}
-            placeholder={`Message ${initial.otherName}`}
-            className="block min-h-11 w-full resize-y rounded border border-line-strong bg-canvas-low px-3 py-2 text-ui text-ink placeholder:text-faint hover:border-faint"
+            placeholder={`Write a message to ${initial.otherName}...`}
+            className="block min-h-11 w-full resize-y rounded-sm border border-line bg-canvas-low px-3.5 py-2.5 text-ui text-ink placeholder:text-muted transition-colors hover:border-line-strong focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
-          <Button type="submit" disabled={sending || !draft.trim()} aria-busy={sending}>
+          <Button type="submit" size="lg" disabled={sending || !draft.trim()} aria-busy={sending}>
             <Icon icon={Send} />
             Send
           </Button>
         </div>
-        <p className="mt-1 text-meta text-faint">Enter sends. Shift+Enter adds a line.</p>
+        <p className="mt-1.5 text-meta text-muted">Enter sends. Shift+Enter adds a line.</p>
       </form>
     </div>
   );

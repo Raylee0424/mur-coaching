@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { Archive, Copy, Pencil, Plus } from 'lucide-react';
+import { Archive, Copy, Pencil, PlayCircle, Plus } from 'lucide-react';
 import { useId, useState, useTransition, type ReactNode } from 'react';
 import {
   ENGINE_LIMITS,
@@ -142,6 +142,18 @@ export function ExerciseLibrary({
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{e.name}</span>
                         {sourceBadge(e)}
+                        {e.demoUrl ? (
+                          <a
+                            href={e.demoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Demo video for ${e.name} (opens in a new tab)`}
+                            className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-meta text-primary hover:border-primary"
+                          >
+                            <Icon icon={PlayCircle} size={14} />
+                            Demo
+                          </a>
+                        ) : null}
                       </span>
                     </td>
                     <td className={clsx(TD, 'h-auto py-2')}>
@@ -361,6 +373,11 @@ function ExerciseDrawer({ editing, viewer, onClose }: { editing: Editing; viewer
           {enumSelect('pattern', 'Movement pattern', Object.values(MovementPattern), MOVEMENT_PATTERN_LABELS)}
           {enumSelect('profile', 'Resistance profile', Object.values(ResistanceProfile), RESISTANCE_PROFILE_LABELS)}
           {enumSelect('position', 'Position', Object.values(ExercisePosition), EXERCISE_POSITION_LABELS)}
+        </div>
+        <div>
+          <Label htmlFor={`${id}-demoUrl`}>Demo video link (optional)</Label>
+          <Input {...bind('demoUrl')} type="url" inputMode="url" maxLength={300} autoComplete="off" placeholder="https://youtu.be/…" />
+          {err('demoUrl')}
         </div>
         {coach ? (
           <>
