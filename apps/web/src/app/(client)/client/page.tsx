@@ -267,7 +267,7 @@ export default async function ClientHome() {
                   Open Calculators
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <Link href="/client/records" className="rounded-sm border border-line bg-canvas-low p-3 transition-colors hover:border-primary/40">
                   <span className="font-mono text-label-sm uppercase text-muted">PR MATRIX</span>
                   <p className="mt-0.5 font-display text-title-md text-primary">1RM – 20RM</p>
@@ -287,6 +287,16 @@ export default async function ClientHome() {
                   <span className="font-mono text-label-sm uppercase text-muted">FORM CHECKS</span>
                   <p className="mt-0.5 font-display text-title-md text-amber">Set Clips</p>
                   <p className="font-mono text-label-sm text-muted">L/R frame sync</p>
+                </Link>
+                <Link href="/client/coach-ai" className="rounded-sm border border-line bg-canvas-low p-3 transition-colors hover:border-primary/40">
+                  <span className="font-mono text-label-sm uppercase text-muted">AI COACH · PRO</span>
+                  <p className="mt-0.5 font-display text-title-md text-primary">MUR AI Coach</p>
+                  <p className="font-mono text-label-sm text-muted">Cited sessions</p>
+                </Link>
+                <Link href="/client/generate" className="rounded-sm border border-line bg-canvas-low p-3 transition-colors hover:border-primary/40">
+                  <span className="font-mono text-label-sm uppercase text-muted">GENERATOR · PRO</span>
+                  <p className="mt-0.5 font-display text-title-md text-emerald">AI Workout</p>
+                  <p className="font-mono text-label-sm text-muted">Injury-aware</p>
                 </Link>
               </div>
             </div>

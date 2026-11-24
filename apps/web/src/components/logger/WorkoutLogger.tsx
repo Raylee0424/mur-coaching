@@ -13,6 +13,7 @@ import type {
   VideoableSetDto,
   WorkoutLogDto,
   WorkoutTemplateDto,
+  VoiceIntent,
 } from '@coaching/shared';
 import { submitWorkoutLog } from '@/actions/workout-logs';
 import { DEFAULT_BAR, describePlates } from '@/components/calculators/calculators-model';
@@ -35,6 +36,8 @@ import { SessionComplete } from './SessionComplete';
 import { Stepper } from './Stepper';
 import { SwapExerciseButton } from './SwapExerciseButton';
 import { SaveTemplateSheet, TemplatePickerSheet } from './TemplateSheets';
+import { VoiceHud } from './VoiceHud';
+import { appendNote, voiceSetValues } from './voice-model';
 import {
   LOGGER_RIR,
   LOGGER_RPE,
@@ -91,6 +94,15 @@ interface Props {
   baselines: Record<string, Baseline>;
   /** Persistent notes by exercise id (`ExerciseNote`), shown while logging that lift. */
   savedNotes: Record<string, SavedNote[]>;
+  /** Athlete has VOICE_LOGGING (Pro): show the voice command HUD. */
+  voiceEnabled?: boolean;
+}
+
+/** Snapshot taken before a voice action, restored by Undo while nothing else has changed since. */
+interface VoiceUndo {
+  label: string;
+  before: { flow: FlowStart; values: StepValues; restOverride: number | null };
+  after: FlowStart;
 }
 
 interface Done {
@@ -99,7 +111,7 @@ interface Done {
   clipSets: VideoableSetDto[];
 }
 
-export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, templates, folders, template, unit, baselines, savedNotes }: Props) {
+export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, templates, folders, template, unit, baselines, savedNotes, voiceEnabled = false }: Props) {
   const library = useMemo(
     () => catalog.map((e) => ({ id: e.id, name: e.name, loadIncrementKg: toNumber(e.loadIncrementKg) })),
     [catalog],
@@ -132,6 +144,9 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
   const [done, setDone] = useState<Done | null>(null);
   const [pending, startTransition] = useTransition();
   const rest = useRestTimer();
+  /** Rest length set by a voice command for the current exercise; null = the prescription's. */
+  const [restOverride, setRestOverride] = useState<number | null>(null);
+  const [voiceUndo, setVoiceUndo] = useState<VoiceUndo | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(EFFORT_MODE_STORAGE_KEY);
@@ -168,6 +183,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
   const extra = planned > 0 && logged.length >= planned;
   const editingSet = editing ? logged.find((s) => s.key === editing) : undefined;
   const targetLine = plan?.target ? formatTargetLine(plan.target, unit) : '';
+  const restTarget = restOverride ?? plan?.restSeconds ?? null;
   const plates = plateLoader(values.weight, DEFAULT_BAR[unit], unit === WeightUnit.LB ? PLATES_LB : PLATES_KG);
 
   function goTo(i: number, next: FlowStart = flow): void {
@@ -177,6 +193,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
     setValues(nextSetDefaults(next.plans[target.key], target.sets, unit, baselines[target.exerciseId]));
     setTempo(next.draft.exercises[i]?.sets.at(-1)?.tempo ?? '');
     rest.reset();
+    setRestOverride(null);
     setConfirmFinish(false);
     setError(undefined);
   }
@@ -196,19 +213,68 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
     goTo(Math.max(0, next.draft.exercises.findIndex((e) => !known.has(e.key))), next);
   }
 
-  function logSet(): void {
-    if (rpeProblem || tempoProblem) return;
+  /** Commits one set; `note` (voice) is appended to the exercise note in the same update. Returns the new flow. */
+  function logSet(v: StepValues = values, note?: string): FlowStart | null {
+    if (rpeError(v.rpe) || tempoProblem) return null;
     const restSeconds = restTaken(rest.startedAt, Date.now());
     const extras = {
-      ...(effort === 'RIR' ? { rir: rirFromRpe(values.rpe) } : {}),
+      ...(effort === 'RIR' ? { rir: rirFromRpe(v.rpe) } : {}),
       ...(restSeconds !== undefined ? { restSeconds } : {}),
     };
-    setFlow({ ...flow, draft: commitSet(draft, key, values, tempo.trim().toUpperCase(), extras) });
-    setAnnounce(
-      `Set ${logged.length + 1} logged: ${formatStepValue('weight', values.weight)} ${unitLabel(unit)} for ${values.reps} reps.`,
-    );
+    const committed = commitSet(draft, key, v, tempo.trim().toUpperCase(), extras);
+    const next = { ...flow, draft: note ? setExerciseNote(committed, key, appendNote(exercise?.notes, note)) : committed };
+    setFlow(next);
+    setAnnounce(`Set ${logged.length + 1} logged: ${formatStepValue('weight', v.weight)} ${unitLabel(unit)} for ${v.reps} reps.`);
     setError(undefined);
     rest.start();
+    return next;
+  }
+
+  /** Applies a confirmed voice intent. The engine target is untouched: voice only fills the steppers you would set by hand. */
+  function applyVoice(intent: VoiceIntent): string | null {
+    const before = { flow, values, restOverride };
+    let after: FlowStart = flow;
+    let label: string;
+    switch (intent.type) {
+      case 'LOG_SET': {
+        const res = voiceSetValues(values, intent, maxWeight);
+        if (!res.ok) return res.error;
+        const next = logSet(res.values, intent.note ?? undefined);
+        if (!next) return 'Fix the tempo before logging.';
+        setValues(res.values);
+        if (intent.restSeconds) setRestOverride(intent.restSeconds);
+        after = next;
+        label = `set ${logged.length + 1}`;
+        break;
+      }
+      case 'NOTE':
+        after = { ...flow, draft: setExerciseNote(draft, key, appendNote(exercise?.notes, intent.text)) };
+        setFlow(after);
+        label = 'note';
+        break;
+      case 'REST_TIMER':
+        setRestOverride(intent.seconds);
+        rest.start();
+        label = 'rest timer';
+        break;
+      default:
+        return 'That command cannot be committed here.';
+    }
+    setVoiceUndo({ label, before, after });
+    return null;
+  }
+
+  function undoVoice(): void {
+    if (!voiceUndo) return;
+    // Only while nothing else changed the session since; otherwise undo would drop newer work.
+    if (voiceUndo.after === flow) {
+      setFlow(voiceUndo.before.flow);
+      setValues(voiceUndo.before.values);
+      setRestOverride(voiceUndo.before.restOverride);
+      if (voiceUndo.label.startsWith('set') || voiceUndo.label === 'rest timer') rest.reset();
+      setAnnounce(`Undid voice ${voiceUndo.label}.`);
+    }
+    setVoiceUndo(null);
   }
 
   function nextExercise(): void {
@@ -300,6 +366,15 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         {/* Left Main Column (8 cols): Exercise Tabs + Active Card + Logged Sets + Notes */}
         <div className="flex flex-col gap-5 lg:col-span-8">
+          {voiceEnabled ? (
+            <VoiceHud
+              unit={unitLabel(unit)}
+              hasExercise={hasExercise}
+              onConfirm={applyVoice}
+              undoLabel={voiceUndo && voiceUndo.after === flow ? voiceUndo.label : null}
+              onUndo={undoVoice}
+            />
+          ) : null}
           {draft.exercises.length > 1 ? (
             <nav aria-label="Exercises in this session">
               <ol className="flex gap-2 overflow-x-auto pb-1">
@@ -358,7 +433,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
                   </a>
                 ) : null}
                 <div className="lg:hidden">
-                  <RestPill startedAt={rest.startedAt} now={rest.now} restSeconds={plan?.restSeconds ?? null} />
+                  <RestPill startedAt={rest.startedAt} now={rest.now} restSeconds={restTarget} />
                 </div>
               </div>
             </header>
@@ -520,7 +595,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
                       {RPE_ERROR}
                     </p>
                   ) : null}
-                  <Button size="lg" className="w-full" disabled={rpeProblem !== null || tempoProblem} onClick={logSet}>
+                  <Button size="lg" className="w-full" disabled={rpeProblem !== null || tempoProblem} onClick={() => logSet()}>
                     {extra ? 'Log Extra Set' : 'Log Set'}
                   </Button>
                 </section>
@@ -594,7 +669,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
           <RestTimerCard
             startedAt={rest.startedAt}
             now={rest.now}
-            restSeconds={plan?.restSeconds ?? null}
+            restSeconds={restTarget}
             onStart={rest.start}
             onReset={rest.reset}
             onAdjust={rest.adjust}

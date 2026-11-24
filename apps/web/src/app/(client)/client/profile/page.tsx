@@ -28,6 +28,9 @@ const WORKSPACE_LINKS = [
   { href: '/client/roadmap', title: 'Coaching Roadmap', meta: 'Event countdown & phases' },
   { href: '/client/resources', title: 'Coach Vault', meta: 'Shared PDFs & guides' },
   { href: '/client/templates', title: 'Templates & Gyms', meta: 'Folders & equipment mode' },
+  { href: '/client/coach-ai', title: 'MUR AI Training Coach', meta: 'Ask about your training' },
+  { href: '/client/generate', title: 'AI Workout Generator', meta: 'Injury-aware sessions' },
+  { href: '/client/settings/connectors', title: 'AI Connectors', meta: 'Read-only app access' },
   { href: '/client/billing', title: 'Plan & Billing', meta: 'MUR Coaching Pro & offers' },
 ] as const;
 
