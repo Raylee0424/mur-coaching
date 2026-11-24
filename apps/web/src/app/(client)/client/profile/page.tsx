@@ -57,6 +57,22 @@ export default async function ProfilePage() {
             </dd>
           </div>
           <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="font-mono text-micro uppercase text-muted">Roadmap</dt>
+            <dd>
+              <Link href="/client/roadmap" className="text-ui text-primary hover:underline">
+                Open
+              </Link>
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="font-mono text-micro uppercase text-muted">Resources from your coach</dt>
+            <dd>
+              <Link href="/client/resources" className="text-ui text-primary hover:underline">
+                Open
+              </Link>
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-4 py-3">
             <dt className="font-mono text-micro uppercase text-muted">Plan and billing</dt>
             <dd>
               <Link href="/client/billing" className="text-ui text-primary hover:underline">

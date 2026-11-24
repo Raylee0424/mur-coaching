@@ -21,3 +21,6 @@ export * from './periodization';
 export * from './scheduling';
 export * from './session-review';
 export * from './billing';
+export * from './leads';
+export * from './resources';
+export * from './roadmap';

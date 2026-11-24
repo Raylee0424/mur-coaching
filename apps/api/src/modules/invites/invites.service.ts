@@ -1,6 +1,6 @@
 import { ConflictException, GoneException, HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { AssignmentStatus, Prisma, Role } from '@prisma/client';
+import { AssignmentStatus, LeadStage, Prisma, Role } from '@prisma/client';
 import type {
   AcceptInviteResponse,
   CreateInviteResponse,
@@ -51,6 +51,11 @@ export class InvitesService {
       const program = await this.prisma.program.findFirst({ where: { id: dto.programId, coachId }, select: { id: true } });
       if (!program) throw new NotFoundException('Program not found');
     }
+    if (dto.leadId) {
+      const lead = await this.prisma.lead.findFirst({ where: { id: dto.leadId, coachId }, select: { stage: true } });
+      if (!lead) throw new NotFoundException('Lead not found');
+      if (lead.stage === LeadStage.ACTIVE) throw new ConflictException('This lead is already a client.');
+    }
     // A pending invite holds a seat, so acceptance never pushes the coach over the limit.
     await this.entitlements.assertSeat(coachId, dto.email);
     const coach = await this.prisma.user.findUniqueOrThrow({ where: { id: coachId }, select: { name: true, displayName: true } });
@@ -65,6 +70,7 @@ export class InvitesService {
           email: dto.email,
           phone: dto.phone || null,
           programId: dto.programId ?? null,
+          leadId: dto.leadId ?? null,
           startDate: dto.startDate ? dateOnly(dto.startDate) : null,
           weightUnit: dto.weightUnit ?? 'KG',
           tokenHash: hashToken(raw),
@@ -151,6 +157,13 @@ export class InvitesService {
               startDate: invite.startDate ?? dateOnly(now.toISOString()),
               status: AssignmentStatus.ACTIVE,
             },
+          });
+        }
+        if (invite.leadId) {
+          // Scoped to the inviting coach, so a stale or foreign leadId can never touch another pipeline.
+          await tx.lead.updateMany({
+            where: { id: invite.leadId, coachId: invite.coachId },
+            data: { stage: LeadStage.ACTIVE, convertedClientId: created.id, convertedAt: now },
           });
         }
         return created;

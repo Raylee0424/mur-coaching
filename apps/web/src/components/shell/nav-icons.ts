@@ -4,7 +4,9 @@ import {
   CalendarCheck,
   CalendarRange,
   Dumbbell,
+  FolderOpen,
   History,
+  Inbox,
   ListChecks,
   SlidersHorizontal,
   UserRound,
@@ -24,4 +26,6 @@ export const NAV_ICONS: Record<NavIconKey, LucideIcon> = {
   tools: Calculator,
   user: UserRound,
   billing: CreditCard,
+  inbox: Inbox,
+  folder: FolderOpen,
 };

@@ -1,5 +1,21 @@
 import 'server-only';
 import type {
+  ClientResourceDto,
+  CreateLeadRequest,
+  CreateResourceRequest,
+  CreateResourceResponse,
+  IntakeFormDto,
+  LeadBoardDto,
+  LeadDto,
+  PublicIntakeDto,
+  ResourceDto,
+  ResourceLibraryDto,
+  RoadmapDto,
+  RoadmapInput,
+  SaveIntakeFormRequest,
+  ShareResourceRequest,
+  SubmitIntakeRequest,
+  UpdateLeadRequest,
   CheckoutRequest,
   ClientOffersDto,
   CoachBillingDto,
@@ -343,4 +359,38 @@ export const billingApi = {
   archiveOffer: (id: string) => apiFetch<void>(`/coach/offers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   clientOffers: () => apiFetch<ClientOffersDto>('/me/offers'),
   checkoutOffer: (id: string) => apiFetch<RedirectUrlDto>(`/me/offers/${encodeURIComponent(id)}/checkout`, { method: 'POST' }),
+};
+
+export const leadsApi = {
+  board: () => apiFetch<LeadBoardDto>('/coach/leads'),
+  create: (body: CreateLeadRequest) => apiFetch<LeadDto>('/coach/leads', { method: 'POST', body }),
+  update: (id: string, body: UpdateLeadRequest) => apiFetch<LeadDto>(idPath('/coach/leads', id), { method: 'PATCH', body }),
+  remove: (id: string) => apiFetch<void>(idPath('/coach/leads', id), { method: 'DELETE' }),
+  form: () => apiFetch<IntakeFormDto>('/coach/intake-form'),
+  saveForm: (body: SaveIntakeFormRequest) => apiFetch<IntakeFormDto>('/coach/intake-form', { method: 'PUT', body }),
+};
+
+/** Public: the application form a visitor opens at /apply/<slug>. */
+export const intakeApi = {
+  preview: (slug: string) => apiFetch<PublicIntakeDto>(idPath('/intake', slug), { auth: false }),
+  submit: (slug: string, body: SubmitIntakeRequest) =>
+    apiFetch<{ received: true }>(idPath('/intake', slug), { method: 'POST', body, auth: false }),
+};
+
+export const resourcesApi = {
+  library: () => apiFetch<ResourceLibraryDto>('/coach/resources'),
+  create: (body: CreateResourceRequest) => apiFetch<CreateResourceResponse>('/coach/resources', { method: 'POST', body }),
+  complete: (id: string) => apiFetch<ResourceDto>(`${idPath('/coach/resources', id)}/complete`, { method: 'POST' }),
+  share: (id: string, body: ShareResourceRequest) => apiFetch<ResourceDto>(`${idPath('/coach/resources', id)}/shares`, { method: 'PUT', body }),
+  url: (id: string) => apiFetch<RedirectUrlDto>(`${idPath('/coach/resources', id)}/url`),
+  remove: (id: string) => apiFetch<void>(idPath('/coach/resources', id), { method: 'DELETE' }),
+  mine: () => apiFetch<ClientResourceDto[]>('/me/resources'),
+  mineUrl: (id: string) => apiFetch<RedirectUrlDto>(`${idPath('/me/resources', id)}/url`),
+};
+
+export const roadmapApi = {
+  forClient: (clientId: string) => apiFetch<RoadmapDto | null>(`${idPath('/clients', clientId)}/roadmap`),
+  save: (clientId: string, body: RoadmapInput) => apiFetch<RoadmapDto>(`${idPath('/clients', clientId)}/roadmap`, { method: 'PUT', body }),
+  remove: (clientId: string) => apiFetch<void>(`${idPath('/clients', clientId)}/roadmap`, { method: 'DELETE' }),
+  mine: () => apiFetch<RoadmapDto | null>('/me/roadmap'),
 };

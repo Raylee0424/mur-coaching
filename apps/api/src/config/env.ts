@@ -24,6 +24,11 @@ const envSchema = z.object({
   STRIPE_PRICE_COACH: z.string().startsWith('price_').optional(),
   /** Platform cut of coach-offer payments, in percent. */
   STRIPE_PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(50).default(0),
+  /** Cloudflare R2 (S3 API) for the resource vault. All four unset = uploads and downloads answer 503. */
+  R2_ACCOUNT_ID: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_BUCKET: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
