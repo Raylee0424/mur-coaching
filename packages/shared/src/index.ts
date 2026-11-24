@@ -31,3 +31,4 @@ export * from './media';
 export * from './calls';
 export * from './automations';
 export * from './live';
+export * from './nutrition';

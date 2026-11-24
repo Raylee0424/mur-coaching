@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { CLIENT_TABS, tabHref, type ClientTab } from './overview-model';
 
 /** Stitch client section tabs with electric-lime active underline (`coach_client_detail`). */
-export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string; active: ClientTab | 'roadmap'; pending?: number }) {
+export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string; active: ClientTab | 'roadmap' | 'nutrition'; pending?: number }) {
   return (
     <nav aria-label="Client sections" className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-line">
       {CLIENT_TABS.map((t) => {
@@ -27,16 +27,19 @@ export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string
           </Link>
         );
       })}
-      <Link
-        href={`/coach/clients/${clientId}/roadmap`}
-        aria-current={active === 'roadmap' ? 'page' : undefined}
-        className={clsx(
-          'inline-flex items-center whitespace-nowrap border-b-2 pb-3 font-sans text-label-lg transition-colors',
-          active === 'roadmap' ? 'border-primary text-ink' : 'border-transparent text-muted hover:text-ink',
-        )}
-      >
-        Roadmap
-      </Link>
+      {(['roadmap', 'nutrition'] as const).map((key) => (
+        <Link
+          key={key}
+          href={`/coach/clients/${clientId}/${key}`}
+          aria-current={active === key ? 'page' : undefined}
+          className={clsx(
+            'inline-flex items-center whitespace-nowrap border-b-2 pb-3 font-sans text-label-lg capitalize transition-colors',
+            active === key ? 'border-primary text-ink' : 'border-transparent text-muted hover:text-ink',
+          )}
+        >
+          {key}
+        </Link>
+      ))}
     </nav>
   );
 }

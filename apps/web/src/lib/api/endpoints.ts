@@ -1,5 +1,20 @@
 import 'server-only';
 import type {
+  CoachNutritionDto,
+  FoodDto,
+  LogMealRequest,
+  LogWaterRequest,
+  MealEntryDto,
+  MealPlanDto,
+  MealTemplateDto,
+  NutritionDayDto,
+  NutritionLibraryDto,
+  NutritionTargetDto,
+  SaveFoodRequest,
+  SaveMealPlanRequest,
+  SaveMealTemplateRequest,
+  SaveNutritionTargetRequest,
+  WaterLogDto,
   AutomationCandidateDto,
   AutomationRuleDto,
   AutomationsDto,
@@ -519,4 +534,31 @@ export const liveApi = {
   removeSet: (id: string, setLogId: string) => apiFetch<LiveSessionDto>(idPath(`${idPath('/coach/live-sessions', id)}/sets`, setLogId), { method: 'DELETE' }),
   end: (id: string) => apiFetch<void>(`${idPath('/coach/live-sessions', id)}/end`, { method: 'POST' }),
   mine: () => apiFetch<{ session: LiveSessionDto | null }>('/me/live-session'),
+};
+
+export const nutritionApi = {
+  searchFoods: (q?: string) => apiFetch<FoodDto[]>('/foods', { query: { q } }),
+  createFood: (body: SaveFoodRequest) => apiFetch<FoodDto>('/foods', { method: 'POST', body }),
+  archiveFood: (id: string) => apiFetch<void>(idPath('/foods', id), { method: 'DELETE' }),
+  favorite: (id: string, on: boolean) => apiFetch<void>(`${idPath('/foods', id)}/favorite`, { method: on ? 'PUT' : 'DELETE' }),
+
+  day: (date?: string) => apiFetch<NutritionDayDto>('/me/nutrition', { query: { date } }),
+  saveTarget: (body: SaveNutritionTargetRequest) => apiFetch<NutritionTargetDto>('/me/nutrition/target', { method: 'PUT', body }),
+  log: (body: LogMealRequest) => apiFetch<MealEntryDto[]>('/me/nutrition/entries', { method: 'POST', body }),
+  removeEntry: (id: string) => apiFetch<void>(idPath('/me/nutrition/entries', id), { method: 'DELETE' }),
+  logWater: (body: LogWaterRequest) => apiFetch<WaterLogDto>('/me/nutrition/water', { method: 'POST', body }),
+  removeWater: (id: string) => apiFetch<void>(idPath('/me/nutrition/water', id), { method: 'DELETE' }),
+  library: () => apiFetch<NutritionLibraryDto>('/me/nutrition/library'),
+  createTemplate: (body: SaveMealTemplateRequest) => apiFetch<MealTemplateDto>('/me/meal-templates', { method: 'POST', body }),
+  removeTemplate: (id: string) => apiFetch<void>(idPath('/me/meal-templates', id), { method: 'DELETE' }),
+
+  forClient: (clientId: string) => apiFetch<CoachNutritionDto>(`${idPath('/clients', clientId)}/nutrition`),
+  saveClientTarget: (clientId: string, body: SaveNutritionTargetRequest) =>
+    apiFetch<NutritionTargetDto>(`${idPath('/clients', clientId)}/nutrition/target`, { method: 'PUT', body }),
+  clearClientTarget: (clientId: string) => apiFetch<void>(`${idPath('/clients', clientId)}/nutrition/target`, { method: 'DELETE' }),
+  createPlan: (clientId: string, body: SaveMealPlanRequest) => apiFetch<MealPlanDto>(`${idPath('/clients', clientId)}/meal-plans`, { method: 'POST', body }),
+  replacePlan: (clientId: string, planId: string, body: SaveMealPlanRequest) =>
+    apiFetch<MealPlanDto>(`${idPath('/clients', clientId)}/meal-plans/${encodeURIComponent(planId)}`, { method: 'PUT', body }),
+  removePlan: (clientId: string, planId: string) =>
+    apiFetch<void>(`${idPath('/clients', clientId)}/meal-plans/${encodeURIComponent(planId)}`, { method: 'DELETE' }),
 };

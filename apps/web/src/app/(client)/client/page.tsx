@@ -9,7 +9,9 @@ import { buttonClass } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { bodyApi, checkInsApi, liveApi, meApi } from '@/lib/api/endpoints';
+import { bodyApi, checkInsApi, liveApi, meApi, nutritionApi } from '@/lib/api/endpoints';
+import { dayTotals, fmt, litres, waterTotal } from '@/components/nutrition/nutrition-model';
+import { NUTRITION_LIMITS } from '@coaching/shared';
 import { requireUser } from '@/lib/auth';
 import { formatClock } from '@/components/logger/logger-model';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
@@ -77,12 +79,13 @@ function ExerciseRow({ index, exercise, unit, coachName }: { index: number; exer
 
 export default async function ClientHome() {
   const user = await requireUser(Role.CLIENT);
-  // Side-rail telemetry (live session, check-ins, bodyweight) is best-effort and never blocks Today.
-  const [today, live, checkIns, body] = await Promise.all([
+  // Side-rail telemetry (live session, check-ins, bodyweight, nutrition) is best-effort and never blocks Today.
+  const [today, live, checkIns, body, food] = await Promise.all([
     meApi.today(),
     liveApi.mine().then((r) => r.session).catch(() => null),
     checkInsApi.mine().catch(() => ({ due: [], recent: [] })),
     bodyApi.trend().catch(() => null),
+    nutritionApi.day().catch(() => null),
   ]);
 
   const unit = user.weightUnit;
@@ -98,6 +101,10 @@ export default async function ClientHome() {
   const estMinutes = workout ? Math.max(25, Math.round(workingSets * 3.8)) : 0;
   const latestWeight = body?.entries.at(-1)?.weightKg ?? null;
   const dueCheckIn = checkIns.due[0] ?? null;
+  const fuel = food ? dayTotals(food.entries) : null;
+  const waterMl = food ? waterTotal(food.water) : 0;
+  const waterGoalMl = food?.target?.waterMl ?? NUTRITION_LIMITS.defaultWaterMl;
+  const fuelLogged = (food?.entries.length ?? 0) > 0 || waterMl > 0;
 
   const secondary =
     today.lastSessionId ? (
@@ -313,6 +320,45 @@ export default async function ClientHome() {
                 Update Weight &amp; Readiness
               </Link>
             </div>
+
+            {food ? (
+              <section aria-labelledby="fuel-heading" className="flex flex-col gap-4 rounded-md border border-line bg-card p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 id="fuel-heading" className="font-display text-title-md text-ink">
+                    Nutrition &amp; Hydration
+                  </h2>
+                  <Badge tone={fuelLogged ? 'emerald' : 'slate'}>{fuelLogged ? 'Logged today' : 'Not logged yet'}</Badge>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between rounded-sm border border-line bg-canvas-low px-3.5 py-2.5">
+                    <span className="text-label-md text-muted">Calories</span>
+                    <span className="font-mono text-label-md text-primary">
+                      {fmt(fuel?.kcal ?? 0)}
+                      {food.target ? ` / ${fmt(food.target.kcal)}` : ''} kcal
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-sm border border-line bg-canvas-low px-3.5 py-2.5">
+                    <span className="text-label-md text-muted">Protein</span>
+                    <span className="font-mono text-label-md text-sky">
+                      {fmt(fuel?.proteinG ?? 0)}
+                      {food.target ? ` / ${fmt(food.target.proteinG)}` : ''} g
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-sm border border-line bg-canvas-low px-3.5 py-2.5">
+                    <span className="text-label-md text-muted">Water</span>
+                    <span className="font-mono text-label-md text-sky">
+                      {litres(waterMl)} / {litres(waterGoalMl)} L
+                    </span>
+                  </div>
+                </div>
+                <Link
+                  href="/client/nutrition"
+                  className="w-full rounded-full border border-line bg-canvas-low py-2 text-center font-sans text-label-sm font-semibold text-ink transition-colors hover:border-primary"
+                >
+                  {fuelLogged ? 'Open Food Log' : 'Log Food & Water'}
+                </Link>
+              </section>
+            ) : null}
 
             <div className="flex flex-col gap-3 rounded-md border border-line bg-card p-5">
               <div className="flex items-center justify-between gap-2">

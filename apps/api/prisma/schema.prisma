@@ -240,6 +240,17 @@ model User {
   liveParticipation LiveParticipant[]
   loggedForOthers   WorkoutLog[]      @relation("LoggedBy")
 
+  // Nutrition
+  foods           Food[]
+  mealEntries     MealEntry[]
+  waterLogs       WaterLog[]
+  nutritionTarget NutritionTarget?  @relation("TargetClient")
+  targetsSet      NutritionTarget[] @relation("TargetSetter")
+  mealTemplates   MealTemplate[]
+  foodFavorites   FoodFavorite[]
+  coachMealPlans  MealPlan[]        @relation("CoachMealPlans")
+  clientMealPlans MealPlan[]        @relation("ClientMealPlans")
+
   @@index([role])
 }
 
@@ -1626,4 +1637,193 @@ model LiveParticipant {
 
   @@unique([sessionId, clientId])
   @@index([clientId])
+}
+
+// ─────────────── Nutrition ───────────────
+
+enum FoodSource {
+  CUSTOM
+  USDA
+  CNF
+}
+
+enum MealSlot {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+/// Nutrients are per 100 g. Global when ownerId is null (starter USDA rows from the migration); otherwise a user's
+/// custom food. Archived instead of deleted so templates and plans that use it keep working.
+model Food {
+  id           String     @id @default(cuid())
+  ownerId      String?
+  source       FoodSource @default(CUSTOM)
+  name         String     @db.VarChar(120)
+  brand        String?    @db.VarChar(80)
+  servingG     Decimal    @default(100) @db.Decimal(6, 1)
+  servingLabel String?    @db.VarChar(40)
+  kcal         Decimal    @db.Decimal(5, 1)
+  proteinG     Decimal    @db.Decimal(4, 1)
+  carbsG       Decimal    @db.Decimal(4, 1)
+  fatG         Decimal    @db.Decimal(4, 1)
+  fiberG       Decimal?   @db.Decimal(4, 1)
+  sodiumMg     Decimal?   @db.Decimal(7, 1)
+  potassiumMg  Decimal?   @db.Decimal(7, 1)
+  calciumMg    Decimal?   @db.Decimal(7, 1)
+  ironMg       Decimal?   @db.Decimal(6, 2)
+  magnesiumMg  Decimal?   @db.Decimal(7, 1)
+  vitaminDMcg  Decimal?   @db.Decimal(6, 2)
+  archivedAt   DateTime?
+  createdAt    DateTime   @default(now())
+
+  owner         User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  entries       MealEntry[]
+  templateItems MealTemplateItem[]
+  planItems     MealPlanItem[]
+  favorites     FoodFavorite[]
+
+  @@index([ownerId, name])
+}
+
+/// One logged portion. Name and nutrients are a snapshot at log time, so food edits never rewrite history.
+model MealEntry {
+  id          String     @id @default(cuid())
+  clientId    String
+  date        DateTime   @db.Date
+  slot        MealSlot
+  foodId      String?
+  name        String     @db.VarChar(120)
+  source      FoodSource
+  grams       Decimal    @db.Decimal(6, 1)
+  kcal        Decimal    @db.Decimal(6, 1)
+  proteinG    Decimal    @db.Decimal(5, 1)
+  carbsG      Decimal    @db.Decimal(5, 1)
+  fatG        Decimal    @db.Decimal(5, 1)
+  fiberG      Decimal?   @db.Decimal(5, 1)
+  sodiumMg    Decimal?   @db.Decimal(8, 1)
+  potassiumMg Decimal?   @db.Decimal(8, 1)
+  calciumMg   Decimal?   @db.Decimal(8, 1)
+  ironMg      Decimal?   @db.Decimal(7, 2)
+  magnesiumMg Decimal?   @db.Decimal(8, 1)
+  vitaminDMcg Decimal?   @db.Decimal(7, 2)
+  createdAt   DateTime   @default(now())
+
+  client User  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  food   Food? @relation(fields: [foodId], references: [id], onDelete: SetNull)
+
+  @@index([clientId, date])
+}
+
+/// Additive water entries; the day total is their sum (CHECK 1–5000 ml in migration).
+model WaterLog {
+  id        String   @id @default(cuid())
+  clientId  String
+  date      DateTime @db.Date
+  ml        Int
+  createdAt DateTime @default(now())
+
+  client User @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, date])
+}
+
+/// One per client. While `setById` is the client's current coach, only that coach may change it.
+model NutritionTarget {
+  id        String   @id @default(cuid())
+  clientId  String   @unique
+  kcal      Int
+  proteinG  Int
+  carbsG    Int
+  fatG      Int
+  fiberG    Int?
+  waterMl   Int?
+  setById   String?
+  updatedAt DateTime @updatedAt
+
+  client User  @relation("TargetClient", fields: [clientId], references: [id], onDelete: Cascade)
+  setBy  User? @relation("TargetSetter", fields: [setById], references: [id], onDelete: SetNull)
+}
+
+/// Saved meal (servings = 1) or recipe (servings > 1). Logging scales each item by servings eaten / servings.
+model MealTemplate {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String   @db.VarChar(80)
+  servings  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items MealTemplateItem[]
+
+  @@index([ownerId])
+}
+
+model MealTemplateItem {
+  id         String  @id @default(cuid())
+  templateId String
+  foodId     String
+  position   Int
+  grams      Decimal @db.Decimal(6, 1)
+
+  template MealTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  food     Food         @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model FoodFavorite {
+  userId    String
+  foodId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@id([userId, foodId])
+}
+
+/// Coach-assigned one-day meal plan. The client sees it only while that coach link is accessible.
+model MealPlan {
+  id        String   @id @default(cuid())
+  coachId   String
+  clientId  String
+  name      String   @db.VarChar(80)
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach  User           @relation("CoachMealPlans", fields: [coachId], references: [id], onDelete: Cascade)
+  client User           @relation("ClientMealPlans", fields: [clientId], references: [id], onDelete: Cascade)
+  meals  MealPlanMeal[]
+
+  @@index([clientId])
+  @@index([coachId])
+}
+
+model MealPlanMeal {
+  id       String @id @default(cuid())
+  planId   String
+  position Int
+  name     String @db.VarChar(80)
+
+  plan  MealPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  items MealPlanItem[]
+
+  @@index([planId])
+}
+
+model MealPlanItem {
+  id       String  @id @default(cuid())
+  mealId   String
+  foodId   String
+  position Int
+  grams    Decimal @db.Decimal(6, 1)
+
+  meal MealPlanMeal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food Food         @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([mealId])
 }
