@@ -5,7 +5,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { PROGRAM_LIMITS } from '@coaching/shared';
-import type { ClientProgramConflictsDto, ExerciseDto, ProgramDto } from '@coaching/shared';
+import type { ClientGroupDto, ClientProgramConflictsDto, ExerciseDto, ProgramDto, SportCategoryDto } from '@coaching/shared';
 import { deleteProgram, saveAsTemplate, saveProgram } from '@/actions/programs';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -37,7 +37,11 @@ import {
 } from './builder-model';
 import { DayCard } from './DayCard';
 import { ExercisePicker } from './ExercisePicker';
+import { PeriodizationPanel } from './PeriodizationPanel';
+import { blockTone, weekBlock } from './periodization-model';
 import { ProgramConflicts } from './ProgramConflicts';
+import { ShareLinkButton } from './ShareLinkButton';
+import { SportPicker } from './SportPicker';
 
 interface Props {
   program: ProgramDto | null;
@@ -45,9 +49,13 @@ interface Props {
   clients: AssignableClient[];
   /** Saved program vs. actively assigned clients' limitations (advisory). */
   conflicts?: ClientProgramConflictsDto[];
+  /** Sport catalog for the tag picker. */
+  sports?: SportCategoryDto[];
+  /** The coach's saved client groups, for bulk assignment. */
+  groups?: ClientGroupDto[];
 }
 
-export function ProgramBuilder({ program, library, clients, conflicts = [] }: Props) {
+export function ProgramBuilder({ program, library, clients, conflicts = [], sports = [], groups = [] }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -65,6 +73,8 @@ export function ProgramBuilder({ program, library, clients, conflicts = [] }: Pr
   const weekDays = daysOfWeek(draft, week);
   const active = draft.days.find((d) => d.key === activeDay) ?? null;
   const weeks = useMemo(() => Array.from({ length: draft.durationWeeks }, (_, i) => i + 1), [draft.durationWeeks]);
+  const block = weekBlock(draft.mesocycles, week);
+  const affected = saved ? clients.filter((c) => saved.activeClientIds.includes(c.id)) : [];
 
   useEffect(() => {
     if (!dirty) return;
@@ -150,8 +160,9 @@ export function ProgramBuilder({ program, library, clients, conflicts = [] }: Pr
           <>
             {saved?.isTemplate ? <Badge tone="neutral">Template</Badge> : null}
             {saved ? (
-              <AssignProgramButton programId={saved.id} programName={saved.name} clients={clients} disabledReason={assignBlocked} />
+              <AssignProgramButton programId={saved.id} programName={saved.name} clients={clients} groups={groups} affectedClientIds={saved.activeClientIds} disabledReason={assignBlocked} />
             ) : null}
+            {saved ? <ShareLinkButton programId={saved.id} active={saved.shareActive} disabledReason={assignBlocked} /> : null}
             {!saved ? (
               <Button variant="secondary" size="sm" onClick={() => save(true)} disabled={pending}>
                 Save as template
@@ -210,9 +221,24 @@ export function ProgramBuilder({ program, library, clients, conflicts = [] }: Pr
               <Input id="program-desc" maxLength={1000} value={draft.description} onChange={(e) => update({ ...draft, description: e.target.value })} />
             </div>
           </div>
+          {sports.length > 0 ? <SportPicker sports={sports} selected={draft.sportIds} onChange={(sportIds) => update({ ...draft, sportIds })} /> : null}
+          {affected.length > 0 ? (
+            <p role="status" className="border-l-2 border-l-sky bg-sky-bg px-3 py-2 text-ui text-sky">
+              Live synced · saving updates the future sessions of {affected.length} {affected.length === 1 ? 'athlete' : 'athletes'} ({affected.map((c) => c.name).join(', ')}). Sessions already logged never change.
+            </p>
+          ) : null}
           <FormError>{formError}</FormError>
         </div>
       </Panel>
+
+      <PeriodizationPanel
+        mesocycles={draft.mesocycles}
+        durationWeeks={draft.durationWeeks}
+        week={week}
+        errors={errors}
+        onSelectWeek={selectWeek}
+        onChange={(mesocycles) => update({ ...draft, mesocycles })}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div>
@@ -230,7 +256,12 @@ export function ProgramBuilder({ program, library, clients, conflicts = [] }: Pr
                 )}
               >
                 {w === week ? <span aria-hidden="true" className="absolute inset-y-2 left-0 hidden w-0.5 rounded-full bg-signal lg:block" /> : null}
-                <span>W{w}</span>
+                <span className="flex items-center gap-1.5">
+                  {weekBlock(draft.mesocycles, w) ? (
+                    <span aria-hidden="true" className={clsx('size-2 rounded-sm', blockTone(weekBlock(draft.mesocycles, w)!.mesoIndex).split(' ')[0])} />
+                  ) : null}
+                  W{w}
+                </span>
                 <span className="text-micro text-faint">{daysOfWeek(draft, w).length} d</span>
               </button>
             ))}
@@ -241,6 +272,14 @@ export function ProgramBuilder({ program, library, clients, conflicts = [] }: Pr
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-mono text-micro uppercase text-muted" style={{ fontStretch: '100%', letterSpacing: '0.06em' }}>
               Week {week}
+              {block ? (
+                <span className="ml-2 normal-case text-faint">
+                  {block.mesoName}
+                  {block.microLabel ? ` · ${block.microLabel}` : ''}
+                  {block.isDeload ? ' · deload' : ''}
+                  {block.rpe ? ` · RPE ${block.rpe}` : ''}
+                </span>
+              ) : null}
             </h2>
             <div className="flex gap-2">
               <Button

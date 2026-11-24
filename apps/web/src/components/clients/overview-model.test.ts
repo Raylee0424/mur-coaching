@@ -5,7 +5,7 @@ import { attentionItems, deltaTone, formatDelta, parseTab, tabHref } from './ove
 const stat = (value: number | null) => ({ value, previous: null, delta: null });
 const overview = { adherence: stat(96), avgRpe: { ...stat(7.9), cap: 8.5 } };
 const day = (date: string, status: CalendarDay['status'], workoutName: string | null = 'Lower A'): CalendarDay => ({
-  date, workoutName, workoutId: null, status, workoutLogId: null, performedAt: null, topSet: null, notes: null,
+  date, workoutName, workoutId: null, scheduledWorkoutId: null, status, workoutLogId: null, performedAt: null, topSet: null, notes: null,
 });
 const rec = (id: string, action: RecommendationDto['action']) => ({ id, action, exerciseId: 'e1', reason: 'because' }) as RecommendationDto;
 

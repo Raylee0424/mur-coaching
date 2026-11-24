@@ -8,12 +8,13 @@ import {
   DAY_MS,
   adherenceWindows,
   addDays,
+  assignmentSlots,
+  countedSlots,
   buildCalendar,
   dayKey,
   delta,
   markCompleted,
   mean,
-  scheduleSlots,
   streaks,
   type CalendarLog,
 } from './analytics';
@@ -82,9 +83,14 @@ export class OverviewService {
 
     const assignment = await this.prisma.programAssignment.findFirst({
       where: { clientId, status: AssignmentStatus.ACTIVE },
-      select: { id: true, startDate: true, program: { select: { workouts: { select: { id: true, weekNumber: true, dayNumber: true, name: true } } } } },
+      select: {
+        id: true,
+        startDate: true,
+        program: { select: { workouts: { select: { id: true, weekNumber: true, dayNumber: true, name: true } } } },
+        scheduled: { select: { id: true, date: true, status: true, workout: { select: { id: true, name: true, weekNumber: true } } } },
+      },
     });
-    const rawSlots = assignment ? scheduleSlots(assignment.startDate, assignment.program.workouts) : [];
+    const rawSlots = assignment ? assignmentSlots(assignment.startDate, assignment.program.workouts, assignment.scheduled) : [];
     const monthSlotWorkoutIds = rawSlots.filter((s) => s.date >= monthStart && s.date <= monthEnd).map((s) => s.workoutId);
 
     const weekAgo = new Date(now.getTime() - 7 * DAY_MS);
@@ -114,7 +120,8 @@ export class OverviewService {
     ]);
 
     const loggedIds = new Set(slotLogs.flatMap((l) => (l.workoutId ? [l.workoutId] : [])));
-    const slots = markCompleted(rawSlots, loggedIds);
+    // A skipped session is neither done nor missed: it stays on the calendar but out of adherence and streaks.
+    const slots = markCompleted(countedSlots(rawSlots), loggedIds);
     const adh = adherenceWindows(slots, today);
 
     const cur = recentSets.filter((s) => s.exerciseLog.workoutLog.performedAt > weekAgo);

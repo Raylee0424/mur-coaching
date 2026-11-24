@@ -37,6 +37,12 @@ enum AssignmentStatus {
   CANCELLED
 }
 
+enum ScheduledStatus {
+  PLANNED
+  COMPLETED
+  SKIPPED
+}
+
 enum MuscleGroup {
   CHEST
   BACK
@@ -156,23 +162,28 @@ model User {
   updatedAt        DateTime   @updatedAt
 
   // COACH side
-  coachedClients CoachClient[]     @relation("CoachSide")
-  programs       Program[]
-  exercises      Exercise[]        @relation("CoachExercises") // coach-owned custom exercises
-  engineRules    CoachEngineRules?
+  coachedClients  CoachClient[]     @relation("CoachSide")
+  programs        Program[]
+  clientGroups    ClientGroup[]
+  sessionFeedback SessionFeedback[]
+  exercises       Exercise[]        @relation("CoachExercises") // coach-owned custom exercises
+  engineRules     CoachEngineRules?
 
   // CLIENT side
-  coachLink        CoachClient?                @relation("ClientSide")
-  assignments      ProgramAssignment[]
-  workoutLogs      WorkoutLog[]
-  recommendations  ProgressionRecommendation[]
-  clientProfile    ClientProfile?
-  baselines        ClientBaseline[]
-  limitations      Limitation[]
-  templateFolders  TemplateFolder[]
-  workoutTemplates WorkoutTemplate[]
-  exerciseNotes    ExerciseNote[]
-  ownedExercises   Exercise[]                  @relation("OwnedExercises") // athlete's own custom exercises
+  coachLink         CoachClient?                @relation("ClientSide")
+  assignments       ProgramAssignment[]
+  workoutLogs       WorkoutLog[]
+  recommendations   ProgressionRecommendation[]
+  clientProfile     ClientProfile?
+  groupMemberships  ClientGroupMember[]
+  baselines         ClientBaseline[]
+  limitations       Limitation[]
+  templateFolders   TemplateFolder[]
+  workoutTemplates  WorkoutTemplate[]
+  exerciseNotes     ExerciseNote[]
+  personalRecords   PersonalRecord[]
+  scheduledWorkouts ScheduledWorkout[]
+  ownedExercises    Exercise[]                  @relation("OwnedExercises") // athlete's own custom exercises
 
   authTokens AuthToken[]
   invites    Invite[]
@@ -286,6 +297,7 @@ model Exercise {
   limitations       Limitation[]
   templateExercises WorkoutTemplateExercise[]
   exerciseNotes     ExerciseNote[]
+  personalRecords   PersonalRecord[]
 
   @@unique([coachId, name])
   @@unique([ownerId, name])
@@ -307,19 +319,23 @@ model ExerciseMuscle {
 // ─────────────── Program Templates ───────────────
 
 model Program {
-  id            String   @id @default(cuid())
-  coachId       String
-  name          String
-  description   String?
-  durationWeeks Int
-  isTemplate    Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  coachId        String
+  name           String
+  description    String?
+  durationWeeks  Int
+  isTemplate     Boolean  @default(false)
+  /// SHA-256 (hex) of the read-only preview token. The raw token is shown once and never stored.
+  shareTokenHash String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  coach       User                @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coach       User                   @relation(fields: [coachId], references: [id], onDelete: Cascade)
   workouts    Workout[]
   assignments ProgramAssignment[]
   invites     Invite[]
+  mesocycles  Mesocycle[]
+  sports      ProgramSportCategory[]
 
   @@index([coachId])
 }
@@ -332,9 +348,10 @@ model Workout {
   dayNumber  Int // 1..7
   name       String
 
-  program     Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
+  program     Program            @relation(fields: [programId], references: [id], onDelete: Cascade)
   exercises   WorkoutExercise[]
   workoutLogs WorkoutLog[]
+  scheduled   ScheduledWorkout[]
 
   @@unique([programId, weekNumber, dayNumber])
 }
@@ -368,14 +385,19 @@ model ProgramAssignment {
   clientId  String
   startDate DateTime         @db.Date
   status    AssignmentStatus @default(ACTIVE)
+  /// Set when assigned through a client group (bulk assign).
+  groupId   String?
   createdAt DateTime         @default(now())
 
-  program     Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
-  client      User         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  program     Program            @relation(fields: [programId], references: [id], onDelete: Restrict)
+  client      User               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  group       ClientGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
   workoutLogs WorkoutLog[]
+  scheduled   ScheduledWorkout[]
   // Partial unique "one ACTIVE per client" added in raw migration SQL.
 
   @@index([clientId, status])
+  @@index([groupId])
 }
 
 // ─────────────── Logging (actuals) ───────────────
@@ -394,6 +416,7 @@ model WorkoutLog {
   assignment   ProgramAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
   workout      Workout?           @relation(fields: [workoutId], references: [id], onDelete: SetNull)
   exerciseLogs ExerciseLog[]
+  feedback     SessionFeedback[]
 
   @@index([clientId, performedAt(sort: Desc)])
 }
@@ -411,11 +434,12 @@ model ExerciseLog {
   /// Free-text note on this lift in this session.
   notes                 String?
 
-  workoutLog      WorkoutLog       @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
-  exercise        Exercise         @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
-  swappedFrom     Exercise?        @relation("SwappedFrom", fields: [swappedFromExerciseId], references: [id], onDelete: SetNull)
-  workoutExercise WorkoutExercise? @relation(fields: [workoutExerciseId], references: [id], onDelete: SetNull)
+  workoutLog      WorkoutLog        @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+  exercise        Exercise          @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  swappedFrom     Exercise?         @relation("SwappedFrom", fields: [swappedFromExerciseId], references: [id], onDelete: SetNull)
+  workoutExercise WorkoutExercise?  @relation(fields: [workoutExerciseId], references: [id], onDelete: SetNull)
   sets            SetLog[]
+  feedback        SessionFeedback[]
 
   @@unique([workoutLogId, order])
   @@index([exerciseId, workoutLogId])
@@ -436,7 +460,9 @@ model SetLog {
   /// Rest taken before this set; CHECK (restSeconds BETWEEN 0 AND 3600) in migration.
   restSeconds   Int?
 
-  exerciseLog ExerciseLog @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
+  exerciseLog    ExerciseLog       @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
+  personalRecord PersonalRecord?
+  feedback       SessionFeedback[]
 
   @@unique([exerciseLogId, setNumber])
 }
@@ -612,4 +638,156 @@ model ExerciseNote {
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@index([clientId, exerciseId])
+}
+
+/// Heaviest working set a client has done at an exact rep count. Warm-ups never count. Derived from logs:
+/// `RecordsService.rebuild` recomputes a client's rows for an exercise whenever a log is created, edited or deleted.
+model PersonalRecord {
+  id         String   @id @default(cuid())
+  clientId   String
+  exerciseId String
+  reps       Int
+  weightKg   Decimal  @db.Decimal(6, 2)
+  /// Epley estimate of the record set.
+  e1rmKg     Decimal  @db.Decimal(6, 2)
+  setLogId   String   @unique
+  achievedAt DateTime
+
+  client   User     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  setLog   SetLog   @relation(fields: [setLogId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, exerciseId, reps])
+  @@index([clientId, achievedAt(sort: Desc)])
+}
+
+// ─────────────── Periodization ───────────────
+
+/// A training block (e.g. weeks 1-4 hypertrophy) inside a program. Weeks never overlap between blocks.
+model Mesocycle {
+  id        String  @id @default(cuid())
+  programId String
+  name      String
+  focus     String?
+  startWeek Int
+  endWeek   Int
+  position  Int
+
+  program     Program      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  microcycles Microcycle[]
+
+  @@index([programId, position])
+}
+
+/// A run of weeks inside a mesocycle with a shared intensity / volume intent (a deload week is a microcycle).
+model Microcycle {
+  id             String   @id @default(cuid())
+  mesocycleId    String
+  label          String
+  startWeek      Int
+  endWeek        Int
+  isDeload       Boolean  @default(false)
+  rpeMin         Decimal? @db.Decimal(3, 1)
+  rpeMax         Decimal? @db.Decimal(3, 1)
+  /// Volume change versus the block baseline, percent (e.g. -35 on a deload).
+  volumeDeltaPct Int?
+
+  mesocycle Mesocycle @relation(fields: [mesocycleId], references: [id], onDelete: Cascade)
+
+  @@index([mesocycleId])
+}
+
+/// Seeded catalog of sports / disciplines a program is built for. `id` is the slug.
+model SportCategory {
+  id    String @id
+  name  String @unique
+  /// Display grouping, e.g. "Strength", "Field", "Combat".
+  group String
+
+  programs ProgramSportCategory[]
+}
+
+model ProgramSportCategory {
+  programId       String
+  sportCategoryId String
+
+  program Program       @relation(fields: [programId], references: [id], onDelete: Cascade)
+  sport   SportCategory @relation(fields: [sportCategoryId], references: [id], onDelete: Cascade)
+
+  @@id([programId, sportCategoryId])
+  @@index([sportCategoryId])
+}
+
+// ─────────────── Client groups ───────────────
+
+model ClientGroup {
+  id        String   @id @default(cuid())
+  coachId   String
+  name      String
+  createdAt DateTime @default(now())
+
+  coach       User                @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  members     ClientGroupMember[]
+  assignments ProgramAssignment[]
+
+  @@unique([coachId, name])
+}
+
+model ClientGroupMember {
+  groupId  String
+  clientId String
+
+  group  ClientGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  client User        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, clientId])
+  @@index([clientId])
+}
+
+// ─────────────── Calendar ───────────────
+
+/// One dated session on a client's calendar. Created from the program's (week, day) formula, then the coach may
+/// move or skip it. Completed rows are history and never change; program edits touch future PLANNED rows only.
+model ScheduledWorkout {
+  id           String          @id @default(cuid())
+  assignmentId String
+  workoutId    String
+  clientId     String
+  date         DateTime        @db.Date
+  status       ScheduledStatus @default(PLANNED)
+  /// Set when a coach moved it: program edits no longer re-date it.
+  movedAt      DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  assignment ProgramAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  workout    Workout           @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  client     User              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, workoutId])
+  @@index([clientId, date])
+}
+
+// ─────────────── Session review ───────────────
+
+/// Coach feedback on a logged session. Scope: setLogId set = one set; else exerciseLogId set = one lift; else whole
+/// session. `carryForward` pins it to the client's next matching exercise (or next session) in `GET /me/today`.
+model SessionFeedback {
+  id            String   @id @default(cuid())
+  workoutLogId  String
+  exerciseLogId String?
+  setLogId      String?
+  coachId       String
+  body          String   @db.VarChar(1000)
+  carryForward  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workoutLog  WorkoutLog   @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+  exerciseLog ExerciseLog? @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
+  setLog      SetLog?      @relation(fields: [setLogId], references: [id], onDelete: Cascade)
+  coach       User         @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([workoutLogId])
+  @@index([exerciseLogId])
 }

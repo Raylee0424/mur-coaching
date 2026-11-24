@@ -1,5 +1,6 @@
 import type { AssignmentStatus, MuscleGroup } from './enums';
 import type { IsoDateString } from './common';
+import type { MesocycleDto, MesocycleInput, SportCategoryDto } from './periodization';
 
 export interface WorkoutExerciseDto {
   id: string;
@@ -33,6 +34,10 @@ export interface ProgramDto {
   workouts: WorkoutDto[];
   /** Clients with an ACTIVE assignment to this program. */
   activeClientIds: string[];
+  mesocycles: MesocycleDto[];
+  sports: SportCategoryDto[];
+  /** True while a read-only preview link exists. The link itself is shown once, at creation. */
+  shareActive: boolean;
 }
 
 export interface ProgramSummaryDto {
@@ -74,6 +79,10 @@ export interface ProgramTreeInput {
   durationWeeks: number;
   /** Omit to keep the current value (false on create). */
   isTemplate?: boolean;
+  /** Omit to keep the current blocks; `[]` clears them. */
+  mesocycles?: MesocycleInput[];
+  /** Omit to keep the current sports; `[]` clears them. */
+  sportCategoryIds?: string[];
   workouts: WorkoutInput[];
 }
 
@@ -91,7 +100,7 @@ export interface DuplicateProgramRequest {
 
 export const PROGRAM_LIMITS = {
   maxWeeks: 52,
-  maxWorkouts: 200,
+  maxWorkouts: 364,
   maxExercisesPerWorkout: 20,
   maxSets: 20,
   maxReps: 50,
@@ -105,6 +114,8 @@ export interface CreateAssignmentRequest {
 }
 
 export interface AssignmentDto {
+  /** Set when assigned through a client group. */
+  groupId?: string | null;
   id: string;
   programId: string;
   clientId: string;

@@ -12,6 +12,7 @@ import { meApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { formatClock } from '@/components/logger/logger-model';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
+import { CoachCues } from '@/components/logger/CoachCues';
 import { WhyButton } from './_components/WhyButton';
 import { bannerLabel, bannerText, targetSourceNote, todayTargetLine } from './_components/today-model';
 
@@ -42,6 +43,11 @@ function ExerciseRow({ exercise, unit, coachName }: { exercise: TodayExercise; u
           </span>
           {note ? ` · ${note}` : ''}
         </p>
+        {exercise.carryForward.length > 0 ? (
+          <div className="mt-2">
+            <CoachCues cues={exercise.carryForward} coachName={coachName} label={`Coach notes for ${exercise.name}`} />
+          </div>
+        ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <span className={'font-mono text-[20px] leading-6'}>{line || <span className="text-ui text-faint">No target</span>}</span>
@@ -107,6 +113,8 @@ export default async function ClientHome() {
                 {workout.name}
               </h2>
             </section>
+
+            <CoachCues cues={workout.carryForward} coachName={today.coachName} label="Coach notes for this session" />
 
             {first && firstLine ? (
               <section aria-label="First up" className="border-y border-line py-4">

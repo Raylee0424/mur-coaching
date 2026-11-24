@@ -18,6 +18,7 @@ import { submitWorkoutLog } from '@/actions/workout-logs';
 import { Button } from '@/components/ui/Button';
 import { FormError, Input, Label } from '@/components/ui/Field';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
+import { CoachCues } from './CoachCues';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ExercisePicker } from '@/components/programs/ExercisePicker';
@@ -277,6 +278,11 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
             {plan.limitation.note ? <span>{plan.limitation.note}</span> : null}
             <span className="text-faint">You can still log it. Swap if it hurts.</span>
           </p>
+        ) : null}
+        {plan?.carryForward && plan.carryForward.length > 0 ? (
+          <div className="mt-2">
+            <CoachCues cues={plan.carryForward} coachName={null} label={`Coach notes for ${name}`} />
+          </div>
         ) : null}
       </div>
       <RestPill startedAt={rest.startedAt} now={rest.now} restSeconds={plan?.restSeconds ?? null} />

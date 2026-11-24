@@ -1,5 +1,6 @@
 import { PROGRAM_LIMITS as L } from '@coaching/shared';
 import type { ExerciseDto, MuscleGroup, ProgramDto, ProgramTreeInput } from '@coaching/shared';
+import { clampToDuration, fromMesocycles, mesoFingerprint, mesocyclesToInput, type DraftMeso } from './periodization-model';
 
 /** Inputs stay strings while editing so half-typed numbers survive. */
 export interface DraftRx {
@@ -29,6 +30,10 @@ export interface ProgramDraft {
   description: string;
   durationWeeks: number;
   days: DraftDay[];
+  /** Training blocks (mesocycles with their microcycles). */
+  mesocycles: DraftMeso[];
+  /** Chosen sport category ids. */
+  sportIds: string[];
 }
 
 export type BuilderErrors = Record<string, string>;
@@ -38,7 +43,7 @@ const key = (): string => `b${++seq}`;
 const str = (n: number | null): string => (n === null ? '' : String(n));
 
 export function emptyProgram(): ProgramDraft {
-  return { name: '', description: '', durationWeeks: 4, days: [] };
+  return { name: '', description: '', durationWeeks: 4, days: [], mesocycles: [], sportIds: [] };
 }
 
 export function fromProgram(p: ProgramDto): ProgramDraft {
@@ -46,6 +51,8 @@ export function fromProgram(p: ProgramDto): ProgramDraft {
     name: p.name,
     description: p.description ?? '',
     durationWeeks: p.durationWeeks,
+    mesocycles: fromMesocycles(p.mesocycles),
+    sportIds: p.sports.map((x) => x.id),
     days: p.workouts.map((w) => ({
       key: key(),
       id: w.id,
@@ -159,7 +166,7 @@ export function moveExercise(d: ProgramDraft, dayKey: string, rxKey: string, del
 /** Shrinking drops the weeks beyond the new length; growing adds empty weeks. */
 export function setDuration(d: ProgramDraft, weeks: number): ProgramDraft {
   const n = Math.min(Math.max(Math.round(weeks), 1), L.maxWeeks);
-  return { ...d, durationWeeks: n, days: d.days.filter((x) => x.weekNumber <= n) };
+  return { ...d, durationWeeks: n, days: d.days.filter((x) => x.weekNumber <= n), mesocycles: clampToDuration(d.mesocycles, n) };
 }
 
 /**
@@ -245,11 +252,20 @@ export function toInput(d: ProgramDraft): { ok: true; input: ProgramTreeInput } 
       exercises,
     });
   }
-  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  const blocks = mesocyclesToInput(d.mesocycles, d.durationWeeks);
+  if (!blocks.ok) Object.assign(errors, blocks.errors);
+  if (Object.keys(errors).length > 0 || !blocks.ok) return { ok: false, errors };
   workouts.sort((a, b) => a.weekNumber - b.weekNumber || a.dayNumber - b.dayNumber);
   return {
     ok: true,
-    input: { name: d.name.trim(), description: d.description.trim() || null, durationWeeks: d.durationWeeks, workouts },
+    input: {
+      name: d.name.trim(),
+      description: d.description.trim() || null,
+      durationWeeks: d.durationWeeks,
+      mesocycles: blocks.input,
+      sportCategoryIds: d.sportIds,
+      workouts,
+    },
   };
 }
 
@@ -259,6 +275,8 @@ export const fingerprint = (d: ProgramDraft): string =>
     name: d.name,
     description: d.description,
     durationWeeks: d.durationWeeks,
+    mesocycles: mesoFingerprint(d.mesocycles),
+    sportIds: [...d.sportIds].sort(),
     days: [...d.days]
       .sort((a, b) => a.weekNumber - b.weekNumber || a.dayNumber - b.dayNumber)
       .map((day) => ({
