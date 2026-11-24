@@ -88,6 +88,7 @@ export function resolveAccess(input: {
 export const UPGRADE_MESSAGES: Partial<Record<Feature, string>> = {
   [Feature.COACH_CLIENTS]: 'Your coach plan is not active. Subscribe on the Billing page to add clients.',
   [Feature.CLIENT_PAYMENTS]: 'Client payments need an active coach plan. Subscribe on the Billing page.',
+  [Feature.MUSCLE_ANALYTICS]: 'The muscle map is part of MUR Coaching Pro. Upgrade on the Billing page.',
 };
 
 /** Why a coach cannot take another client, or null when a seat is free. */

@@ -96,7 +96,7 @@ describe('NutritionService.logMeal', () => {
   it('snapshots scaled nutrients for a food', async () => {
     const { service, prisma } = setup();
     const [entry] = await service.logMeal('k1', { date: today, slot: 'BREAKFAST', foodId: 'usda-oats', grams: '50' });
-    expect(prisma.food.findFirst.mock.calls[0][0].where).toMatchObject({ id: 'usda-oats', archivedAt: null });
+    expect(prisma.food.findFirst.mock.calls[0]![0].where).toMatchObject({ id: 'usda-oats', archivedAt: null });
     expect(entry).toMatchObject({ name: 'Oats', grams: '50', slot: 'BREAKFAST' });
     expect(entry!.nutrients).toMatchObject({ kcal: '189.5', proteinG: '6.6', ironMg: '2.13', sodiumMg: null });
   });
@@ -117,7 +117,7 @@ describe('NutritionService.logMeal', () => {
     const linked = setup({ coachId: 'c1' });
     linked.prisma.mealPlanMeal.findFirst.mockResolvedValue({ items: [{ food: oats, grams: D(80) }] });
     await linked.service.logMeal('k1', { date: today, slot: 'LUNCH', planMealId: 'm1' });
-    expect(linked.prisma.mealPlanMeal.findFirst.mock.calls[0][0].where).toEqual({ id: 'm1', plan: { clientId: 'k1', coachId: 'c1' } });
+    expect(linked.prisma.mealPlanMeal.findFirst.mock.calls[0]![0].where).toEqual({ id: 'm1', plan: { clientId: 'k1', coachId: 'c1' } });
   });
 });
 

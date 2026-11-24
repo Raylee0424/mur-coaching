@@ -191,8 +191,12 @@ export function setWeightForRir(rir: number): number {
   return rir <= 4 ? 1 : rir <= 5 ? 0.5 : 0;
 }
 
+/** Band for a week's effective sets on one muscle. */
+export function stimulusBand(effectiveSets: number): StimulusBand {
+  return effectiveSets < 6 ? 'BELOW' : effectiveSets < 10 ? 'MAINTAIN' : effectiveSets <= 20 ? 'PRODUCTIVE' : 'HIGH';
+}
+
 export function weeklyNetStimulus(sets: ReadonlyArray<{ rir: number }>): NetStimulus {
   const effectiveSets = sets.reduce((sum, s) => sum + setWeightForRir(s.rir), 0);
-  const band: StimulusBand = effectiveSets < 6 ? 'BELOW' : effectiveSets < 10 ? 'MAINTAIN' : effectiveSets <= 20 ? 'PRODUCTIVE' : 'HIGH';
-  return { effectiveSets, band };
+  return { effectiveSets, band: stimulusBand(effectiveSets) };
 }
