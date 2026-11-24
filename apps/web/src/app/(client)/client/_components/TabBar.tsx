@@ -7,10 +7,10 @@ import type { NavItem } from '@/lib/routes';
 import { Icon } from '@/components/ui/Icon';
 import { NAV_ICONS } from '@/components/shell/nav-icons';
 
-/** Paths that light a tab besides its own prefix (lift detail belongs to History). */
+/** Paths that light a tab besides its own prefix (lift detail and records belong to History). */
 function isActive(item: NavItem, pathname: string): boolean {
   if (item.exact) return pathname === item.href;
-  if (item.href === '/client/history' && pathname.startsWith('/client/lifts/')) return true;
+  if (item.href === '/client/history' && (pathname.startsWith('/client/lifts/') || pathname === '/client/records')) return true;
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 

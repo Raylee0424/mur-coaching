@@ -16,3 +16,7 @@ export * from './limitations';
 export * from './templates';
 export * from './exercise-notes';
 export * from './calculators';
+export * from './records';
+export * from './periodization';
+export * from './scheduling';
+export * from './session-review';

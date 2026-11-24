@@ -1,6 +1,7 @@
 import type { MuscleGroup, RecommendationAction } from './enums';
 import type { LimitationFlag } from './limitations';
 import type { DecimalString, IsoDateString } from './common';
+import type { CarryForwardCue } from './session-review';
 
 /** Where today's target for an exercise came from. */
 export type TargetSource = 'COACH_OVERRIDE' | 'RECOMMENDATION' | 'PRESCRIPTION' | 'LAST_SESSION' | 'BASELINE' | 'NONE';
@@ -32,6 +33,8 @@ export interface TodayExercise {
   recommendationAction: RecommendationAction | null;
   /** Active limitation covering this exercise (advisory); null when none. */
   limitation: LimitationFlag | null;
+  /** Coach cues pinned from the last session of this exercise, until the client logs it again. */
+  carryForward: CarryForwardCue[];
 }
 
 export interface TodayWorkout {
@@ -41,6 +44,8 @@ export interface TodayWorkout {
   weekNumber: number;
   dayNumber: number;
   exercises: TodayExercise[];
+  /** Whole-session cues pinned from the client's last session. */
+  carryForward: CarryForwardCue[];
 }
 
 /** A recommendation resolved in the last 3 days (drives the "target changed" banner). */

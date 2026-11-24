@@ -19,6 +19,9 @@ const program: ProgramDto = {
   description: null,
   durationWeeks: 2,
   isTemplate: false,
+  mesocycles: [],
+  sports: [],
+  shareActive: false,
   createdAt: '',
   updatedAt: '',
   activeClientIds: [],
@@ -104,5 +107,44 @@ describe('builder model', () => {
     expect(Object.keys(r.errors).filter((k) => k.endsWith('repsMax') || k.endsWith('rpe')).length).toBe(4);
     expect(r.errors.name).toBeDefined();
     expect(fingerprint(fromProgram(program))).toBe(fingerprint(fromProgram(program)));
+  });
+});
+
+describe('periodization in the draft', () => {
+  it('round-trips blocks and sports through the API shape', () => {
+    const withBlocks: ProgramDto = {
+      ...program,
+      sports: [{ id: 'powerlifting', name: 'Powerlifting', group: 'Strength' }],
+      mesocycles: [
+        {
+          id: 'm1',
+          name: 'Hypertrophy',
+          focus: null,
+          startWeek: 1,
+          endWeek: 2,
+          microcycles: [{ id: 'c1', label: 'Deload', startWeek: 2, endWeek: 2, isDeload: true, rpeMin: '6.0', rpeMax: null, volumeDeltaPct: -35 }],
+        },
+      ],
+    };
+    const r = toInput(fromProgram(withBlocks));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.input.sportCategoryIds).toEqual(['powerlifting']);
+    expect(r.input.mesocycles?.[0]).toMatchObject({ id: 'm1', name: 'Hypertrophy', startWeek: 1, endWeek: 2 });
+    expect(r.input.mesocycles?.[0]?.microcycles[0]).toMatchObject({ id: 'c1', isDeload: true, rpeMin: 6, rpeMax: null, volumeDeltaPct: -35 });
+  });
+
+  it('blocks saving when a block overlaps and trims blocks when the program shrinks', () => {
+    const d = fromProgram({
+      ...program,
+      durationWeeks: 4,
+      mesocycles: [
+        { id: 'a', name: 'A', focus: null, startWeek: 1, endWeek: 3, microcycles: [] },
+        { id: 'b', name: 'B', focus: null, startWeek: 3, endWeek: 4, microcycles: [] },
+      ],
+    });
+    const r = toInput(d);
+    expect(!r.ok && r.errors['periodization']).toMatch(/overlaps/);
+    expect(setDuration(d, 2).mesocycles.map((m) => [m.startWeek, m.endWeek])).toEqual([['1', '2']]);
   });
 });

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import { Role } from '@coaching/shared';
-import type { AssignmentDto, ClientProgramConflictsDto, ProgramDto, ProgramSummaryDto } from '@coaching/shared';
-import { CurrentUser, RequestUser, Roles } from '../../common';
+import type { AssignmentDto, ClientProgramConflictsDto, ProgramDto, ProgramShareDto, ProgramSummaryDto, SharedProgramDto, SportCategoryDto } from '@coaching/shared';
+import { CurrentUser, Public, RequestUser, Roles } from '../../common';
 import { ClientAccessService } from '../clients/client-access.service';
 import { CreateAssignmentDto, DuplicateProgramDto, ListProgramsQuery, ProgramConflictsQuery, ProgramTreeDto } from './dto/program.dto';
 import { ProgramsService } from './programs.service';
@@ -33,6 +33,20 @@ export class ProgramsController {
     return this.programs.conflicts(user.id, id, query.clientIds);
   }
 
+  /** Mints (or replaces) the read-only preview link. The token is in this response only. */
+  @Roles(Role.COACH)
+  @Post(':id/share')
+  share(@CurrentUser() user: RequestUser, @Param('id') id: string): Promise<ProgramShareDto> {
+    return this.programs.createShare(user.id, id);
+  }
+
+  @Roles(Role.COACH)
+  @Delete(':id/share')
+  @HttpCode(204)
+  unshare(@CurrentUser() user: RequestUser, @Param('id') id: string): Promise<void> {
+    return this.programs.revokeShare(user.id, id);
+  }
+
   /** Owning coach, or a client assigned to it. */
   @Get(':id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string): Promise<ProgramDto> {
@@ -57,6 +71,29 @@ export class ProgramsController {
   @HttpCode(204)
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string): Promise<void> {
     return this.programs.remove(user.id, id);
+  }
+}
+
+@Controller('sport-categories')
+export class SportCategoriesController {
+  constructor(private readonly programs: ProgramsService) {}
+
+  @Roles(Role.COACH)
+  @Get()
+  list(): Promise<SportCategoryDto[]> {
+    return this.programs.sportCategories();
+  }
+}
+
+/** Anyone holding the link may read the plan. The 256-bit token is the credential; only its hash is stored. */
+@Controller('shared-programs')
+export class SharedProgramsController {
+  constructor(private readonly programs: ProgramsService) {}
+
+  @Public()
+  @Get(':token')
+  get(@Param('token') token: string): Promise<SharedProgramDto> {
+    return this.programs.getShared(token);
   }
 }
 

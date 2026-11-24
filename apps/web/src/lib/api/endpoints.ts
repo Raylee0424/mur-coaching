@@ -1,6 +1,19 @@
 import 'server-only';
 import type {
   AcceptInviteRequest,
+  ClientGroupDto,
+  CreateSessionFeedbackRequest,
+  GroupAssignOutcome,
+  GroupAssignRequest,
+  ProgramShareDto,
+  SaveClientGroupRequest,
+  ScheduledWorkoutDto,
+  SessionFeedbackDto,
+  SessionReviewDto,
+  SharedProgramDto,
+  SportCategoryDto,
+  UpdateScheduledWorkoutRequest,
+  UpdateSessionFeedbackRequest,
   AcceptInviteResponse,
   BulkResolveRequest,
   BulkResolveResponse,
@@ -62,6 +75,8 @@ import type {
   UpdateMeRequest,
   WorkoutLogDto,
   CreateExerciseNoteRequest,
+  ExerciseStatsDto,
+  RecordsDto,
   CreateWorkoutTemplateRequest,
   ExerciseNoteDto,
   TemplateFolderDto,
@@ -141,6 +156,8 @@ export const exercisesApi = {
   update: (id: string, body: UpdateExerciseRequest) =>
     apiFetch<ExerciseDto>(`/exercises/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
   duplicate: (id: string) => apiFetch<ExerciseDto>(`/exercises/${encodeURIComponent(id)}/duplicate`, { method: 'POST' }),
+  /** Athlete's own net progression and records for one exercise. */
+  stats: (id: string) => apiFetch<ExerciseStatsDto>(`/exercises/${encodeURIComponent(id)}/stats`),
   /** Soft archive (coach-owned only). */
   archive: (id: string) => apiFetch<void>(`/exercises/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   /** Client swap picker. */
@@ -222,9 +239,49 @@ export const programsApi = {
     }),
 };
 
+export const programSharingApi = {
+  /** Mints (or replaces) the read-only preview link. The token comes back once. */
+  create: (id: string) => apiFetch<ProgramShareDto>(`/programs/${encodeURIComponent(id)}/share`, { method: 'POST' }),
+  revoke: (id: string) => apiFetch<void>(`/programs/${encodeURIComponent(id)}/share`, { method: 'DELETE' }),
+  /** Public: the link is the credential. 404 when unknown or revoked. */
+  preview: (token: string) => apiFetch<SharedProgramDto>(`/shared-programs/${encodeURIComponent(token)}`, { auth: false }),
+};
+
+export const sportsApi = {
+  list: () => apiFetch<SportCategoryDto[]>('/sport-categories'),
+};
+
+export const clientGroupsApi = {
+  list: () => apiFetch<ClientGroupDto[]>('/client-groups'),
+  create: (body: SaveClientGroupRequest) => apiFetch<ClientGroupDto>('/client-groups', { method: 'POST', body }),
+  replace: (id: string, body: SaveClientGroupRequest) =>
+    apiFetch<ClientGroupDto>(`/client-groups/${encodeURIComponent(id)}`, { method: 'PUT', body }),
+  remove: (id: string) => apiFetch<void>(`/client-groups/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  assign: (id: string, body: GroupAssignRequest) =>
+    apiFetch<GroupAssignOutcome[]>(`/client-groups/${encodeURIComponent(id)}/assign`, { method: 'POST', body }),
+};
+
+export const scheduleApi = {
+  update: (clientId: string, id: string, body: UpdateScheduledWorkoutRequest) =>
+    apiFetch<ScheduledWorkoutDto>(`/clients/${encodeURIComponent(clientId)}/scheduled-workouts/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+};
+
+export const sessionReviewApi = {
+  get: (clientId: string, logId: string) =>
+    apiFetch<SessionReviewDto>(`/clients/${encodeURIComponent(clientId)}/workout-logs/${encodeURIComponent(logId)}/review`),
+  addFeedback: (clientId: string, logId: string, body: CreateSessionFeedbackRequest) =>
+    apiFetch<SessionFeedbackDto>(`/clients/${encodeURIComponent(clientId)}/workout-logs/${encodeURIComponent(logId)}/feedback`, { method: 'POST', body }),
+  updateFeedback: (clientId: string, id: string, body: UpdateSessionFeedbackRequest) =>
+    apiFetch<SessionFeedbackDto>(`/clients/${encodeURIComponent(clientId)}/session-feedback/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
+  removeFeedback: (clientId: string, id: string) =>
+    apiFetch<void>(`/clients/${encodeURIComponent(clientId)}/session-feedback/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
+
 export const meApi = {
   /** Client home: today's workout with targets, banner and last session id. */
   today: () => apiFetch<TodayDto>('/me/today'),
+  /** Rep-range PR matrix and 30-day stats per exercise. */
+  records: () => apiFetch<RecordsDto>('/me/records'),
   profile: () => apiFetch<MeProfileDto>('/me/profile'),
   updateProfile: (body: Partial<ClientProfileDto>) => apiFetch<MeProfileDto>('/me/profile', { method: 'PUT', body }),
   setBaselines: (baselines: BaselineInput[]) =>

@@ -1,12 +1,19 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { createHash, randomBytes } from 'node:crypto';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AssignmentStatus, Prisma, Role } from '@prisma/client';
+import { PERIODIZATION_LIMITS, validatePeriodization } from '@coaching/shared';
 import type {
   AssignmentDto,
   ClientProgramConflictsDto,
   DuplicateProgramRequest,
+  MesocycleDto,
+  MesocycleInput,
   ProgramDto,
+  ProgramShareDto,
   ProgramSummaryDto,
   ProgramTreeInput,
+  SharedProgramDto,
+  SportCategoryDto,
 } from '@coaching/shared';
 import type { RequestUser } from '../../common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -14,6 +21,7 @@ import { ACCESSIBLE_LINK_STATUSES } from '../clients/link-status';
 import { exerciseScope } from '../exercises/exercise-visibility';
 import { CONFLICT_EXERCISE_SELECT, programConflicts } from '../limitations/conflict';
 import { LimitationsService } from '../limitations/limitations.service';
+import { ScheduleService } from '../schedule/schedule.service';
 import { planTreeSync, referencedExerciseIds, type TreePlan } from './tree-diff';
 
 const treeInclude = {
@@ -27,17 +35,48 @@ const treeInclude = {
     },
   },
   assignments: { where: { status: AssignmentStatus.ACTIVE }, select: { clientId: true } },
+  mesocycles: { orderBy: { position: 'asc' }, include: { microcycles: { orderBy: { startWeek: 'asc' } } } },
+  sports: { include: { sport: true }, orderBy: { sport: { name: 'asc' } } },
 } satisfies Prisma.ProgramInclude;
 
 type ProgramRow = Prisma.ProgramGetPayload<{ include: typeof treeInclude }>;
 
+const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
+
+function toMesocycleDto(m: ProgramRow['mesocycles'][number]): MesocycleDto {
+  return {
+    id: m.id,
+    name: m.name,
+    focus: m.focus,
+    startWeek: m.startWeek,
+    endWeek: m.endWeek,
+    microcycles: m.microcycles.map((c) => ({
+      id: c.id,
+      label: c.label,
+      startWeek: c.startWeek,
+      endWeek: c.endWeek,
+      isDeload: c.isDeload,
+      rpeMin: c.rpeMin?.toString() ?? null,
+      rpeMax: c.rpeMax?.toString() ?? null,
+      volumeDeltaPct: c.volumeDeltaPct,
+    })),
+  };
+}
+
 /** Program templates. Coaches own them; clients may read programs they are (or were) assigned. */
 @Injectable()
 export class ProgramsService {
+  private readonly logger = new Logger(ProgramsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly limitations: LimitationsService,
+    private readonly schedule: ScheduleService,
   ) {}
+
+  async sportCategories(): Promise<SportCategoryDto[]> {
+    return this.prisma.sportCategory.findMany({ orderBy: [{ group: 'asc' }, { name: 'asc' }], select: { id: true, name: true, group: true } });
+  }
 
   /** `template`: true = templates only, false = regular programs only, undefined = all. */
   async list(coachId: string, template?: boolean): Promise<ProgramSummaryDto[]> {
@@ -74,6 +113,8 @@ export class ProgramsService {
   async create(coachId: string, input: ProgramTreeInput): Promise<ProgramDto> {
     const plan = this.plan({ workouts: [] }, input);
     await this.assertExercisesVisible(coachId, input);
+    this.assertPeriodization(input.mesocycles ?? [], input.durationWeeks);
+    await this.assertSports(input.sportCategoryIds);
     const id = await this.prisma.$transaction(async (tx) => {
       const program = await tx.program.create({
         data: {
@@ -85,6 +126,7 @@ export class ProgramsService {
         },
       });
       await this.apply(tx, program.id, plan);
+      await this.writePeriodization(tx, program.id, input);
       return program.id;
     });
     return this.get({ id: coachId, role: Role.COACH }, id);
@@ -93,11 +135,20 @@ export class ProgramsService {
   async replace(coachId: string, id: string, input: ProgramTreeInput): Promise<ProgramDto> {
     const current = await this.prisma.program.findFirst({
       where: { id, coachId },
-      select: { workouts: { select: { id: true, exercises: { select: { id: true } } } } },
+      select: {
+        workouts: { select: { id: true, exercises: { select: { id: true } } } },
+        mesocycles: { include: { microcycles: true } },
+      },
     });
     if (!current) throw new NotFoundException('Program not found');
     const plan = this.plan(current, input);
     await this.assertExercisesVisible(coachId, input);
+    // Blocks left untouched must still fit a shortened program.
+    this.assertPeriodization(
+      input.mesocycles ?? current.mesocycles.map((m) => ({ ...m, microcycles: m.microcycles.map((c) => ({ ...c, rpeMin: c.rpeMin?.toNumber() ?? null, rpeMax: c.rpeMax?.toNumber() ?? null })) })),
+      input.durationWeeks,
+    );
+    await this.assertSports(input.sportCategoryIds);
     await this.prisma.$transaction(async (tx) => {
       await tx.program.update({
         where: { id },
@@ -109,7 +160,10 @@ export class ProgramsService {
         },
       });
       await this.apply(tx, id, plan);
+      await this.writePeriodization(tx, id, input);
     });
+    // Saved: now move the clients' future sessions. Failing here must not report the save as failed.
+    await this.schedule.syncProgram(id).catch((err: unknown) => this.logger.error(`Calendar sync failed for program ${id}`, err));
     return this.get({ id: coachId, role: Role.COACH }, id);
   }
 
@@ -120,7 +174,11 @@ export class ProgramsService {
   async duplicate(coachId: string, id: string, req: DuplicateProgramRequest): Promise<ProgramDto> {
     const src = await this.prisma.program.findFirst({
       where: { id, coachId },
-      include: { workouts: { include: { exercises: { orderBy: { order: 'asc' } } } } },
+      include: {
+        workouts: { include: { exercises: { orderBy: { order: 'asc' } } } },
+        mesocycles: { orderBy: { position: 'asc' }, include: { microcycles: true } },
+        sports: { select: { sportCategoryId: true } },
+      },
     });
     if (!src) throw new NotFoundException('Program not found');
     const copyId = await this.prisma.$transaction(async (tx) => {
@@ -131,6 +189,27 @@ export class ProgramsService {
           description: src.description,
           durationWeeks: src.durationWeeks,
           isTemplate: req.asTemplate ?? false,
+          sports: { create: src.sports.map((x) => ({ sportCategoryId: x.sportCategoryId })) },
+          mesocycles: {
+            create: src.mesocycles.map((m) => ({
+              name: m.name,
+              focus: m.focus,
+              startWeek: m.startWeek,
+              endWeek: m.endWeek,
+              position: m.position,
+              microcycles: {
+                create: m.microcycles.map((c) => ({
+                  label: c.label,
+                  startWeek: c.startWeek,
+                  endWeek: c.endWeek,
+                  isDeload: c.isDeload,
+                  rpeMin: c.rpeMin,
+                  rpeMax: c.rpeMax,
+                  volumeDeltaPct: c.volumeDeltaPct,
+                })),
+              },
+            })),
+          },
           workouts: {
             create: src.workouts.map((w) => ({
               weekNumber: w.weekNumber,
@@ -170,18 +249,73 @@ export class ProgramsService {
     await this.prisma.program.delete({ where: { id } });
   }
 
-  /** Cancels the client's current ACTIVE assignment and starts the new one, atomically. */
-  async assign(coachId: string, clientId: string, programId: string, startDate: string): Promise<AssignmentDto> {
+  /**
+   * Cancels the client's current ACTIVE assignment and starts the new one, atomically, with a dated calendar.
+   * `groupId` records a bulk assignment. The old plan's undone sessions go; its completed ones stay as history.
+   */
+  async assign(coachId: string, clientId: string, programId: string, startDate: string, groupId: string | null = null): Promise<AssignmentDto> {
     const program = await this.prisma.program.findFirst({ where: { id: programId, coachId }, select: { id: true } });
     if (!program) throw new BadRequestException('Unknown program');
     const row = await this.prisma.$transaction(async (tx) => {
-      await tx.programAssignment.updateMany({
-        where: { clientId, status: AssignmentStatus.ACTIVE },
-        data: { status: AssignmentStatus.CANCELLED },
-      });
-      return tx.programAssignment.create({ data: { programId, clientId, startDate: new Date(`${startDate}T00:00:00.000Z`) } });
+      const previous = await tx.programAssignment.findMany({ where: { clientId, status: AssignmentStatus.ACTIVE }, select: { id: true } });
+      await tx.programAssignment.updateMany({ where: { clientId, status: AssignmentStatus.ACTIVE }, data: { status: AssignmentStatus.CANCELLED } });
+      await this.schedule.dropPlanned(previous.map((a) => a.id), tx);
+      const created = await tx.programAssignment.create({ data: { programId, clientId, groupId, startDate: new Date(`${startDate}T00:00:00.000Z`) } });
+      await this.schedule.syncAssignment(created.id, { initial: true, db: tx });
+      return created;
     });
-    return { id: row.id, programId: row.programId, clientId: row.clientId, startDate: row.startDate.toISOString(), status: row.status };
+    return { id: row.id, programId: row.programId, clientId: row.clientId, groupId: row.groupId, startDate: row.startDate.toISOString(), status: row.status };
+  }
+
+  /** Mints a read-only preview link, replacing any earlier one. The raw token is returned once; only its hash is kept. */
+  async createShare(coachId: string, id: string): Promise<ProgramShareDto> {
+    const token = randomBytes(32).toString('base64url');
+    const { count } = await this.prisma.program.updateMany({ where: { id, coachId }, data: { shareTokenHash: hashToken(token) } });
+    if (count === 0) throw new NotFoundException('Program not found');
+    return { token };
+  }
+
+  async revokeShare(coachId: string, id: string): Promise<void> {
+    const { count } = await this.prisma.program.updateMany({ where: { id, coachId }, data: { shareTokenHash: null } });
+    if (count === 0) throw new NotFoundException('Program not found');
+  }
+
+  /** Public, read-only. Exposes the plan only: no clients, no coach contact details, no notes. */
+  async getShared(token: string): Promise<SharedProgramDto> {
+    const row = await this.prisma.program.findUnique({
+      where: { shareTokenHash: hashToken(token) },
+      include: {
+        coach: { select: { name: true, displayName: true } },
+        mesocycles: { orderBy: { position: 'asc' }, include: { microcycles: { orderBy: { startWeek: 'asc' } } } },
+        sports: { include: { sport: true }, orderBy: { sport: { name: 'asc' } } },
+        workouts: {
+          orderBy: [{ weekNumber: 'asc' }, { dayNumber: 'asc' }],
+          include: { exercises: { orderBy: { order: 'asc' }, include: { exercise: { select: { name: true } } } } },
+        },
+      },
+    });
+    if (!row) throw new NotFoundException('This preview link is no longer valid');
+    return {
+      name: row.name,
+      description: row.description,
+      durationWeeks: row.durationWeeks,
+      coachName: row.coach.displayName ?? row.coach.name,
+      sports: row.sports.map((x) => ({ id: x.sport.id, name: x.sport.name, group: x.sport.group })),
+      mesocycles: row.mesocycles.map(toMesocycleDto),
+      workouts: row.workouts.map((w) => ({
+        weekNumber: w.weekNumber,
+        dayNumber: w.dayNumber,
+        name: w.name,
+        exercises: w.exercises.map((e) => ({
+          name: e.exercise.name,
+          sets: e.targetSets,
+          repsMin: e.targetRepsMin,
+          repsMax: e.targetRepsMax,
+          rpe: e.targetRpe?.toString() ?? null,
+          restSeconds: e.restSeconds,
+        })),
+      })),
+    };
   }
 
   /**
@@ -217,6 +351,53 @@ export class ProgramsService {
       if (conflicts.length > 0) out.push({ clientId: c.id, clientName: c.name, conflicts });
     }
     return out;
+  }
+
+  private assertPeriodization(mesocycles: readonly MesocycleInput[], durationWeeks: number): void {
+    if (mesocycles.length > PERIODIZATION_LIMITS.maxMesocycles) throw new BadRequestException(`At most ${PERIODIZATION_LIMITS.maxMesocycles} mesocycles`);
+    const problem = validatePeriodization(mesocycles, durationWeeks);
+    if (problem) throw new BadRequestException(problem);
+  }
+
+  private async assertSports(ids: readonly string[] | undefined): Promise<void> {
+    if (!ids || ids.length === 0) return;
+    if (new Set(ids).size !== ids.length) throw new BadRequestException('A sport is listed twice');
+    if (ids.length > PERIODIZATION_LIMITS.maxSports) throw new BadRequestException(`Choose at most ${PERIODIZATION_LIMITS.maxSports} sports`);
+    if ((await this.prisma.sportCategory.count({ where: { id: { in: [...ids] } } })) !== ids.length) throw new BadRequestException('Unknown sport');
+  }
+
+  /** Blocks and sports are replaced wholesale (nothing else references them); omitted fields stay as they are. */
+  private async writePeriodization(tx: Prisma.TransactionClient, programId: string, input: ProgramTreeInput): Promise<void> {
+    if (input.mesocycles !== undefined) {
+      await tx.mesocycle.deleteMany({ where: { programId } });
+      for (const [position, m] of [...input.mesocycles].sort((a, b) => a.startWeek - b.startWeek).entries()) {
+        await tx.mesocycle.create({
+          data: {
+            programId,
+            position,
+            name: m.name.trim(),
+            focus: m.focus?.trim() || null,
+            startWeek: m.startWeek,
+            endWeek: m.endWeek,
+            microcycles: {
+              create: m.microcycles.map((c) => ({
+                label: c.label.trim(),
+                startWeek: c.startWeek,
+                endWeek: c.endWeek,
+                isDeload: c.isDeload,
+                rpeMin: c.rpeMin ?? null,
+                rpeMax: c.rpeMax ?? null,
+                volumeDeltaPct: c.volumeDeltaPct ?? null,
+              })),
+            },
+          },
+        });
+      }
+    }
+    if (input.sportCategoryIds !== undefined) {
+      await tx.programSportCategory.deleteMany({ where: { programId } });
+      await tx.programSportCategory.createMany({ data: input.sportCategoryIds.map((sportCategoryId) => ({ programId, sportCategoryId })) });
+    }
   }
 
   private plan(existing: Parameters<typeof planTreeSync>[0], input: ProgramTreeInput): TreePlan {
@@ -286,6 +467,9 @@ export class ProgramsService {
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
       activeClientIds: p.assignments.map((a) => a.clientId),
+      shareActive: p.shareTokenHash !== null,
+      mesocycles: p.mesocycles.map(toMesocycleDto),
+      sports: p.sports.map((x) => ({ id: x.sport.id, name: x.sport.name, group: x.sport.group })),
       workouts: p.workouts.map((w) => ({
         id: w.id,
         weekNumber: w.weekNumber,

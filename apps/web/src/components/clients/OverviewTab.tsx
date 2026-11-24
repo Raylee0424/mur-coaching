@@ -7,7 +7,7 @@ import { Panel } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { StatStrip, type StatItem } from '@/components/ui/StatStrip';
-import { TrainingCalendar } from './TrainingCalendar';
+import { InteractiveCalendar } from './InteractiveCalendar';
 import { attentionItems, deltaTone, formatDelta, tabHref, type Tone } from './overview-model';
 
 const DELTA_TONE: Record<Tone, 'good' | 'warn' | 'neutral'> = { good: 'good', warn: 'warn', neutral: 'neutral' };
@@ -19,6 +19,7 @@ export function OverviewTab({
   exerciseNames,
   unit,
   hasProgram,
+  today,
 }: {
   clientId: string;
   overview: ClientOverviewDto;
@@ -26,6 +27,8 @@ export function OverviewTab({
   exerciseNames: ReadonlyMap<string, string>;
   unit: WeightUnit;
   hasProgram: boolean;
+  /** `YYYY-MM-DD` (UTC), from the server so the calendar and the API agree on "today". */
+  today: string;
 }) {
   const { adherence, weeklyVolumeKg, avgRpe, streak, days } = overview;
   const empty = !hasProgram && days.every((d) => d.status === null);
@@ -77,7 +80,7 @@ export function OverviewTab({
       <StatStrip label="Key metrics" items={items} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <TrainingCalendar clientId={clientId} month={overview.month} days={days} unit={unit} />
+        <InteractiveCalendar clientId={clientId} month={overview.month} days={days} unit={unit} today={today} />
         <Panel title="Needs attention" meta={String(attention.length)} className="h-fit">
           {attention.length === 0 ? (
             <p className="p-4 text-ui text-muted">Nothing needs your attention. Training is on track.</p>

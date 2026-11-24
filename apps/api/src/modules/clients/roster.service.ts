@@ -5,12 +5,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import {
   DAY_MS,
   adherenceWindows,
+  assignmentSlots,
   attentionReasons,
+  countedSlots,
   currentProgramWeek,
   dayKey,
   markCompleted,
   mean,
-  scheduleSlots,
 } from './analytics';
 import type { RosterQueryDto } from './dto/roster.dto';
 
@@ -31,6 +32,7 @@ const rosterSelect = {
           id: true,
           programId: true,
           startDate: true,
+          scheduled: { select: { id: true, date: true, status: true, workout: { select: { id: true, name: true, weekNumber: true } } } },
           program: {
             select: {
               name: true,
@@ -110,7 +112,7 @@ export class RosterService {
 
       let adherence: number | null = null;
       if (a) {
-        const slots = markCompleted(scheduleSlots(a.startDate, a.program.workouts), loggedByClient.get(l.client.id) ?? new Set());
+        const slots = markCompleted(countedSlots(assignmentSlots(a.startDate, a.program.workouts, a.scheduled)), loggedByClient.get(l.client.id) ?? new Set());
         adherence = adherenceWindows(slots, today).current;
       }
       const reasons = attentionReasons({

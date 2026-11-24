@@ -25,7 +25,7 @@ export default async function EditProgramPage({ params }: { params: Promise<{ pr
   return (
     <>
       <PageHeader title={program.name} />
-      <ProgramBuilder key={program.id} program={program} library={data.library} clients={data.clients} conflicts={conflicts} />
+      <ProgramBuilder key={program.id} program={program} library={data.library} clients={data.clients} conflicts={conflicts} sports={data.sports} groups={data.groups} />
     </>
   );
 }

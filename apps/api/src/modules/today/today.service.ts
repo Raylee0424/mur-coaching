@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AssignmentStatus, Prisma, RecommendationStatus } from '@prisma/client';
-import type { MuscleGroup, SessionMetrics, TodayDto, TodayExercise, TodayTarget } from '@coaching/shared';
+import { AssignmentStatus, Prisma, RecommendationStatus, ScheduledStatus } from '@prisma/client';
+import type { CarryForwardCue, MuscleGroup, SessionMetrics, TodayDto, TodayExercise, TodayTarget } from '@coaching/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { currentProgramWeek, dayKey } from '../clients/analytics';
 import { isAccessibleLink } from '../clients/link-status';
 import { CONFLICT_EXERCISE_SELECT } from '../limitations/conflict';
+import { SessionFeedbackService } from '../session-feedback/session-feedback.service';
 import { LimitationsService } from '../limitations/limitations.service';
 
 const BANNER_DAYS = 3;
@@ -17,6 +18,7 @@ export class TodayService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly limitations: LimitationsService,
+    private readonly feedback: SessionFeedbackService,
   ) {}
 
   async get(clientId: string, now: Date = new Date()): Promise<TodayDto> {
@@ -53,7 +55,16 @@ export class TodayService {
     const total = assignment.program.durationWeeks;
     // Before the start date the client sees week 1 so they can look ahead.
     const week = currentProgramWeek(assignment.startDate, total, dayKey(now)) ?? 1;
-    const weekWorkouts = assignment.program.workouts.filter((w) => w.weekNumber === week);
+    // A session the coach skipped is neither next nor part of the week's progress; the rest go in calendar order.
+    const scheduled = await this.prisma.scheduledWorkout.findMany({
+      where: { assignmentId: assignment.id, workout: { weekNumber: week } },
+      select: { workoutId: true, date: true, status: true },
+    });
+    const skipped = new Set(scheduled.filter((r) => r.status === ScheduledStatus.SKIPPED).map((r) => r.workoutId));
+    const dateOf = new Map(scheduled.map((r) => [r.workoutId, r.date.getTime()]));
+    const weekWorkouts = assignment.program.workouts
+      .filter((w) => w.weekNumber === week && !skipped.has(w.id))
+      .sort((a, b) => (dateOf.get(a.id) ?? Infinity) - (dateOf.get(b.id) ?? Infinity) || a.dayNumber - b.dayNumber);
     const logged = new Set(
       (
         await this.prisma.workoutLog.findMany({
@@ -72,11 +83,20 @@ export class TodayService {
     };
     if (!next) return { ...common, state: 'WEEK_COMPLETE', workout: null };
 
-    const exercises = await this.exercises(clientId, next.exercises, dayKey(now));
+    const cues = await this.feedback.cuesFor(clientId);
+    const exercises = await this.exercises(clientId, next.exercises, dayKey(now), cues.byExercise);
     return {
       ...common,
       state: 'READY',
-      workout: { id: next.id, assignmentId: assignment.id, name: next.name, weekNumber: next.weekNumber, dayNumber: next.dayNumber, exercises },
+      workout: {
+        id: next.id,
+        assignmentId: assignment.id,
+        name: next.name,
+        weekNumber: next.weekNumber,
+        dayNumber: next.dayNumber,
+        exercises,
+        carryForward: cues.session,
+      },
     };
   }
 
@@ -89,6 +109,7 @@ export class TodayService {
     clientId: string,
     prescriptions: Prisma.WorkoutExerciseGetPayload<{ include: { exercise: { select: typeof CONFLICT_EXERCISE_SELECT & { name: true } } } }>[],
     day: string,
+    cues: ReadonlyMap<string, CarryForwardCue[]>,
   ): Promise<TodayExercise[]> {
     const exerciseIds = prescriptions.map((p) => p.exerciseId);
     const flags = await this.limitations.flagsFor(
@@ -173,6 +194,7 @@ export class TodayService {
         recommendationId: why?.id ?? null,
         recommendationAction: why?.action ?? null,
         limitation: flags.get(p.exerciseId) ?? null,
+        carryForward: cues.get(p.exerciseId) ?? [],
       };
     });
   }

@@ -31,7 +31,14 @@ export default async function HistoryPage({ searchParams }: { searchParams: Sear
 
   return (
     <>
-      <PageHeader title="History" />
+      <PageHeader
+        title="History"
+        actions={
+          <Link href="/client/records" className={buttonClass('ghost', '', 'sm')}>
+            Records
+          </Link>
+        }
+      />
       <div className="max-w-xl space-y-5">
         <Segmented
           label="History views"
