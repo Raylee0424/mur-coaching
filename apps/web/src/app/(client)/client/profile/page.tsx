@@ -21,6 +21,8 @@ function initials(name: string): string {
 
 const WORKSPACE_LINKS = [
   { href: '/client/check-in', title: 'Weekly Check-in', meta: 'Submit metrics & notes' },
+  { href: '/client/health', title: 'Steps & Health Sync', meta: 'Step goal, streak & imports' },
+  { href: '/client/groups', title: 'Training Groups', meta: 'Private groups & leaderboards' },
   { href: '/client/body', title: 'Bodyweight & Readiness', meta: '7-day avg & photos' },
   { href: '/client/videos', title: 'Set Videos & L/R', meta: 'Clips & form checks' },
   { href: '/client/calls', title: 'Calls & Booking', meta: 'Self-book coach slots' },
@@ -28,6 +30,10 @@ const WORKSPACE_LINKS = [
   { href: '/client/roadmap', title: 'Coaching Roadmap', meta: 'Event countdown & phases' },
   { href: '/client/resources', title: 'Coach Vault', meta: 'Shared PDFs & guides' },
   { href: '/client/templates', title: 'Templates & Gyms', meta: 'Folders & equipment mode' },
+  { href: '/client/coach-ai', title: 'MUR AI Training Coach', meta: 'Ask about your training' },
+  { href: '/client/generate', title: 'AI Workout Generator', meta: 'Injury-aware sessions' },
+  { href: '/client/settings/connectors', title: 'AI Connectors', meta: 'Read-only app access' },
+  { href: '/client/settings/data', title: 'Data Import & Export', meta: 'Strong, Hevy, MFP & full export' },
   { href: '/client/billing', title: 'Plan & Billing', meta: 'MUR Coaching Pro & offers' },
 ] as const;
 

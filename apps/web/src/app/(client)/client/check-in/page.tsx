@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { Role } from '@coaching/shared';
 import { answerText } from '@/components/check-ins/check-ins-model';
 import { CheckInForm } from '@/components/check-ins/CheckInForm';
+import { HealthOverview } from '@/components/health/HealthOverview';
+import { loadStepBoard } from '@/components/health/load-board';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { checkInsApi } from '@/lib/api/endpoints';
+import { checkInsApi, healthApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam } from '@/lib/form';
 import { formatDate } from '@/lib/format';
@@ -22,6 +24,10 @@ export default async function ClientCheckInPage({ searchParams }: { searchParams
   const [{ due, recent }, params] = await Promise.all([checkInsApi.mine(), searchParams]);
   const tab = firstParam(params.tab) === 'steps' ? 'steps' : 'checkin';
   const todayIso = new Date().toISOString().slice(0, 10);
+  const steps =
+    tab === 'steps'
+      ? await Promise.all([healthApi.overview(), loadStepBoard(firstParam(params.group))]).then(([overview, b]) => ({ overview, ...b }))
+      : null;
 
   return (
     <>
@@ -55,60 +61,16 @@ export default async function ClientCheckInPage({ searchParams }: { searchParams
         }
       />
 
-      {tab === 'steps' ? (
-        <section className="space-y-6">
-          <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-12">
-            <div className="flex flex-col justify-between gap-4 rounded-md border border-line bg-card p-6 lg:col-span-5">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <span className="font-mono text-label-sm uppercase text-primary">DAILY STEP GOAL</span>
-                  <h2 className="mt-0.5 font-display text-headline-md text-ink">10,000 / day</h2>
-                </div>
-                <Badge tone="slate">PWA Bridge</Badge>
-              </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full border border-line bg-canvas-low">
-                <div className="h-full w-0 rounded-full bg-primary" />
-              </div>
-              <p className="font-mono text-label-sm text-muted">
-                Log daily step averages inside your weekly coach check-in or sync via native health bridge when mobile apps ship.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-7">
-              <article className="flex flex-col justify-between gap-4 rounded-md border border-line bg-card p-5">
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-title-md text-ink">Apple Health</span>
-                  <Badge tone="slate">iOS App Bridge</Badge>
-                </div>
-                <p className="text-label-md text-muted">
-                  Automatic step, sleep duration, and resting HR sync requires the native iOS wrapper. Use Weekly Check-in on web.
-                </p>
-                <Link
-                  href="/client/check-in"
-                  className="w-full rounded-full border border-line bg-canvas-low py-1.5 text-center font-sans text-label-sm font-semibold text-primary hover:border-primary"
-                >
-                  Log in Weekly Check-in
-                </Link>
-              </article>
-
-              <article className="flex flex-col justify-between gap-4 rounded-md border border-line bg-card p-5">
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-title-md text-ink">Health Connect</span>
-                  <Badge tone="slate">Standby</Badge>
-                </div>
-                <p className="text-label-md text-muted">
-                  Android &amp; WearOS bridge for daily step counts, sleep stages, and readiness telemetry.
-                </p>
-                <Link
-                  href="/client/body"
-                  className="w-full rounded-full border border-line bg-canvas-low py-1.5 text-center font-sans text-label-sm font-semibold text-ink hover:border-primary"
-                >
-                  Open Body &amp; Readiness
-                </Link>
-              </article>
-            </div>
-          </div>
-        </section>
+      {tab === 'steps' && steps ? (
+        <div className="space-y-4">
+          <HealthOverview overview={steps.overview} board={steps.board} groups={steps.groups} today={todayIso} basePath="/client/check-in?tab=steps" />
+          <p className="text-label-md text-muted">
+            <Link href="/client/health" className="text-primary hover:underline">
+              Open full daily history
+            </Link>{' '}
+            for sleep, HRV and resting HR by day.
+          </p>
+        </div>
       ) : (
         <div className="space-y-8">
           <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">

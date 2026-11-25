@@ -1,5 +1,20 @@
 import 'server-only';
 import type {
+  GroupDetailDto,
+  GroupLeaderboardDto,
+  SharedWorkoutDto,
+  SocialOverviewDto,
+  CreateGroupRequest,
+  CreateReportRequest,
+  ShareWorkoutRequest,
+  HealthOverviewDto,
+  SyncHealthMetricsRequest,
+  SyncHealthMetricsResponse,
+  ImportCommitRequest,
+  ImportCommitResponse,
+  ImportJobDto,
+  ImportPreviewDto,
+  ImportPreviewRequest,
   CycleContextDto,
   MuscleAnalyticsDto,
   ReadinessDto,
@@ -170,6 +185,16 @@ import type {
   UpdateExerciseNoteRequest,
   UpdateWorkoutTemplateRequest,
   WorkoutTemplateDto,
+  AiConversationDto,
+  AskCoachRequest,
+  AskCoachResponse,
+  CoachOverviewDto,
+  ConnectorGrantDto,
+  CreateConnectorRequest,
+  CreatedConnectorDto,
+  GeneratedWorkoutDto,
+  GenerateWorkoutRequest,
+  VoiceParseResponse,
 } from '@coaching/shared';
 import { apiFetch } from './client';
 
@@ -583,4 +608,57 @@ export const readinessApi = {
   saveCycle: (body: SaveCycleEntryRequest) => apiFetch<void>('/me/cycle/entries', { method: 'PUT', body }),
   removeCycle: (date: string) => apiFetch<void>(idPath('/me/cycle/entries', date), { method: 'DELETE' }),
   shareCycle: (sharedWithCoach: boolean) => apiFetch<void>('/me/cycle/sharing', { method: 'PUT', body: { sharedWithCoach } }),
+};
+
+/** MUR AI Training Coach, generator and voice: 402 without the Pro feature, 429 over the daily cap. */
+export const aiApi = {
+  coachOverview: () => apiFetch<CoachOverviewDto>('/ai/coach'),
+  conversation: (id: string) => apiFetch<AiConversationDto>(idPath('/ai/coach/conversations', id)),
+  removeConversation: (id: string) => apiFetch<void>(idPath('/ai/coach/conversations', id), { method: 'DELETE' }),
+  ask: (body: AskCoachRequest) => apiFetch<AskCoachResponse>('/ai/coach', { method: 'POST', body }),
+  generateWorkout: (body: GenerateWorkoutRequest) => apiFetch<GeneratedWorkoutDto>('/ai/workouts', { method: 'POST', body }),
+  parseVoice: (transcript: string) => apiFetch<VoiceParseResponse>('/ai/voice/parse', { method: 'POST', body: { transcript } }),
+};
+
+export const connectorsApi = {
+  list: () => apiFetch<ConnectorGrantDto[]>('/me/connectors'),
+  create: (body: CreateConnectorRequest) => apiFetch<CreatedConnectorDto>('/me/connectors', { method: 'POST', body }),
+  revoke: (id: string) => apiFetch<void>(idPath('/me/connectors', id), { method: 'DELETE' }),
+};
+
+/** Steps, sleep, HRV and resting HR (owner only). Sync is idempotent per day and source. */
+export const healthApi = {
+  overview: (days?: number) => apiFetch<HealthOverviewDto>('/me/health', { query: { days } }),
+  sync: (body: SyncHealthMetricsRequest) => apiFetch<SyncHealthMetricsResponse>('/me/health/metrics', { method: 'PUT', body }),
+  saveGoal: (dailySteps: number) => apiFetch<void>('/me/health/step-goal', { method: 'PUT', body: { dailySteps } }),
+};
+
+/** CSV import (preview, commit, rollback). Export downloads go through the route handler, not this client. */
+export const dataApi = {
+  jobs: () => apiFetch<ImportJobDto[]>('/me/data/imports'),
+  preview: (body: ImportPreviewRequest) => apiFetch<ImportPreviewDto>('/me/data/imports/preview', { method: 'POST', body }),
+  commit: (body: ImportCommitRequest) => apiFetch<ImportCommitResponse>('/me/data/imports/commit', { method: 'POST', body }),
+  rollback: (id: string) => apiFetch<ImportJobDto>(`${idPath('/me/data/imports', id)}/rollback`, { method: 'POST' }),
+};
+
+/** Training groups, friends, blocks and reports. Every group route is members-only (404 otherwise). */
+export const socialApi = {
+  overview: () => apiFetch<SocialOverviewDto>('/me/social'),
+  createGroup: (body: CreateGroupRequest) => apiFetch<GroupDetailDto>('/me/groups', { method: 'POST', body }),
+  join: (inviteCode: string) => apiFetch<GroupDetailDto>('/me/groups/join', { method: 'POST', body: { inviteCode } }),
+  group: (id: string) => apiFetch<GroupDetailDto>(idPath('/me/groups', id)),
+  leave: (id: string) => apiFetch<void>(`${idPath('/me/groups', id)}/membership`, { method: 'DELETE' }),
+  setShareStats: (id: string, shareStats: boolean) => apiFetch<void>(`${idPath('/me/groups', id)}/membership`, { method: 'PATCH', body: { shareStats } }),
+  rotateCode: (id: string) => apiFetch<GroupDetailDto>(`${idPath('/me/groups', id)}/invite-code`, { method: 'POST' }),
+  removeMember: (id: string, userId: string) => apiFetch<void>(`${idPath('/me/groups', id)}${idPath('/members', userId)}`, { method: 'DELETE' }),
+  feed: (id: string) => apiFetch<SharedWorkoutDto[]>(`${idPath('/me/groups', id)}/feed`),
+  share: (id: string, body: ShareWorkoutRequest) => apiFetch<SharedWorkoutDto>(`${idPath('/me/groups', id)}/shares`, { method: 'POST', body }),
+  unshare: (id: string) => apiFetch<void>(idPath('/me/shares', id), { method: 'DELETE' }),
+  leaderboard: (id: string) => apiFetch<GroupLeaderboardDto>(`${idPath('/me/groups', id)}/leaderboard`),
+  requestFriend: (userId: string) => apiFetch<void>('/me/friends', { method: 'POST', body: { userId } }),
+  acceptFriend: (id: string) => apiFetch<void>(`${idPath('/me/friends', id)}/accept`, { method: 'PUT' }),
+  removeFriend: (id: string) => apiFetch<void>(idPath('/me/friends', id), { method: 'DELETE' }),
+  block: (userId: string) => apiFetch<void>('/me/blocks', { method: 'POST', body: { userId } }),
+  unblock: (userId: string) => apiFetch<void>(idPath('/me/blocks', userId), { method: 'DELETE' }),
+  report: (body: CreateReportRequest) => apiFetch<void>('/me/reports', { method: 'POST', body }),
 };

@@ -34,3 +34,7 @@ export * from './live';
 export * from './nutrition';
 export * from './muscle-analytics';
 export * from './readiness';
+export * from './ai';
+export * from './health';
+export * from './data-io';
+export * from './social';

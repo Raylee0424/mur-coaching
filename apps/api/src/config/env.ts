@@ -38,6 +38,12 @@ const envSchema = z.object({
     .string()
     .refine((v) => Buffer.from(v, 'base64').length === 32, 'CYCLE_ENCRYPTION_KEY must be 32 bytes, base64-encoded')
     .optional(),
+  /**
+   * Optional model provider for the MUR AI Training Coach, workout generator and voice parsing. Unset = every AI
+   * route answers from the deterministic server rules, with no network call (local dev, CI, smoke tests).
+   */
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  AI_MODEL: z.string().min(1).default('claude-sonnet-4-6'),
   AUTOMATIONS_INTERVAL_MINUTES: z.coerce.number().int().min(0).max(1440).default(5),
 });
 

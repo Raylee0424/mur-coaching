@@ -1,7 +1,7 @@
-import { Role } from '@coaching/shared';
+import { Feature, Role } from '@coaching/shared';
 import type { SavedNote } from '@/components/logger/ExerciseNotes';
 import { WorkoutLogger } from '@/components/logger/WorkoutLogger';
-import { exerciseNotesApi, exercisesApi, meApi, templatesApi, workoutLogsApi } from '@/lib/api/endpoints';
+import { billingApi, exerciseNotesApi, exercisesApi, meApi, templatesApi, workoutLogsApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
 import { firstParam } from '@/lib/form';
 
@@ -18,7 +18,7 @@ export default async function LogPage({ searchParams }: { searchParams: SearchPa
   const repeat = firstParam(params.repeat) === '1';
   const templateId = firstParam(params.template);
 
-  const [exercises, today, latest, me, notes, templates, folders] = await Promise.all([
+  const [exercises, today, latest, me, notes, templates, folders, entitlements] = await Promise.all([
     exercisesApi.list(),
     meApi.today(),
     workoutLogsApi.listForClient(user.id, { limit: 1 }),
@@ -26,6 +26,7 @@ export default async function LogPage({ searchParams }: { searchParams: SearchPa
     exerciseNotesApi.list(),
     templatesApi.list(),
     templatesApi.listFolders(),
+    billingApi.entitlements(),
   ]);
   const savedNotes: Record<string, SavedNote[]> = {};
   for (const n of notes) (savedNotes[n.exerciseId] ??= []).push({ id: n.id, body: n.body });
@@ -61,6 +62,7 @@ export default async function LogPage({ searchParams }: { searchParams: SearchPa
       unit={user.weightUnit}
       baselines={baselines}
       savedNotes={savedNotes}
+      voiceEnabled={entitlements.features.includes(Feature.VOICE_LOGGING)}
     />
   );
 }
