@@ -282,6 +282,7 @@ export const workoutLogsApi = {
     apiFetch<Paginated<WorkoutLogDto>>(`/clients/${encodeURIComponent(clientId)}/workout-logs`, {
       ...(query ? { query: { ...query } } : {}),
     }),
+  get: (id: string) => apiFetch<WorkoutLogDto>(`/workout-logs/${encodeURIComponent(id)}`),
   update: (id: string, body: UpdateWorkoutLogRequest) =>
     apiFetch<WorkoutLogDto>(`/workout-logs/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
   remove: (id: string) => apiFetch<void>(`/workout-logs/${encodeURIComponent(id)}`, { method: 'DELETE' }),

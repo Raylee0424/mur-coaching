@@ -55,9 +55,9 @@ export function ClientBooking({ data }: { data: ClientCallsDto & { timezone: str
   };
 
   return (
-    <div className="space-y-6">
+    <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
       {data.upcoming.length ? (
-        <Panel title="Your upcoming calls">
+        <Panel title="Your upcoming calls" className="lg:order-2 lg:col-span-4">
           <ul className="divide-y divide-line">
             {data.upcoming.map((b) => (
               <li key={b.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
@@ -86,6 +86,7 @@ export function ClientBooking({ data }: { data: ClientCallsDto & { timezone: str
 
       <Panel
         title={moving ? `Move call on ${at(moving.startsAt)}` : 'Book a call'}
+        className={data.upcoming.length ? 'lg:order-1 lg:col-span-8' : 'lg:col-span-12'}
         meta={`times in ${zoneLabel(zone)}${zone !== data.timezone ? ` · coach in ${zoneLabel(data.timezone)}` : ''}`}
         actions={
           moving ? (

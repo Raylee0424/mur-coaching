@@ -34,16 +34,18 @@ export default async function AutomationsPage() {
           </>
         }
       />
-      <div className="space-y-6">
-        <p className="max-w-3xl text-meta text-muted">
+      <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+        <p className="max-w-prose text-meta text-muted lg:col-span-12">
           Deterministic triggers for onboarding, nudges and follow-ups. Each rule sends a chat message once per event, only for events after the rule was created.
         </p>
         {data.rules.length === 0 ? (
-          <EmptyState title="No automations yet" action={<RuleEditor />}>
-            Start with a missed-session nudge: if a planned session day ends without a log, message the client 24 hours later.
-          </EmptyState>
+          <div className="lg:col-span-12">
+            <EmptyState title="No automations yet" action={<RuleEditor />}>
+              Start with a missed-session nudge: if a planned session day ends without a log, message the client 24 hours later.
+            </EmptyState>
+          </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          <section aria-label="Rules" className="grid gap-4 lg:col-span-7 2xl:grid-cols-2">
             {data.rules.map((r) => (
               <Card key={r.id} className="flex flex-col gap-3.5 p-5">
                 <div className="flex items-start justify-between gap-2">
@@ -74,9 +76,9 @@ export default async function AutomationsPage() {
                 </div>
               </Card>
             ))}
-          </div>
+          </section>
         )}
-        <Panel title="Run Log" meta={`last ${data.runs.length}`}>
+        <Panel title="Run Log" meta={`last ${data.runs.length}`} className={data.rules.length === 0 ? 'lg:col-span-12' : 'lg:col-span-5'}>
           {data.runs.length === 0 ? (
             <p className="px-6 py-6 text-ui text-muted">No messages sent yet.</p>
           ) : (

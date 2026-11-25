@@ -11,7 +11,7 @@ export default async function ClientCallsPage() {
   return (
     <>
       <PageHeader title="Calls" back={{ href: '/client/profile', label: 'Profile' }} meta={data.coachName ? `with ${data.coachName}` : undefined} />
-      <div className="max-w-3xl">
+      <div>
         {!data.coachName ? (
           <EmptyState title="No coach yet">Calls are booked with your coach once you are linked.</EmptyState>
         ) : !data.timezone && data.upcoming.length === 0 ? (

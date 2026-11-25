@@ -13,6 +13,7 @@ export const GLOSSARY = {
   rir: { term: 'RIR', definition: 'Reps left in the tank.' },
   e1rm: { term: 'e1RM', definition: ONE_REP_MAX },
   oneRm: { term: '1RM', definition: ONE_REP_MAX },
+  volume: { term: 'Volume', definition: 'Weight × reps, added up over every working set. Warm-ups do not count.' },
   deload: { term: 'Deload', definition: 'A planned easier week so your body recovers.' },
   tempo: { term: 'Tempo', definition: 'How many seconds each part of a rep takes, lowering first. 3-1-1 = 3 down, 1 pause, 1 up.' },
   mesocycle: { term: 'Mesocycle', definition: 'A training block of a few weeks with one goal, usually ending in a deload.' },
