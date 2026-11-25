@@ -110,7 +110,7 @@ export function ExerciseLibrary({
           {filtered ? 'Try clearing the filters.' : coach ? 'Add your first exercise to start building programs.' : 'Add your own exercise to log it.'}
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-line bg-card">
+        <div className="relative overflow-x-auto rounded-md border border-line bg-card">
           <table className={clsx(TABLE, coach ? 'min-w-[60rem]' : 'min-w-[40rem]')}>
             <caption className="sr-only">Exercise library</caption>
             <thead className={THEAD}>

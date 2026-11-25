@@ -72,7 +72,7 @@ export function RosterTable({ clients, total, toolbar }: { clients: RosterClient
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className={clsx(TABLE, 'min-w-[56rem]')}>
             <caption className="sr-only">Your clients</caption>
             <thead className={THEAD}>

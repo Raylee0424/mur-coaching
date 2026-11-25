@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Segmented } from '@/components/ui/Segmented';
 import { ApiError } from '@/lib/api/client';
 import { analyticsApi } from '@/lib/api/endpoints';
+import { Term } from '@/components/ui/Term';
 import { requireUser } from '@/lib/auth';
 
 export default async function MuscleAnalyticsPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
@@ -72,9 +73,15 @@ export default async function MuscleAnalyticsPage({ searchParams }: { searchPara
         </div>
       ) : data ? (
         <div className="flex flex-col gap-4">
-          <p className="font-mono text-label-sm text-muted">
-            {data.from} – {data.to} · {data.sessionCount} {data.sessionCount === 1 ? 'session' : 'sessions'} · {data.totalHardSets} hard sets · warm-ups excluded, sets past 5 RIR count half or nothing
-          </p>
+          <div className="space-y-1">
+            <p className="font-mono text-label-sm text-muted">
+              {data.from} – {data.to} · {data.sessionCount} {data.sessionCount === 1 ? 'session' : 'sessions'} · {data.totalHardSets} hard sets
+            </p>
+            <p className="text-label-md text-muted">
+              Warm-ups don&apos;t count. Easy sets, with more than 5 reps left in the tank (<Term id="rir" />), count half or not at all. What&apos;s left is
+              your <Term id="netStimulus" />.
+            </p>
+          </div>
           <MuscleMap data={data} />
         </div>
       ) : null}

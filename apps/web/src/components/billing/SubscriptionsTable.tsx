@@ -7,7 +7,7 @@ import { formatDate } from '@/lib/format';
 /** Offer subscriptions. Coaches see a Client column; clients see only their own rows. */
 export function SubscriptionsTable({ rows, showClient }: { rows: readonly ClientSubscriptionDto[]; showClient: boolean }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className={TABLE}>
         <thead className={THEAD}>
           <tr>

@@ -34,7 +34,7 @@ export function FoodLogTable({ entries, editable }: { entries: MealEntryDto[]; e
   if (!entries.length) return <p className="px-6 py-8 text-body-md text-muted">Nothing logged for this day yet.</p>;
 
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className={TABLE}>
         <thead className={THEAD}>
           <tr>

@@ -80,7 +80,7 @@ export default async function AutomationsPage() {
           {data.runs.length === 0 ? (
             <p className="px-6 py-6 text-ui text-muted">No messages sent yet.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className={TABLE}>
                 <thead className={THEAD}>
                   <tr>

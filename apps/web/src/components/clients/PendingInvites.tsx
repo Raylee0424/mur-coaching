@@ -31,7 +31,7 @@ export function PendingInvites({ invites }: { invites: InviteDto[] }) {
 
   return (
     <Panel title="Pending invites" meta={String(invites.length)}>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className={`${TABLE} min-w-[40rem]`}>
           <caption className="sr-only">Pending invites</caption>
           <thead className={THEAD}>

@@ -293,7 +293,7 @@ function Inputs({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
   return (
     <section>
       <SectionTitle>{`2. Inputs (Last ${data.sessions.length} Sessions)`}</SectionTitle>
-      <div className="overflow-x-auto rounded-md border border-line bg-canvas-low">
+      <div className="relative overflow-x-auto rounded-md border border-line bg-canvas-low">
         <table className="w-full min-w-[22rem] border-collapse text-left tabular-nums">
           <caption className="sr-only">Sessions the engine used, newest first</caption>
           <thead>

@@ -33,7 +33,7 @@ export default async function ResourcesPage({ searchParams }: { searchParams: Se
             File storage is not configured on this server, so uploads and downloads are off. Set the R2 variables in the API environment.
           </p>
         ) : null}
-        <nav aria-label="Resource types" className="flex items-center gap-6 overflow-x-auto border-b border-line">
+        <nav aria-label="Resource types" className="flex items-center gap-6 relative overflow-x-auto border-b border-line">
           {RESOURCE_FILTERS.map((f) => (
             <Link
               key={f.key}

@@ -2,6 +2,13 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { SESSION_COOKIE } from './claims';
 
+/** Set once the athlete dismisses Today's "How your targets work" card. */
+export const TARGETS_INTRO_COOKIE = 'rc_targets_intro';
+
+export async function targetsIntroDismissed(): Promise<boolean> {
+  return (await cookies()).get(TARGETS_INTRO_COOKIE)?.value === 'dismissed';
+}
+
 export async function getSessionToken(): Promise<string | undefined> {
   return (await cookies()).get(SESSION_COOKIE)?.value;
 }

@@ -239,7 +239,7 @@ export default async function CoachBillingPage({ searchParams }: { searchParams:
               No client charges recorded yet. Platform subscription PDF receipts are available anytime in your Stripe billing portal.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className={TABLE}>
                 <thead className={THEAD}>
                   <tr>

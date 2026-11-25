@@ -196,7 +196,7 @@ export function WorkoutGenerator({ guardrails, catalog, unit }: { guardrails: Gu
           </div>
           <p className="text-body text-muted">{result.rationale}</p>
 
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[720px] text-left">
               <thead>
                 <tr className="border-b border-line font-mono text-label-sm uppercase text-muted">

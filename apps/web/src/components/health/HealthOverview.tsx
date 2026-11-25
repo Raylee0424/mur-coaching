@@ -162,7 +162,7 @@ function StepLeaderboard({ board, groups, basePath }: { board: StepBoard | null;
           {board.board.rows.length === 0 ? (
             <p className="px-6 py-5 text-ui text-muted">No one in this group shares stats yet.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className={TABLE}>
                 <thead className={THEAD}>
                   <tr>
@@ -198,7 +198,7 @@ export function HealthHistory({ overview }: { overview: HealthOverviewDto }) {
       <h2 id="history-heading" className="border-b border-line px-6 py-4 font-display text-title-md text-ink">
         Daily history
       </h2>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className={TABLE}>
           <thead className={THEAD}>
             <tr>
