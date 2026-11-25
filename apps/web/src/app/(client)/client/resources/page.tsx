@@ -16,13 +16,13 @@ export default async function ClientResourcesPage() {
   return (
     <>
       <PageHeader title="Resources" back={{ href: '/client/profile', label: 'Profile' }} meta={`${resources.length} shared`} />
-      <div className="max-w-3xl">
+      <div>
         {resources.length === 0 ? (
           <EmptyState title="Nothing shared yet">Guides, videos and sheets your coach shares with you show up here.</EmptyState>
         ) : (
-          <ul className="divide-y divide-line rounded-md border border-line bg-card">
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {resources.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <li key={r.id} className="flex flex-wrap items-center gap-3 rounded-md border border-line bg-card px-4 py-3">
                 <FileText aria-hidden="true" className="size-5 shrink-0 text-faint" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-ui font-medium">{r.title}</p>

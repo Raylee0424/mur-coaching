@@ -44,17 +44,17 @@ export default async function ProfilePage() {
     <>
       <PageHeader title="Athlete Settings" meta="Preferences & Coaching Link" />
 
-      <div className="max-w-4xl space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Card 1: Profile & Units (`mur_coaching_athlete_web_settings`) */}
-        <section className="flex flex-col gap-5 rounded-md border border-line bg-card p-6">
+        <section className="flex min-w-0 flex-col gap-5 rounded-md border border-line bg-card p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-4">
               <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-full border border-primary bg-raised font-display text-title-md text-primary">
                 {initials(displayName, 'AT')}
               </span>
-              <div>
+              <div className="min-w-0">
                 <h2 className="font-display text-title-md text-ink">Profile &amp; Units</h2>
-                <p className="font-mono text-label-sm text-muted">
+                <p className="break-words font-mono text-label-sm text-muted">
                   {displayName} · {user.email}
                 </p>
               </div>
@@ -62,7 +62,7 @@ export default async function ProfilePage() {
             <Badge tone="signal">Active</Badge>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2">
             {/* Weight Unit Toggle */}
             <div className="flex items-center justify-between gap-4 rounded-sm border border-line bg-canvas-low p-4">
               <div>
@@ -101,7 +101,7 @@ export default async function ProfilePage() {
         <AthleteNotificationCard coachName={coachName} />
 
         {/* Card 3: Connected Coach */}
-        <section className="flex flex-col gap-4 rounded-md border border-line bg-card p-6">
+        <section className="flex min-w-0 flex-col gap-4 rounded-md border border-line bg-card p-6 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
             <div>
               <h2 className="font-display text-title-md text-ink">Connected Coach</h2>
@@ -156,16 +156,18 @@ export default async function ProfilePage() {
         </section>
 
         {/* Card 4: Injuries & Limitations */}
-        <LimitationsPanel
+        <div className="min-w-0 lg:col-span-2">
+          <LimitationsPanel
           clientId={user.id}
           limitations={limitations}
           exercises={exercises.map((e) => ({ id: e.id, name: e.name }))}
           today={day}
           large
-        />
+          />
+        </div>
 
         {/* Sign Out */}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-2 lg:col-span-2">
           <form action={logout} className="w-full sm:w-56">
             <SubmitButton variant="secondary" size="lg" className="w-full" pendingLabel="Signing out…">
               Sign Out
