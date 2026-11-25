@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracketCells, computeRecords, countRecent, netDelta, windowSummary, type RecordSetInput, type SessionPoint } from './records';
+import { bestRecord, bracketCells, computeRecords, countRecent, netDelta, windowSummary, type RecordSetInput, type SessionPoint } from './records';
 
 const d = (day: number) => new Date(Date.UTC(2026, 10, day));
 const set = (id: string, reps: number, weightKg: number, day = 1, extra: Partial<RecordSetInput> = {}): RecordSetInput => ({
@@ -78,5 +78,12 @@ describe('windowSummary', () => {
 
   it('is empty-safe', () => {
     expect(windowSummary([], d(24))).toEqual({ sets: 0, avgRpe: null, netDeltaPct: null });
+  });
+});
+
+describe('bestRecord', () => {
+  it('picks the highest e1RM, earlier record on a tie', () => {
+    const row = (id: string, e1rmKg: number, day: number) => ({ setLogId: id, reps: 5, weightKg: 100, e1rmKg, achievedAt: d(day) });
+    expect(bestRecord([row('a', 110, 5), row('b', 120, 9), row('c', 120, 3)]).setLogId).toBe('c');
   });
 });

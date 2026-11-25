@@ -17,7 +17,7 @@ export function PageHeader({
   back?: { href: string; label: string };
 }) {
   return (
-    <header className="sticky top-0 z-30 -mx-6 -mt-6 mb-6 flex min-h-topbar items-center justify-between gap-4 border-b border-line bg-canvas/95 px-6 py-2 backdrop-blur-sm md:-mx-8 md:px-8">
+    <header className="sticky top-0 z-30 -mx-6 -mt-6 mb-6 flex min-h-topbar flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line bg-canvas/95 px-6 py-2 backdrop-blur-sm md:-mx-8 md:px-8">
       <div className="flex min-w-0 items-center gap-3">
         {back ? (
           // 44px target (WCAG 2.5.5) with a visible outline so it reads as a button, not a stray glyph.

@@ -12,6 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { clientExerciseScope } from '../exercises/exercise-visibility';
 import { computeSessionMetrics } from '../progression/engine/metrics';
 import {
+  bestRecord,
   bracketCells,
   computeRecords,
   countRecent,
@@ -113,13 +114,19 @@ export class RecordsService {
     for (const l of recentLogs) sessionsByExercise.set(l.exerciseId, [...(sessionsByExercise.get(l.exerciseId) ?? []), l]);
 
     const exercises: ExerciseRecordsDto[] = [...rowsByExercise.entries()]
-      .map(([exerciseId, { name, rows }]) => ({
-        exerciseId,
-        exerciseName: name,
-        cells: bracketCells(rows).map(cellDto),
-        bestE1rmKg: fixed(Math.max(...rows.map((r) => r.e1rmKg))),
-        stats: windowSummary(this.points(sessionsByExercise.get(exerciseId) ?? []), now),
-      }))
+      .map(([exerciseId, { name, rows }]) => {
+        const best = bestRecord(rows);
+        const points = this.points(sessionsByExercise.get(exerciseId) ?? []);
+        return {
+          exerciseId,
+          exerciseName: name,
+          cells: bracketCells(rows).map(cellDto),
+          bestE1rmKg: fixed(best.e1rmKg),
+          best: { reps: best.reps, weightKg: fixed(best.weightKg), setReps: best.reps, e1rmKg: fixed(best.e1rmKg), achievedAt: best.achievedAt.toISOString() },
+          trendE1rmKg: points.map((p) => fixed(p.e1rmKg)),
+          stats: windowSummary(points, now),
+        };
+      })
       .sort((a, b) => Number(b.bestE1rmKg) - Number(a.bestE1rmKg) || a.exerciseName.localeCompare(b.exerciseName));
 
     return {

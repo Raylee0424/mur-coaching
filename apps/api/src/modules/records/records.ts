@@ -72,6 +72,11 @@ export function bracketCells(rows: readonly RecordRow[], brackets: readonly numb
   });
 }
 
+/** The record with the highest estimated 1RM. Ties go to the earlier record. Rows must be non-empty. */
+export function bestRecord(rows: readonly RecordRow[]): RecordRow {
+  return rows.reduce((a, b) => (b.e1rmKg > a.e1rmKg || (b.e1rmKg === a.e1rmKg && b.achievedAt < a.achievedAt) ? b : a));
+}
+
 /** Records set inside the window, counted once per exercise and rep count. */
 export function countRecent(rows: readonly RecordRow[], now: Date, windowDays = RECORDS_WINDOW_DAYS): number {
   const cutoff = now.getTime() - windowDays * DAY_MS;
