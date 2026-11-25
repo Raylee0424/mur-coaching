@@ -43,7 +43,7 @@ const envSchema = z.object({
    * route answers from the deterministic server rules, with no network call (local dev, CI, smoke tests).
    */
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
-  AI_MODEL: z.string().min(1).default('claude-opus-5-5'),
+  AI_MODEL: z.string().min(1).default('claude-sonnet-4-6'),
   AUTOMATIONS_INTERVAL_MINUTES: z.coerce.number().int().min(0).max(1440).default(5),
 });
 

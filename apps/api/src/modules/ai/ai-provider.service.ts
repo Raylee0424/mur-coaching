@@ -7,6 +7,9 @@ export interface ProviderTurn {
   content: string;
 }
 
+/** Models that accept the server-side refusal fallback; other ids would reject the parameter. */
+const SUPPORTS_FALLBACK = /^claude-(fable|mythos|opus-5|sonnet-5-5)/;
+
 /**
  * Optional model provider. Every method returns null when no key is configured or the call fails, and callers then
  * use their deterministic rules. Server-side only: the key never reaches the browser.
@@ -60,8 +63,8 @@ export class AiProviderService {
         system,
         messages: turns.map((t) => ({ role: t.role, content: t.content })),
         output_config: { effort: 'low', ...(schema ? { format: { type: 'json_schema', schema } } : {}) },
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
+        // Server-side refusal fallback exists only on the Claude 5-generation models; older ids would 400 on it.
+        ...(SUPPORTS_FALLBACK.test(this.model) ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const } : {}),
       });
       if (message.stop_reason === 'refusal' || message.stop_reason === 'max_tokens') {
         this.logger.warn(`Model stopped with ${message.stop_reason}; using rules`);
