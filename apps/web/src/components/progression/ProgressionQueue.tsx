@@ -195,7 +195,7 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
             <EmptyState title="Queue is clear">New calls appear after clients log sessions.</EmptyState>
           )
         ) : (
-          <div className="overflow-x-auto rounded-md border border-line bg-card">
+          <div className="relative overflow-x-auto rounded-md border border-line bg-card">
             <table className={clsx(TABLE, 'min-w-[60rem]')}>
               <caption className="sr-only">Pending progression recommendations</caption>
               <thead className={THEAD}>

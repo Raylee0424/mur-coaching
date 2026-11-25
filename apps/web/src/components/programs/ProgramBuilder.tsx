@@ -243,7 +243,7 @@ export function ProgramBuilder({ program, library, clients, conflicts = [], spor
 
       <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div>
-          <div role="tablist" aria-label="Weeks" aria-orientation="vertical" className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+          <div role="tablist" aria-label="Weeks" aria-orientation="vertical" className="flex gap-1 relative overflow-x-auto lg:flex-col lg:overflow-visible">
             {weeks.map((w) => (
               <button
                 key={w}

@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { CircleCheck } from 'lucide-react';
 import { Icon } from '@/components/ui/Icon';
+import { Term } from '@/components/ui/Term';
 import { DemoForms } from './DemoForms';
 import { CONTAINER } from './Section';
 
@@ -24,7 +25,7 @@ function WorkoutPreview() {
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-line bg-canvas-low">
+      <div className="relative overflow-x-auto rounded-md border border-line bg-canvas-low">
         <table className="w-full border-collapse text-left tabular-nums">
           <caption className="sr-only">Sets logged in the latest session</caption>
           <thead>
@@ -90,8 +91,9 @@ export function Hero() {
 
           <p className="max-w-prose text-pretty font-sans text-body-lg text-muted">
             Coaches manage entire rosters in one workspace while the deterministic progression engine analyzes the last 3 sessions—weight,
-            reps, and RPE—to recommend the exact next move.
+            reps, and <Term id="rpe" />—to recommend the exact next move.
           </p>
+          <p className="-mt-3 font-mono text-label-md text-muted">RPE = how hard a set felt, 1-10</p>
 
           <DemoForms layout="inline" />
         </div>

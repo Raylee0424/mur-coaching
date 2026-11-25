@@ -7,7 +7,7 @@ import { formatWeight } from '@/lib/units';
 export function MetricsTable({ metrics, unit }: { metrics: SessionMetrics[]; unit: WeightUnit }) {
   if (metrics.length === 0) return null;
   return (
-    <div className="overflow-x-auto rounded-md border border-line">
+    <div className="relative overflow-x-auto rounded-md border border-line">
       <table className={clsx(TABLE, 'min-w-[28rem]')}>
         <caption className="sr-only">Sessions the engine analysed, oldest first</caption>
         <thead className={THEAD}>

@@ -16,7 +16,7 @@ export function IntakeAudit({ totals, waterMl, target }: { totals: NutrientTotal
     { label: 'Water', unit: 'L', logged: waterMl / 1000, goal: (target?.waterMl ?? NUTRITION_LIMITS.defaultWaterMl) / 1000, tone: 'text-sky' },
   ];
   return (
-    <div className="overflow-x-auto rounded-sm border border-line bg-canvas-low">
+    <div className="relative overflow-x-auto rounded-sm border border-line bg-canvas-low">
       <table className={TABLE}>
         <thead className={THEAD}>
           <tr>
@@ -78,7 +78,7 @@ const VERDICT: Record<DayVerdict, { label: string; tone: BadgeTone }> = {
 /** 7-day calorie and protein bars against target, plus hydration consistency. Every bar carries its number. */
 export function AdherenceWeek({ summary, target }: { summary: AdherenceSummary; target: NutritionTargetDto | null }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className={TABLE}>
         <caption className="sr-only">Daily intake for the last {summary.days.length} days</caption>
         <thead className={THEAD}>

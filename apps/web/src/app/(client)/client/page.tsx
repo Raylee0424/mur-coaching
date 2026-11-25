@@ -13,12 +13,14 @@ import { bodyApi, checkInsApi, liveApi, meApi, nutritionApi, readinessApi } from
 import { dayTotals, fmt, litres, waterTotal } from '@/components/nutrition/nutrition-model';
 import { NUTRITION_LIMITS, READINESS_BAND_LABELS, readinessBand } from '@coaching/shared';
 import { requireUser } from '@/lib/auth';
+import { targetsIntroDismissed } from '@/lib/session';
 import { formatClock } from '@/components/logger/logger-model';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
 import { CoachCues } from '@/components/logger/CoachCues';
 import { formatWeight } from '@/lib/units';
+import { QuickTerms, TargetsIntro } from './_components/TargetsIntro';
 import { WhyButton } from './_components/WhyButton';
-import { bannerLabel, bannerText, targetSourceNote, todayTargetLine } from './_components/today-model';
+import { bannerLabel, bannerText, targetSourceNote, todayPlainLine, todayTargetLine } from './_components/today-model';
 
 function sourceLine(exercise: TodayExercise): string | null {
   const t = exercise.target;
@@ -30,11 +32,13 @@ function sourceLine(exercise: TodayExercise): string | null {
 function ExerciseRow({ index, exercise, unit, coachName }: { index: number; exercise: TodayExercise; unit: WeightUnit; coachName: string | null }) {
   const t = exercise.target;
   const line = todayTargetLine(t, unit);
+  const plain = todayPlainLine(t);
   const note = sourceLine(exercise);
   const highlighted = t.source === 'RECOMMENDATION' || t.source === 'COACH_OVERRIDE';
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-4 py-3.5">
+    // Phones: name on its own line, target below. sm+: target sits at the right.
+    <li className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
           <Link href={`/client/lifts/${exercise.exerciseId}`} className="font-sans text-label-md font-semibold text-ink hover:text-primary hover:underline">
@@ -42,6 +46,7 @@ function ExerciseRow({ index, exercise, unit, coachName }: { index: number; exer
           </Link>
           {exercise.limitation ? <LimitationBadge flag={exercise.limitation} /> : null}
         </span>
+        {plain ? <p className="mt-1 text-label-md text-ink">{plain}</p> : null}
         <p className="mt-0.5 text-label-sm text-muted">
           <span className="font-mono">
             {exercise.sets} {exercise.sets === 1 ? 'set' : 'sets'}
@@ -55,7 +60,7 @@ function ExerciseRow({ index, exercise, unit, coachName }: { index: number; exer
           </div>
         ) : null}
       </div>
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="flex items-center gap-1.5 sm:shrink-0">
         <span className={clsx('font-mono text-label-md tabular-nums', highlighted ? 'text-primary' : 'text-ink')}>
           {line || <span className="text-muted">Pick load</span>}
         </span>
@@ -80,13 +85,14 @@ function ExerciseRow({ index, exercise, unit, coachName }: { index: number; exer
 export default async function ClientHome() {
   const user = await requireUser(Role.CLIENT);
   // Side-rail telemetry (live session, check-ins, bodyweight, nutrition) is best-effort and never blocks Today.
-  const [today, live, checkIns, body, food, readiness] = await Promise.all([
+  const [today, live, checkIns, body, food, readiness, introDismissed] = await Promise.all([
     meApi.today(),
     liveApi.mine().then((r) => r.session).catch(() => null),
     checkInsApi.mine().catch(() => ({ due: [], recent: [] })),
     bodyApi.trend().catch(() => null),
     nutritionApi.day().catch(() => null),
     readinessApi.history().catch(() => null),
+    targetsIntroDismissed(),
   ]);
 
   const unit = user.weightUnit;
@@ -123,7 +129,7 @@ export default async function ClientHome() {
         actions={
           <>
             {today.coachName ? (
-              <Link href="/client/messages" className={buttonClass('secondary', undefined, 'sm')}>
+              <Link href="/client/messages" className={buttonClass('secondary', 'max-sm:hidden', 'sm')}>
                 <Icon icon={MessageSquare} />
                 Ask My Coach
               </Link>
@@ -136,6 +142,9 @@ export default async function ClientHome() {
       />
 
       <div className="space-y-6">
+        {introDismissed ? null : <TargetsIntro />}
+        <QuickTerms />
+
         {live ? (
           <Link
             href="/client/live"

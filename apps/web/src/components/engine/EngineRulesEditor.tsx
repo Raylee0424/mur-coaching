@@ -108,7 +108,7 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
           </Button>
         }
       >
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className={clsx(TABLE, 'min-w-[44rem]')}>
             <caption className="sr-only">Progression rules, in the order the engine checks them</caption>
             <thead className={THEAD}>

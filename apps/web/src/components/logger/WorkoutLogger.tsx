@@ -377,7 +377,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
           ) : null}
           {draft.exercises.length > 1 ? (
             <nav aria-label="Exercises in this session">
-              <ol className="flex gap-2 overflow-x-auto pb-1">
+              <ol className="flex gap-2 relative overflow-x-auto pb-1">
                 {draft.exercises.map((e, i) => {
                   const label = plans[e.key]?.name || byId.get(e.exerciseId)?.name || 'New exercise';
                   const active = i === index;

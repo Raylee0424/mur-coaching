@@ -57,6 +57,7 @@ export function Sheet({ open, onClose, title, description, variant = 'modal', he
     <dialog
       ref={ref}
       aria-labelledby={titleId}
+      aria-modal="true"
       onClose={onClose}
       onClick={(e) => {
         if (e.target === ref.current) onClose();

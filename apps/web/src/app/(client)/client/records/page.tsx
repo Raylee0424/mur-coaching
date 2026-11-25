@@ -90,7 +90,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
             </span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className={TABLE}>
               <caption className="sr-only">Heaviest working set per exercise and rep bracket. Warm-ups are excluded.</caption>
               <thead className={THEAD}>
@@ -198,7 +198,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Sear
                 PRO TELEMETRY · {records.windowDays}D
               </span>
             </div>
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className={TABLE}>
                 <caption className="sr-only">Working sets, average RPE and e1RM change per exercise over the last {records.windowDays} days</caption>
                 <thead className={THEAD}>

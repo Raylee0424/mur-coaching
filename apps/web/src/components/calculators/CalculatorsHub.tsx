@@ -26,6 +26,7 @@ import {
 } from '@coaching/shared';
 import { Input, Label, Select } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
+import { Term } from '@/components/ui/Term';
 import { unitLabel } from '@/lib/units';
 import { DEFAULT_BAR, describePlates, fmt, parseNum, toKg } from './calculators-model';
 
@@ -96,7 +97,9 @@ function OneRepMaxTool({ unit }: { unit: WeightUnit }) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <Icon icon={Activity} size={20} className="text-primary" />
-          <h2 className="font-display text-title-md text-ink">1RM Calculator</h2>
+          <h2 className="font-display text-title-md text-ink">
+            <Term id="oneRm" /> Calculator
+          </h2>
         </div>
         <span className="font-mono text-title-lg text-primary tabular-nums">
           {est === null ? '—' : `${fmt(est, 1)} ${unitLabel(unit)}`}
@@ -114,6 +117,9 @@ function OneRepMaxTool({ unit }: { unit: WeightUnit }) {
           <option value="BRZYCKI">Brzycki</option>
           <option value="LOMBARDI">Lombardi</option>
         </Select>
+        <p className="mt-1.5 text-label-sm text-muted">
+          <Term id="epley" />, <Term id="brzycki" /> and <Term id="lombardi" /> each estimate your best single rep a little differently.
+        </p>
       </div>
 
       {est === null ? (
@@ -247,7 +253,7 @@ function ToolCardHeader({
 }: {
   icon: LucideIcon;
   tone: 'sky' | 'emerald' | 'primary' | 'amber';
-  title: string;
+  title: ReactNode;
   subtitle: string;
   readout?: string;
 }) {
@@ -344,7 +350,11 @@ function StrengthScoreTool({ unit }: { unit: WeightUnit }) {
       <ToolCardHeader
         icon={Trophy}
         tone="primary"
-        title="Wilks / DOTS"
+        title={
+          <>
+            <Term id="wilks" /> / <Term id="dots" />
+          </>
+        }
         subtitle="Relative Strength Score"
         readout={dotsScore ? `${fmt(dotsScore, 1)} DOTS` : undefined}
       />
@@ -442,7 +452,7 @@ function NetStimulusTool() {
       <ToolCardHeader
         icon={Zap}
         tone="primary"
-        title="Net Stimulus"
+        title={<Term id="netStimulus" />}
         subtitle="Weekly Hard Sets"
         readout={result ? `${fmt(result.effectiveSets, 1)} sets` : undefined}
       />

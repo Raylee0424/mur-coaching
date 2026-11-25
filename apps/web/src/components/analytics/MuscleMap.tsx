@@ -127,7 +127,7 @@ export function MuscleMap({ data }: { data: MuscleAnalyticsDto }) {
             SORTED BY: {COLUMNS.find((c) => c.key === sort.key)?.label.toUpperCase()} {sort.dir === 'desc' ? '↓' : '↑'}
           </span>
         </div>
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className={TABLE}>
             <caption className="sr-only">Per-muscle training volume over the last {data.days} days</caption>
             <thead className={THEAD}>

@@ -18,7 +18,7 @@ const LINK = 'font-sans text-label-lg text-muted transition-colors hover:text-in
 export function MarketingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/95 backdrop-blur-sm">
-      <div className={clsx(CONTAINER, 'flex h-20 items-center justify-between gap-8')}>
+      <div className={clsx(CONTAINER, 'flex h-20 items-center justify-between gap-4 sm:gap-8')}>
         <a href="#top" aria-label="MUR Coaching home" className="shrink-0">
           <Wordmark />
         </a>
@@ -31,12 +31,12 @@ export function MarketingNav() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-5">
+        <div className="flex shrink-0 items-center gap-3 sm:gap-5">
           <Link href="/login" className={LINK}>
             Sign In
           </Link>
           <details className="group relative">
-            <summary className={buttonClass('primary', 'cursor-pointer list-none px-6 [&::-webkit-details-marker]:hidden', 'lg')}>
+            <summary className={buttonClass('primary', 'cursor-pointer list-none sm:px-6 [&::-webkit-details-marker]:hidden', 'lg')}>
               Try Live Demo
             </summary>
             <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border border-line bg-card p-3.5">

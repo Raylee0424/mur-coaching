@@ -1,16 +1,15 @@
-import { ChevronsUpDown, LogOut } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Route } from 'lucide-react';
+import Link from 'next/link';
 import clsx from 'clsx';
 import type { AuthUser } from '@coaching/shared';
 import { Role, WeightUnit } from '@coaching/shared';
 import { setWeightUnit } from '@/actions/account';
 import { logout } from '@/actions/auth';
 import { Icon } from '@/components/ui/Icon';
+import { initials } from '@/lib/initials';
+import { onboardingFor } from '@/lib/routes';
+import { buttonClass } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '')).toUpperCase() || '?';
-}
 
 /** Stitch bottom user chip + popover: weight unit and sign out. */
 export function AccountMenu({ user }: { user: AuthUser }) {
@@ -56,6 +55,12 @@ export function AccountMenu({ user }: { user: AuthUser }) {
           </span>
         </form>
         <div className="my-1.5 border-t border-line" />
+        {user.isDemo ? (
+          <Link href={onboardingFor(user.role)} className={buttonClass('ghost', 'w-full justify-start rounded-sm', 'sm')}>
+            <Icon icon={Route} />
+            View onboarding
+          </Link>
+        ) : null}
         <form action={logout}>
           <SubmitButton variant="ghost" size="sm" className="w-full justify-start rounded-sm" pendingLabel="Signing out…">
             <Icon icon={LogOut} />

@@ -129,7 +129,7 @@ export function ImportWizard({
               Matched names reuse your library. Pick an exercise for each unmatched name, or leave it on Skip to leave those sets out. Choices are remembered for
               next time.
             </p>
-            <div className="overflow-x-auto rounded-sm border border-line">
+            <div className="relative overflow-x-auto rounded-sm border border-line">
               <table className={TABLE}>
                 <thead className={THEAD}>
                   <tr>

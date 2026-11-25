@@ -13,11 +13,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { exercisesApi, limitationsApi, meApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'AT';
-}
+import { initials } from '@/lib/initials';
 
 const WORKSPACE_LINKS = [
   { href: '/client/check-in', title: 'Weekly Check-in', meta: 'Submit metrics & notes' },
@@ -54,7 +50,7 @@ export default async function ProfilePage() {
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
             <div className="flex items-center gap-4">
               <span className="inline-flex size-12 shrink-0 items-center justify-center rounded-full border border-primary bg-raised font-display text-title-md text-primary">
-                {initials(displayName)}
+                {initials(displayName, 'AT')}
               </span>
               <div>
                 <h2 className="font-display text-title-md text-ink">Profile &amp; Units</h2>
