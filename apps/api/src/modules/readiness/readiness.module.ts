@@ -7,5 +7,6 @@ import { ReadinessService } from './readiness.service';
   imports: [ClientsModule],
   controllers: [MeReadinessController, CoachCycleController],
   providers: [ReadinessService],
+  exports: [ReadinessService],
 })
 export class ReadinessModule {}

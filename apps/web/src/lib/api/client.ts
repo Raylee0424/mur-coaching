@@ -101,3 +101,17 @@ export async function apiFetch<T>(path: `/${string}`, opts: ApiFetchOptions = {}
 
   return (await res.json()) as T;
 }
+
+/**
+ * Server-only passthrough for file downloads (data export): returns the raw API response so a route handler can stream
+ * it to the browser. The bearer token never leaves this server.
+ */
+export async function apiDownload(path: `/${string}`, query?: Query): Promise<Response> {
+  const token = await getSessionToken();
+  if (!token) redirect('/auth/signout?reason=expired');
+  try {
+    return await fetch(`${API_URL}${path}${buildQuery(query)}`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+  } catch {
+    throw new ApiError(503, ['The API is unreachable.']);
+  }
+}

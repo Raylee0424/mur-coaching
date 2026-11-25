@@ -1,5 +1,20 @@
 import 'server-only';
 import type {
+  GroupDetailDto,
+  GroupLeaderboardDto,
+  SharedWorkoutDto,
+  SocialOverviewDto,
+  CreateGroupRequest,
+  CreateReportRequest,
+  ShareWorkoutRequest,
+  HealthOverviewDto,
+  SyncHealthMetricsRequest,
+  SyncHealthMetricsResponse,
+  ImportCommitRequest,
+  ImportCommitResponse,
+  ImportJobDto,
+  ImportPreviewDto,
+  ImportPreviewRequest,
   CycleContextDto,
   MuscleAnalyticsDto,
   ReadinessDto,
@@ -609,4 +624,41 @@ export const connectorsApi = {
   list: () => apiFetch<ConnectorGrantDto[]>('/me/connectors'),
   create: (body: CreateConnectorRequest) => apiFetch<CreatedConnectorDto>('/me/connectors', { method: 'POST', body }),
   revoke: (id: string) => apiFetch<void>(idPath('/me/connectors', id), { method: 'DELETE' }),
+};
+
+/** Steps, sleep, HRV and resting HR (owner only). Sync is idempotent per day and source. */
+export const healthApi = {
+  overview: (days?: number) => apiFetch<HealthOverviewDto>('/me/health', { query: { days } }),
+  sync: (body: SyncHealthMetricsRequest) => apiFetch<SyncHealthMetricsResponse>('/me/health/metrics', { method: 'PUT', body }),
+  saveGoal: (dailySteps: number) => apiFetch<void>('/me/health/step-goal', { method: 'PUT', body: { dailySteps } }),
+};
+
+/** CSV import (preview, commit, rollback). Export downloads go through the route handler, not this client. */
+export const dataApi = {
+  jobs: () => apiFetch<ImportJobDto[]>('/me/data/imports'),
+  preview: (body: ImportPreviewRequest) => apiFetch<ImportPreviewDto>('/me/data/imports/preview', { method: 'POST', body }),
+  commit: (body: ImportCommitRequest) => apiFetch<ImportCommitResponse>('/me/data/imports/commit', { method: 'POST', body }),
+  rollback: (id: string) => apiFetch<ImportJobDto>(`${idPath('/me/data/imports', id)}/rollback`, { method: 'POST' }),
+};
+
+/** Training groups, friends, blocks and reports. Every group route is members-only (404 otherwise). */
+export const socialApi = {
+  overview: () => apiFetch<SocialOverviewDto>('/me/social'),
+  createGroup: (body: CreateGroupRequest) => apiFetch<GroupDetailDto>('/me/groups', { method: 'POST', body }),
+  join: (inviteCode: string) => apiFetch<GroupDetailDto>('/me/groups/join', { method: 'POST', body: { inviteCode } }),
+  group: (id: string) => apiFetch<GroupDetailDto>(idPath('/me/groups', id)),
+  leave: (id: string) => apiFetch<void>(`${idPath('/me/groups', id)}/membership`, { method: 'DELETE' }),
+  setShareStats: (id: string, shareStats: boolean) => apiFetch<void>(`${idPath('/me/groups', id)}/membership`, { method: 'PATCH', body: { shareStats } }),
+  rotateCode: (id: string) => apiFetch<GroupDetailDto>(`${idPath('/me/groups', id)}/invite-code`, { method: 'POST' }),
+  removeMember: (id: string, userId: string) => apiFetch<void>(`${idPath('/me/groups', id)}${idPath('/members', userId)}`, { method: 'DELETE' }),
+  feed: (id: string) => apiFetch<SharedWorkoutDto[]>(`${idPath('/me/groups', id)}/feed`),
+  share: (id: string, body: ShareWorkoutRequest) => apiFetch<SharedWorkoutDto>(`${idPath('/me/groups', id)}/shares`, { method: 'POST', body }),
+  unshare: (id: string) => apiFetch<void>(idPath('/me/shares', id), { method: 'DELETE' }),
+  leaderboard: (id: string) => apiFetch<GroupLeaderboardDto>(`${idPath('/me/groups', id)}/leaderboard`),
+  requestFriend: (userId: string) => apiFetch<void>('/me/friends', { method: 'POST', body: { userId } }),
+  acceptFriend: (id: string) => apiFetch<void>(`${idPath('/me/friends', id)}/accept`, { method: 'PUT' }),
+  removeFriend: (id: string) => apiFetch<void>(idPath('/me/friends', id), { method: 'DELETE' }),
+  block: (userId: string) => apiFetch<void>('/me/blocks', { method: 'POST', body: { userId } }),
+  unblock: (userId: string) => apiFetch<void>(idPath('/me/blocks', userId), { method: 'DELETE' }),
+  report: (body: CreateReportRequest) => apiFetch<void>('/me/reports', { method: 'POST', body }),
 };

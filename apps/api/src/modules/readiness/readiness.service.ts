@@ -129,6 +129,13 @@ export class ReadinessService {
     return { configured: true, sharedWithCoach: rows[0]?.sharedWithCoach ?? false, summary: summarizeCycle(entries, today()), entries };
   }
 
+  /** Owner export of every entry (no history window). Plaintext fields only: ciphertext and key version never leave here. */
+  async exportCycle(clientId: string): Promise<{ configured: boolean; entries: CycleEntryDto[] }> {
+    if (!this.cipher) return { configured: false, entries: [] };
+    const rows = await this.prisma.cycleLog.findMany({ where: { clientId }, orderBy: { date: 'desc' } });
+    return { configured: true, entries: this.decryptAll(this.cipher, rows) };
+  }
+
   /** One row per day, replaced on resubmit. A new row inherits the client's current share choice. */
   async saveCycleEntry(clientId: string, input: SaveCycleEntryRequest): Promise<void> {
     const cipher = this.requireCipher();
