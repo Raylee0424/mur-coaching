@@ -12,15 +12,23 @@ const VARIANTS: Record<ButtonVariant, string> = {
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: 'h-8 gap-1.5 px-3.5 text-label-md',
-  md: 'h-10 gap-2 px-4 text-label-lg',
-  lg: 'h-11 gap-2 px-5 text-label-lg',
+  sm: 'h-8 gap-1.5 text-label-md',
+  md: 'h-10 gap-2 text-label-lg',
+  lg: 'h-11 gap-2 text-label-lg',
 };
+
+const PADDING: Record<ButtonSize, string> = { sm: 'px-3.5', md: 'px-4', lg: 'px-5' };
+
+/** True when `className` sets its own horizontal padding (`px-0` on icon-only buttons, for example). */
+const OWN_PADDING = /(^|\s)px-/;
 
 export function buttonClass(variant: ButtonVariant = 'primary', className?: string, size: ButtonSize = 'md'): string {
   return clsx(
     'inline-flex items-center justify-center whitespace-nowrap rounded-full font-semibold transition-colors disabled:cursor-not-allowed',
     SIZES[size],
+    // clsx only concatenates and Tailwind orders `px-0` before `px-3.5`, so a caller's padding
+    // would lose to the size default. Drop the default instead (it squeezed icon-only buttons to a dot).
+    className && OWN_PADDING.test(className) ? undefined : PADDING[size],
     VARIANTS[variant],
     className,
   );

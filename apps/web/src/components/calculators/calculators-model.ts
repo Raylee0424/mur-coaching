@@ -1,4 +1,4 @@
-import { WeightUnit } from '@coaching/shared';
+import { PLATES_KG, PLATES_LB, WeightUnit } from '@coaching/shared';
 import { KG_PER_LB } from '@/lib/units';
 
 /** Parses a form field. Blank or non-numeric input is `null`, never 0. */
@@ -27,3 +27,40 @@ export function describePlates(perSide: readonly number[]): string {
 }
 
 export const DEFAULT_BAR = { KG: 20, LB: 45 } as const;
+
+/** Browser-local "plates in my gym" set, one list per unit. Shared by the calculator and the logger. */
+export const PLATE_SET_STORAGE_KEY = 'mur:plate-set';
+
+export function allPlates(unit: WeightUnit): readonly number[] {
+  return unit === WeightUnit.LB ? PLATES_LB : PLATES_KG;
+}
+
+/**
+ * Reads the stored plate set for `unit`. Keeps only known plates for that unit, heaviest first.
+ * Missing, malformed or empty data falls back to every plate.
+ */
+export function parsePlateSet(raw: string | null, unit: WeightUnit): readonly number[] {
+  const all = allPlates(unit);
+  if (!raw) return all;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const list = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>)[unit] : undefined;
+    if (!Array.isArray(list)) return all;
+    const kept = all.filter((p) => list.includes(p));
+    return kept.length > 0 ? kept : all;
+  } catch {
+    return all;
+  }
+}
+
+/** Writes `plates` for `unit`, leaving the other unit's set untouched. */
+export function serializePlateSet(raw: string | null, unit: WeightUnit, plates: readonly number[]): string {
+  let base: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) base = parsed as Record<string, unknown>;
+  } catch {
+    // Overwrite malformed data.
+  }
+  return JSON.stringify({ ...base, [unit]: [...plates] });
+}

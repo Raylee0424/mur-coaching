@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PLATES_KG,
   PLATES_LB,
+  WeightUnit,
   bmr,
   bodyFatNavy,
   dots,
@@ -14,7 +15,7 @@ import {
   weeklyNetStimulus,
   wilks,
 } from '@coaching/shared';
-import { describePlates, parseNum } from '@/components/calculators/calculators-model';
+import { describePlates, parsePlateSet, parseNum, serializePlateSet } from '@/components/calculators/calculators-model';
 
 describe('oneRepMax', () => {
   it('matches Epley, Brzycki and Lombardi', () => {
@@ -125,5 +126,25 @@ describe('parseNum', () => {
     expect(parseNum('')).toBeNull();
     expect(parseNum('abc')).toBeNull();
     expect(parseNum('82,5')).toBe(82.5);
+  });
+});
+
+describe('plate set (gym without 25 kg plates)', () => {
+  it('loads 157.5 kg with 20s when 25s are switched off', () => {
+    const noTwentyFives = PLATES_KG.filter((p) => p !== 25);
+    expect(plateLoader(157.5, 20, noTwentyFives)?.perSide).toEqual([20, 20, 20, 5, 2.5, 1.25]);
+  });
+  it('falls back to every plate for missing, malformed or empty data', () => {
+    expect(parsePlateSet(null, WeightUnit.KG)).toEqual(PLATES_KG);
+    expect(parsePlateSet('{oops', WeightUnit.KG)).toEqual(PLATES_KG);
+    expect(parsePlateSet('{"KG":[]}', WeightUnit.KG)).toEqual(PLATES_KG);
+  });
+  it('keeps only known plates for the unit, heaviest first', () => {
+    expect(parsePlateSet('{"KG":[1.25,20,99,15]}', WeightUnit.KG)).toEqual([20, 15, 1.25]);
+  });
+  it('saves one unit without touching the other', () => {
+    const raw = serializePlateSet('{"LB":[45,25]}', WeightUnit.KG, [20, 10]);
+    expect(parsePlateSet(raw, WeightUnit.KG)).toEqual([20, 10]);
+    expect(parsePlateSet(raw, WeightUnit.LB)).toEqual([45, 25]);
   });
 });
