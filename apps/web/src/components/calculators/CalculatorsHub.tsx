@@ -5,8 +5,6 @@ import { Activity, Droplets, Dumbbell, Flame, PieChart, Ruler, Trophy, Zap, type
 import { useId, useState, type ReactNode } from 'react';
 import {
   ACTIVITY_MULTIPLIER,
-  PLATES_KG,
-  PLATES_LB,
   WeightUnit,
   bmr,
   bodyFatNavy,
@@ -28,7 +26,8 @@ import { Input, Label, Select } from '@/components/ui/Field';
 import { Icon } from '@/components/ui/Icon';
 import { Term } from '@/components/ui/Term';
 import { unitLabel } from '@/lib/units';
-import { DEFAULT_BAR, describePlates, fmt, parseNum, toKg } from './calculators-model';
+import { DEFAULT_BAR, allPlates, describePlates, fmt, parseNum, toKg } from './calculators-model';
+import { usePlateSet } from './usePlateSet';
 
 function NumField({ label, value, onChange, hint }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
   const id = useId();
@@ -138,8 +137,10 @@ function PlateLoaderTool({ unit }: { unit: WeightUnit }) {
   const [bar, setBar] = useState(String(DEFAULT_BAR[unit]));
   const t = parseNum(target);
   const b = parseNum(bar);
-  const load = t !== null && b !== null ? plateLoader(t, b, unit === WeightUnit.LB ? PLATES_LB : PLATES_KG) : null;
+  const { plates, toggle } = usePlateSet(unit);
+  const load = t !== null && b !== null ? plateLoader(t, b, plates) : null;
   const flatPlates = load ? load.perSide.slice(0, 8) : [];
+  const missing = allPlates(unit).length - plates.length;
 
   return (
     <article className="flex flex-col justify-between gap-4 rounded-md border border-line bg-card p-6">
@@ -157,6 +158,33 @@ function PlateLoaderTool({ unit }: { unit: WeightUnit }) {
         <NumField label={`Target (${unitLabel(unit)})`} value={target} onChange={setTarget} />
         <NumField label={`Bar (${unitLabel(unit)})`} value={bar} onChange={setBar} />
       </div>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-2 flex w-full items-center justify-between gap-2 font-sans text-label-sm font-semibold uppercase tracking-wide text-muted">
+          <span>Plates in your gym</span>
+          <span className="font-mono normal-case tracking-normal">{missing === 0 ? 'All plates' : `${missing} off`}</span>
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {allPlates(unit).map((p) => {
+            const on = plates.includes(p);
+            return (
+              <button
+                key={p}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggle(p)}
+                className={clsx(
+                  'inline-flex h-9 min-w-12 items-center justify-center rounded-full border px-3 font-mono text-label-md tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  on ? 'border-primary bg-primary-container text-primary' : 'border-line text-muted line-through hover:text-ink',
+                )}
+              >
+                {String(p)}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-label-sm text-muted">Tap a plate your gym doesn&apos;t have. Saved on this device and used in the workout logger too.</p>
+      </fieldset>
 
       {/* Visual Barbell Sleeve (`athlete_web_training_nutrition_calculators`) */}
       <div className="flex min-h-24 items-center justify-center gap-1 rounded-sm border border-line bg-canvas-low p-4" aria-hidden="true">
@@ -178,7 +206,7 @@ function PlateLoaderTool({ unit }: { unit: WeightUnit }) {
       ) : (
         <Result>
           Per side ({fmt(b ?? DEFAULT_BAR[unit])} {unitLabel(unit)} bar): {describePlates(load.perSide)}
-          {load.shortfall > 0 ? ` · ${fmt(load.shortfall, 2)} ${unitLabel(unit)} short` : ''}
+          {load.shortfall > 0 ? ` · ${fmt(load.shortfall, 2)} ${unitLabel(unit)} short with your plates` : ''}
         </Result>
       )}
     </article>
