@@ -142,7 +142,7 @@ export function EditTargetDialog({ subject, unit, onClose }: { subject: EditTarg
         <section className={`space-y-2 rounded-md border p-4 ${ACTION_META[subject.action].box}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className={`font-sans text-label-sm uppercase tracking-wider ${ACTION_META[subject.action].text}`}>Engine proposed</span>
-            <ActionBadge action={subject.action} />
+            <ActionBadge action={subject.action} showCode />
           </div>
           {engineTarget ? (
             <p className="font-display text-title-lg text-ink tabular-nums">

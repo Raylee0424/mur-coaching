@@ -9,8 +9,9 @@ import type { RosterClientDto } from '@coaching/shared';
 import { Badge } from '@/components/ui/Badge';
 import { buttonClass } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { Term } from '@/components/ui/Term';
 import { TABLE, TD, TD_NUM, TH, TH_NUM, THEAD, TR } from '@/components/ui/table';
-import { ACTION_META } from '@/components/progression/ActionBadge';
+import { ActionBadge } from '@/components/progression/ActionBadge';
 import { formatDate } from '@/lib/format';
 import { RestoreClientButton } from './RestoreClientButton';
 import {
@@ -82,7 +83,7 @@ export function RosterTable({ clients, total, toolbar }: { clients: RosterClient
                 {show('program') ? <th scope="col" className={TH}>Current Program</th> : null}
                 {show('adherence') ? <th scope="col" className={TH_NUM}>Adherence</th> : null}
                 {show('pending') ? <th scope="col" className={TH}>Pending</th> : null}
-                {show('rpe') ? <th scope="col" className={TH_NUM}>RPE Trend</th> : null}
+                {show('rpe') ? <th scope="col" className={TH_NUM}><Term id="rpe">RPE</Term> Trend</th> : null}
                 <th scope="col" className={clsx(TH, 'text-right')}>Actions</th>
               </tr>
             </thead>
@@ -156,9 +157,7 @@ function Row({ client, show }: { client: RosterClientDto; show: (c: RosterColumn
           ) : (
             <span className="flex flex-wrap gap-2">
               {pendingEntries.map((a) => (
-                <Badge key={a} tone={ACTION_META[a].tone} icon={ACTION_META[a].icon}>
-                  {client.pendingByAction[a]} pending
-                </Badge>
+                <ActionBadge key={a} action={a} count={client.pendingByAction[a]} showCode />
               ))}
             </span>
           )}

@@ -276,7 +276,7 @@ export function ProgramBuilder({ program, library, clients, conflicts = [], spor
                 <span className="ml-2.5 font-sans text-label-md font-normal text-primary">
                   {block.mesoName}
                   {block.microLabel ? ` · ${block.microLabel}` : ''}
-                  {block.isDeload ? ' · DELOAD' : ''}
+                  {block.isDeload ? ' · Lighter week' : ''}
                   {block.rpe ? ` · RPE ${block.rpe}` : ''}
                 </span>
               ) : null}

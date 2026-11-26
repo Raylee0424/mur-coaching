@@ -170,7 +170,7 @@ async function SessionsTab({ userId, unit, view, logged }: { userId: string; uni
         </div>
 
         {selected ? (
-          <div className={detailOpen ? 'flex min-w-0 flex-col gap-6 lg:col-span-7' : 'hidden min-w-0 flex-col gap-6 lg:col-span-7 lg:flex'}>
+          <div className={detailOpen ? 'flex min-w-0 flex-col gap-6 lg:col-span-7 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1' : 'hidden min-w-0 flex-col gap-6 lg:col-span-7 lg:flex lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1'}>
             <Link href={historyHref(base)} className={buttonClass('secondary', 'self-start lg:hidden', 'lg')}>
               <Icon icon={ArrowLeft} size={20} />
               All sessions

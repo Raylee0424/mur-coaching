@@ -53,8 +53,13 @@ export function parseColumns(raw: string | null): RosterColumn[] {
   }
 }
 
+/** Roster header meta: paused is shown only when someone is paused. */
+export function rosterMeta(counts: { ACTIVE: number; PAUSED: number }): string {
+  return counts.PAUSED > 0 ? `${counts.ACTIVE} active · ${counts.PAUSED} paused` : `${counts.ACTIVE} active`;
+}
+
 export const ATTENTION_LABELS: Record<AttentionReason, string> = {
-  PENDING_DELOAD: 'Deload pending',
+  PENDING_DELOAD: 'Lighter week pending',
   LOW_ADHERENCE: 'Low adherence',
   NO_RECENT_SESSION: 'No recent session',
 };

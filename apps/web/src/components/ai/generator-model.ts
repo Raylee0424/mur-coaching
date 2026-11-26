@@ -1,4 +1,4 @@
-import { TEMPLATE_LIMITS } from '@coaching/shared';
+import { PROGRESSION_ACTION_LABEL, TEMPLATE_LIMITS } from '@coaching/shared';
 import type { CreateWorkoutTemplateRequest, Equipment, GeneratedExerciseDto, WeightUnit } from '@coaching/shared';
 import { GYM_PROFILES, type GymProfileId } from '@/components/onboarding/client-onboarding-model';
 import { kgToDisplay, unitLabel } from '@/lib/units';
@@ -49,10 +49,10 @@ export function workingSets(rows: readonly PreviewRow[]): number {
   return rows.reduce((n, r) => n + r.sets, 0);
 }
 
-/** "Engine 140 kg · Deload" or "No engine target". Never computes a load of its own. */
+/** "Engine 140 kg · lighter week" or "No engine target". Never computes a load of its own. */
 export function engineLoadLabel(r: Pick<PreviewRow, 'engineWeightKg' | 'engineAction'>, unit: WeightUnit): string {
   if (r.engineWeightKg === null) return 'No engine target';
-  const action = r.engineAction ? ` · ${r.engineAction.replace('_', ' ').toLowerCase()}` : '';
+  const action = r.engineAction ? ` · ${PROGRESSION_ACTION_LABEL[r.engineAction].toLowerCase()}` : '';
   return `${kgToDisplay(Number(r.engineWeightKg), unit)} ${unitLabel(unit)}${action}`;
 }
 

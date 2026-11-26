@@ -1,5 +1,7 @@
 import clsx from 'clsx';
 import { CircleCheck } from 'lucide-react';
+import { PROGRESSION_ACTION_LABEL } from '@coaching/shared';
+import { ACTION_META } from '@/components/progression/ActionBadge';
 import { Icon } from '@/components/ui/Icon';
 import { Term } from '@/components/ui/Term';
 import { DemoForms } from './DemoForms';
@@ -59,8 +61,8 @@ function WorkoutPreview() {
       <div className="flex flex-col justify-between gap-4 rounded-md border border-emerald/40 bg-emerald-bg p-4 sm:flex-row sm:items-center">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-emerald" aria-hidden="true" />
-            <span className="font-sans text-label-sm uppercase tracking-wider text-emerald tabular-nums">INCREASE LOAD • +2.5 kg</span>
+            <span className="size-2 rounded-full bg-current text-primary" aria-hidden="true" />
+            <span className={clsx('font-sans text-label-sm tracking-wider tabular-nums', ACTION_META.INCREASE_LOAD.text)}>{PROGRESSION_ACTION_LABEL.INCREASE_LOAD} · +2.5 kg</span>
           </div>
           <p className="font-sans text-label-md font-normal text-ink">
             3-session average RPE 7.8 is below 8.5 cap. Next target: 157.5 kg.

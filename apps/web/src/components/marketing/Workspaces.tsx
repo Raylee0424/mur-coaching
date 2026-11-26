@@ -16,9 +16,9 @@ const ATHLETE_POINTS = [
 ] as const;
 
 const QUEUE_ROWS = [
-  { client: 'M. Vance', lift: 'Back Squat', badge: '+2.5 kg', badgeCls: 'bg-emerald-bg text-emerald', cta: 'Accept', primaryCta: true },
+  { client: 'M. Vance', lift: 'Back Squat', badge: '+2.5 kg', badgeCls: 'bg-primary-container text-primary', cta: 'Accept', primaryCta: true },
   { client: 'E. Rostova', lift: 'Bench Press', badge: '+1 rep', badgeCls: 'bg-sky-bg text-sky', cta: 'Accept', primaryCta: true },
-  { client: 'D. Brooks', lift: 'Deadlift', badge: 'Deload', badgeCls: 'bg-rose-bg text-rose', cta: 'Review', primaryCta: false },
+  { client: 'D. Brooks', lift: 'Deadlift', badge: 'Lighter week', badgeCls: 'bg-amber-bg text-amber', cta: 'Review', primaryCta: false },
 ] as const;
 
 export function Workspaces() {

@@ -76,7 +76,7 @@ describe('generator model', () => {
   });
 
   it('shows the engine load as is and builds a template request', () => {
-    expect(engineLoadLabel({ engineWeightKg: '140.00', engineAction: 'DELOAD' }, 'KG')).toBe('140 kg · deload');
+    expect(engineLoadLabel({ engineWeightKg: '140.00', engineAction: 'DELOAD' }, 'KG')).toBe('140 kg · lighter week');
     expect(engineLoadLabel({ engineWeightKg: null, engineAction: null }, 'KG')).toBe('No engine target');
     expect(toTemplateRequest(toRows([gen('a')]), '  Legs  ', 'why')).toEqual({
       name: 'Legs',

@@ -70,7 +70,7 @@ export function PreviewLine({
               <p className="mt-0.5 font-display text-title-md text-ink">
                 With these rules, {target.clientName.replace(' (Demo)', '')}&rsquo;s {target.exerciseName} would be{' '}
                 <span className={meta.text}>
-                  {meta.code}
+                  {meta.label.toLowerCase()}
                   {state.data.recommendedWeightKg !== null
                     ? ` (${formatTarget({ ...state.data, recommendedWeightKg: String(state.data.recommendedWeightKg) }, unit)})`
                     : ''}
@@ -80,7 +80,7 @@ export function PreviewLine({
               <p className="mt-1 font-sans text-label-sm font-normal text-ink/85">{state.data.reason}</p>
             </div>
           </div>
-          <ActionBadge action={state.data.action} />
+          <ActionBadge action={state.data.action} showCode />
         </div>
       ) : null}
     </div>

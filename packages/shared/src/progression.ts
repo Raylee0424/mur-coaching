@@ -64,6 +64,53 @@ export interface QueueTarget {
   repsMax: number | null;
 }
 
+/** Which engine branch produced a call. Chosen by the API engine, never by the web. */
+export const ProgressionReasonCase = {
+  TOO_FEW_SESSIONS: 'TOO_FEW_SESSIONS',
+  DELOAD_PLATEAU: 'DELOAD_PLATEAU',
+  DELOAD_DECLINE: 'DELOAD_DECLINE',
+  HOLD_SETS_MISSED: 'HOLD_SETS_MISSED',
+  HOLD_RPE_MISSING: 'HOLD_RPE_MISSING',
+  HOLD_RPE_HIGH: 'HOLD_RPE_HIGH',
+  HOLD_REPS_LOW: 'HOLD_REPS_LOW',
+  HOLD_LOAD_MARGIN: 'HOLD_LOAD_MARGIN',
+  INCREASE_LOAD: 'INCREASE_LOAD',
+  INCREASE_REPS: 'INCREASE_REPS',
+} as const;
+export type ProgressionReasonCase = (typeof ProgressionReasonCase)[keyof typeof ProgressionReasonCase];
+
+/** The action each case always produces. */
+export const REASON_CASE_ACTION = {
+  TOO_FEW_SESSIONS: 'HOLD',
+  DELOAD_PLATEAU: 'DELOAD',
+  DELOAD_DECLINE: 'DELOAD',
+  HOLD_SETS_MISSED: 'HOLD',
+  HOLD_RPE_MISSING: 'HOLD',
+  HOLD_RPE_HIGH: 'HOLD',
+  HOLD_REPS_LOW: 'HOLD',
+  HOLD_LOAD_MARGIN: 'HOLD',
+  INCREASE_LOAD: 'INCREASE_LOAD',
+  INCREASE_REPS: 'INCREASE_REPS',
+} as const satisfies Record<ProgressionReasonCase, RecommendationAction>;
+
+export interface QueueReasonBasis {
+  /** Number of sessions the call used. */
+  sessionsUsed: number;
+  /** Newest analysed session. repsPerSet is null when the source log is gone or was edited. */
+  latest: { weightKg: DecimalString; repsPerSet: number[] | null; workingSets: number; avgRpe: DecimalString | null } | null;
+  /** Values the evaluation used. Every field is null for calls stored before settings existed. */
+  rule: {
+    sets: number | null;
+    repsMin: number | null;
+    repsMax: number | null;
+    rpeCap: DecimalString | null;
+    loadMarginRpe: DecimalString | null;
+    highRpe: DecimalString | null;
+    loadIncrementKg: DecimalString | null;
+    deloadPercent: number | null;
+  };
+}
+
 export interface RecommendationQueueItem {
   id: string;
   clientId: string;
@@ -78,6 +125,9 @@ export interface RecommendationQueueItem {
   current: { weightKg: number; reps: number; avgRpe: number | null } | null;
   /** The engine's proposal (never the coach override). */
   proposed: QueueTarget;
+  /** Engine branch replayed from stored settings; null when it cannot be replayed (show `reason`). */
+  reasonCase: ProgressionReasonCase | null;
+  basis: QueueReasonBasis;
 }
 
 export interface RecommendationQueueQuery {

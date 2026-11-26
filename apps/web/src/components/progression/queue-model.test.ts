@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RecommendationQueueItem } from '@coaching/shared';
-import { bulkMessage, cancel, flushAll, parseActionFilter, pruneSelection, queueHref, schedule, scheduledIds, selectionState, toggleAll, toggleId, undoMessage, visibleItems } from './queue-model';
+import { bulkMessage, cancel, flushAll, groupByClient, parseActionFilter, pruneSelection, queueHref, schedule, scheduledIds, selectedText, selectionState, suggestionsText, toggleAll, toggleId, undoMessage, visibleItems } from './queue-model';
 
 const item = (id: string): RecommendationQueueItem => ({
   id,
@@ -14,6 +14,12 @@ const item = (id: string): RecommendationQueueItem => ({
   createdAt: '2026-11-20T00:00:00Z',
   current: null,
   proposed: { weightKg: null, repsMin: null, repsMax: null },
+  reasonCase: null,
+  basis: {
+    sessionsUsed: 0,
+    latest: null,
+    rule: { sets: null, repsMin: null, repsMax: null, rpeCap: null, loadMarginRpe: null, highRpe: null, loadIncrementKg: null, deloadPercent: null },
+  },
 });
 const items = [item('a'), item('b'), item('c')];
 
@@ -83,5 +89,23 @@ describe('deferred commits', () => {
   it('words the undo toast', () => {
     expect(undoMessage('ACCEPTED', [{ clientName: 'Marcus Vance', exerciseName: 'Back squat' }])).toBe('Accepted Marcus Vance · Back squat');
     expect(undoMessage('DISMISSED', [{ clientName: 'a', exerciseName: 'b' }, { clientName: 'c', exerciseName: 'd' }])).toBe('Dismissed 2 calls');
+  });
+});
+
+describe('grouping and text', () => {
+  it('groups by client in first-appearance order and keeps row order', () => {
+    const rows = [
+      { id: '1', clientId: 'b', clientName: 'B' },
+      { id: '2', clientId: 'a', clientName: 'A' },
+      { id: '3', clientId: 'b', clientName: 'B' },
+    ];
+    const g = groupByClient(rows);
+    expect(g.map((x) => x.clientId)).toEqual(['b', 'a']);
+    expect(g[0]?.items.map((i) => i.id)).toEqual(['1', '3']);
+  });
+  it('formats suggestion and selection counts', () => {
+    expect(suggestionsText(1)).toBe('1 suggestion');
+    expect(suggestionsText(3)).toBe('3 suggestions');
+    expect(selectedText(2)).toBe('2 selected');
   });
 });

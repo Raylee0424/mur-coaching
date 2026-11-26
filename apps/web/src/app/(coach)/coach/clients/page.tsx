@@ -5,7 +5,7 @@ import { InviteClientModal } from '@/components/clients/InviteClientModal';
 import { PendingInvites } from '@/components/clients/PendingInvites';
 import { RosterFilters } from '@/components/clients/RosterFilters';
 import { RosterTable } from '@/components/clients/RosterTable';
-import { parseRosterFilter, rosterQuery } from '@/components/clients/roster-model';
+import { parseRosterFilter, rosterMeta, rosterQuery } from '@/components/clients/roster-model';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatStrip, type StatItem } from '@/components/ui/StatStrip';
@@ -32,7 +32,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
 
   return (
     <>
-      <PageHeader title="Roster" meta={`${counts.ACTIVE} active`} actions={<InviteClientModal templates={templates} />} />
+      <PageHeader title="Roster" meta={rosterMeta(counts)} actions={<InviteClientModal templates={templates} />} />
       <div className="space-y-6">
         {nobody ? (
           <EmptyState title="No clients yet" action={<InviteClientModal templates={templates} />}>
@@ -40,7 +40,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
           </EmptyState>
         ) : (
           <>
-            <StatStrip label="Roster summary" items={kpiItems(kpis)} />
+            <StatStrip label="Roster summary" items={kpiItems(kpis)} dense />
             {items.length === 0 ? (
               <>
                 <RosterFilters counts={counts} filter={filter} q={q} />
@@ -69,14 +69,14 @@ function kpiItems(kpis: RosterKpis): StatItem[] {
   return [
     { label: 'Active clients', value: String(kpis.activeClients) },
     {
-      label: 'Pending calls',
+      label: 'Targets to review',
       value: String(kpis.pendingRecommendations),
       emphasis: kpis.pendingRecommendations > 0,
       note: `across ${kpis.pendingLifters} ${kpis.pendingLifters === 1 ? 'lifter' : 'lifters'}`,
     },
     { label: 'Sessions logged · 7d', value: String(kpis.sessionsLogged7d) },
     {
-      label: 'Deloads flagged',
+      label: 'Lighter weeks flagged',
       value: String(kpis.deloadsFlagged),
       delta: kpis.deloadsFlagged > 0 ? { text: 'awaiting review', tone: 'bad' } : null,
     },

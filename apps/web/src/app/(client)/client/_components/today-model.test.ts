@@ -67,7 +67,7 @@ describe('banner', () => {
     toWeightKg: '157.50',
   };
   it('names the approver and the jump', () => {
-    expect(bannerLabel('INCREASE_LOAD')).toBe('INCREASE LOAD APPROVED');
+    expect(bannerLabel('INCREASE_LOAD')).toBe('Add weight approved');
     expect(bannerText(base, 'KG')).toBe("Coach Morgan accepted +2.5 kg on your Back Squat. Today's target is locked at 157.5 kg.");
   });
   it('handles auto-approval and other actions', () => {

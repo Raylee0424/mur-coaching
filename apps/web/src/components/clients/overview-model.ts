@@ -1,4 +1,4 @@
-import { ADHERENCE_ATTENTION_PCT } from '@coaching/shared';
+import { ADHERENCE_ATTENTION_PCT, PROGRESSION_ACTION_LABEL } from '@coaching/shared';
 import type { CalendarDay, ClientOverviewDto, RecommendationDto } from '@coaching/shared';
 
 export type ClientTab = 'overview' | 'lifts' | 'history' | 'notes';
@@ -61,7 +61,7 @@ export function attentionItems(
   const name = (id: string): string => exerciseNames.get(id) ?? 'Unknown exercise';
 
   for (const r of pending.filter((p) => p.action === 'DELOAD')) {
-    items.push({ key: `deload-${r.id}`, title: `Pending DELOAD · ${name(r.exerciseId)}`, detail: r.reason, tab: 'lifts', priority: 0 });
+    items.push({ key: `deload-${r.id}`, title: `${PROGRESSION_ACTION_LABEL.DELOAD} pending · ${name(r.exerciseId)}`, detail: r.reason, tab: 'lifts', priority: 0 });
   }
   const others = pending.filter((p) => p.action !== 'DELOAD').length;
   if (others > 0) {

@@ -54,7 +54,7 @@ describe('attentionItems', () => {
       names,
     );
     expect(items.map((i) => i.key)).toEqual(['deload-b', 'pending', 'adherence', 'missed', 'high-rpe']);
-    expect(items[0]?.title).toBe('Pending DELOAD · Deadlift');
+    expect(items[0]?.title).toBe('Lighter week pending · Deadlift');
     expect(items[3]?.title).toBe('Missed Upper B (Nov 14)');
     expect(items[3]?.detail).toBe('2 missed sessions this month.');
   });
