@@ -35,6 +35,8 @@ export interface AuthUser {
   onboardedAt: IsoDateString | null;
   /** False until the emailed 6-digit code is confirmed. */
   emailVerified: boolean;
+  /** True when the user's email is on the API's MODERATOR_EMAILS allowlist. Shows the Reports nav item. */
+  isModerator: boolean;
 }
 
 export interface UpdateMeRequest {

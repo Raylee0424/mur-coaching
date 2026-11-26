@@ -24,7 +24,7 @@ export function safeNext(next: string | null | undefined, role: Role): string | 
 export type NavIconKey =
   | 'users' | 'queue' | 'dumbbell' | 'calendar-range' | 'sliders' | 'today' | 'history' | 'tools' | 'user' | 'billing'
   | 'inbox' | 'folder' | 'message' | 'clipboard' | 'video' | 'phone' | 'zap' | 'radio'
-  | 'log' | 'template' | 'trophy' | 'muscle' | 'scale' | 'food' | 'steps' | 'sparkles' | 'group';
+  | 'log' | 'template' | 'trophy' | 'muscle' | 'scale' | 'food' | 'steps' | 'sparkles' | 'group' | 'flag';
 
 export interface NavItem {
   href: string;
@@ -100,3 +100,10 @@ export const CLIENT_NAV: readonly NavItem[] = [
 
 /** Phone tab bar for athletes, in tab order; everything else lives in the "More" sheet. */
 export const CLIENT_TABS: readonly string[] = ['/client', '/client/log', '/client/history', '/client/profile'];
+
+export const MODERATION_NAV_ITEM: NavItem = { group: 'Platform', href: '/moderation', label: 'Reports', icon: 'flag' };
+
+/** Appends the moderator-only Reports item (its own "Platform" group, shown last). */
+export function navFor(nav: readonly NavItem[], user: { isModerator: boolean }): readonly NavItem[] {
+  return user.isModerator ? [...nav, MODERATION_NAV_ITEM] : nav;
+}

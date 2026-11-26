@@ -163,3 +163,64 @@ export interface SocialOverviewDto {
   friends: FriendDto[];
   blocked: BlockedUserDto[];
 }
+
+// ─── Moderation (platform staff from MODERATOR_EMAILS) ───
+
+export const ReportStatus = { OPEN: 'OPEN', REVIEWED: 'REVIEWED' } as const;
+export type ReportStatus = (typeof ReportStatus)[keyof typeof ReportStatus];
+
+export const MODERATION_PAGE_SIZE = 30;
+
+export interface ModerationPersonDto {
+  userId: string;
+  name: string;
+}
+
+/** What the report points at. `null` on the report when the target no longer exists. */
+export type ModerationPreviewDto =
+  | { type: 'USER'; name: string }
+  | { type: 'GROUP'; name: string; memberCount: number }
+  | {
+      type: 'SHARED_WORKOUT';
+      kind: SharedWorkoutKind;
+      author: ModerationPersonDto;
+      groupName: string;
+      title: string;
+      liftCount: number;
+      /** First three exercise names of the snapshot. */
+      topLifts: string[];
+      volumeKg: string | null;
+      caption: string | null;
+      postedAt: IsoDateString;
+    };
+
+export interface ModerationReportDto {
+  id: string;
+  targetType: ReportTarget;
+  targetId: string;
+  /** A `ReportReason` for every report made through the app; stored as text, so treat unknown values as "Something else". */
+  reason: string;
+  details: string | null;
+  status: ReportStatus;
+  createdAt: IsoDateString;
+  reporter: ModerationPersonDto;
+  preview: ModerationPreviewDto | null;
+  /** OPEN reports on the same target (this one included when it is OPEN). */
+  openReportsOnTarget: number;
+}
+
+export interface ModerationReportPage {
+  items: ModerationReportDto[];
+  /** Pass back as `cursor` for the next (older) page. Null on the last page. */
+  nextCursor: string | null;
+  counts: Record<ReportStatus, number>;
+}
+
+export interface ModerationReportsQuery {
+  status?: ReportStatus;
+  cursor?: string;
+}
+
+export interface UpdateReportStatusRequest {
+  status: ReportStatus;
+}

@@ -103,7 +103,7 @@ export function Term({ id, children, className }: { id: GlossaryId; children?: R
         role="tooltip"
         style={style}
         className={clsx(
-          'fixed z-[70] rounded-md border border-line bg-raised px-3 py-2 text-left font-sans text-label-md font-normal normal-case tracking-normal text-ink shadow-lg',
+          'fixed z-[70] whitespace-normal rounded-md border border-line bg-raised px-3 py-2 text-left font-sans text-label-md font-normal normal-case tracking-normal text-ink shadow-lg',
           !open && 'hidden',
         )}
       >

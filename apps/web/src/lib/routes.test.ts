@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { CLIENT_NAV, CLIENT_TABS, COACH_NAV, COACH_TABS, groupNav, homeFor, isNavActive, onboardingFor, safeNext } from './routes';
+import { CLIENT_NAV, CLIENT_TABS, COACH_NAV, COACH_TABS, MODERATION_NAV_ITEM, groupNav, homeFor, isNavActive, navFor, onboardingFor, safeNext } from './routes';
 
 describe('routes', () => {
   it('maps roles to home', () => {
@@ -77,5 +77,20 @@ describe('isNavActive', () => {
   it('lights History on lift detail pages', () => {
     expect(isNavActive(find('/client/history'), '/client/lifts/abc')).toBe(true);
     expect(isNavActive(find('/client/records'), '/client/lifts/abc')).toBe(false);
+  });
+});
+
+describe('navFor', () => {
+  it('leaves the nav alone for non-moderators', () => {
+    expect(navFor(COACH_NAV, { isModerator: false })).toBe(COACH_NAV);
+    expect(navFor(CLIENT_NAV, { isModerator: false })).toBe(CLIENT_NAV);
+  });
+
+  it('appends Reports last for moderators, in its own Platform group', () => {
+    const nav = navFor(COACH_NAV, { isModerator: true });
+    expect(nav.at(-1)).toBe(MODERATION_NAV_ITEM);
+    expect(nav).toHaveLength(COACH_NAV.length + 1);
+    const groups = groupNav(nav);
+    expect(groups.at(-1)).toEqual({ group: 'Platform', items: [MODERATION_NAV_ITEM] });
   });
 });

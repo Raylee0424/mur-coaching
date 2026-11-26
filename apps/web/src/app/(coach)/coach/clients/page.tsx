@@ -32,7 +32,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Sear
 
   return (
     <>
-      <PageHeader title="Roster" meta={rosterMeta(counts)} actions={<InviteClientModal templates={templates} />} />
+      <PageHeader title="Roster" meta={rosterMeta(counts)} metaOnPhone actions={<InviteClientModal templates={templates} />} />
       <div className="space-y-6">
         {nobody ? (
           <EmptyState title="No clients yet" action={<InviteClientModal templates={templates} />}>

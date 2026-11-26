@@ -12,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { AuthTokenType, BillingEventType, CoachClientStatus, Prisma, Role as PrismaRole, SubscriptionStatus } from '@prisma/client';
 import { PlanId, planById } from '@coaching/shared';
 import type { AuthTokenResponse, AuthUser, JwtPayload, Role } from '@coaching/shared';
+import { EnvService } from '../../config/env.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import type { UpdateMeDto } from './dto/update-me.dto';
@@ -33,6 +34,7 @@ import {
   RESEND_WINDOW_MS,
 } from './token-utils';
 import { isAccessibleLink } from '../clients/link-status';
+import { isModeratorEmail } from '../moderation/moderators';
 
 /** New coaches start the plan's free trial: no card, full features, plan seat count. */
 function coachTrial(role: Role): Pick<Prisma.UserCreateInput, 'subscription' | 'billingEvents'> {
@@ -52,6 +54,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly mail: MailService,
+    private readonly env: EnvService,
   ) {}
 
   async login(email: string, password: string): Promise<AuthTokenResponse> {
@@ -238,6 +241,7 @@ export class AuthService {
       displayName: user.displayName,
       onboardedAt: user.onboardedAt?.toISOString() ?? null,
       emailVerified: user.emailVerifiedAt !== null,
+      isModerator: isModeratorEmail(this.env.get('MODERATOR_EMAILS'), user.email),
     };
   }
 

@@ -5,6 +5,7 @@ import {
   CalendarRange,
   ClipboardCheck,
   Dumbbell,
+  Flag,
   Apple,
   Footprints,
   LayoutTemplate,
@@ -58,4 +59,5 @@ export const NAV_ICONS: Record<NavIconKey, LucideIcon> = {
   steps: Footprints,
   sparkles: Sparkles,
   group: UsersRound,
+  flag: Flag,
 };

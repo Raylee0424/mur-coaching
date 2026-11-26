@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import { EXERCISES, seedMuscles, type ExerciseSeed } from './exercises';
 import { SPORTS } from './sports';
 import { seedRecords } from './records';
+import { seedModeration } from './moderation';
 import { PLANS, PlanId } from '@coaching/shared';
 import {
   CLIENT_PLANS,
@@ -338,6 +339,8 @@ async function main(): Promise<void> {
   for (const c of seeded) await seedRecommendations(c);
   // Personal records from the same logs (same RecordsService the API runs after every log commit).
   const personalRecords = await seedRecords(prisma, seeded.map((c) => c.clientId));
+  // Demo group, shared post and reports for the moderation queue.
+  const contentReports = await seedModeration(prisma, now);
 
   // One coach override with a note: Alex's squat call is softened and accepted.
   const alex = await prisma.user.findFirstOrThrow({ where: { email: CLIENT_PLANS[0]?.email } });
@@ -385,7 +388,7 @@ async function main(): Promise<void> {
     prisma.exerciseLog.count(),
     prisma.setLog.count(),
   ]);
-  console.log({ users, globalExercises: exercises, workouts, workoutLogs: logs, exerciseLogs, setLogs, personalRecords });
+  console.log({ users, globalExercises: exercises, workouts, workoutLogs: logs, exerciseLogs, setLogs, personalRecords, contentReports });
   console.log(`Demo password for all demo users: ${DEMO_PASSWORD}`);
 }
 
