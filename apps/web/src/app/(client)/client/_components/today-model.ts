@@ -1,4 +1,4 @@
-import { RecommendationAction } from '@coaching/shared';
+import { PROGRESSION_ACTION_LABEL, RecommendationAction } from '@coaching/shared';
 import type { ExplainDto, TargetSource, TodayBanner, WeightUnit } from '@coaching/shared';
 import { formatStepValue, formatTargetLine } from '@/components/logger/logger-model';
 import { toNumber } from '@/lib/format';
@@ -61,15 +61,8 @@ export function targetSourceNote(source: TargetSource): string | null {
   }
 }
 
-const BANNER_VERB: Record<RecommendationAction, string> = {
-  INCREASE_LOAD: 'INCREASE LOAD APPROVED',
-  INCREASE_REPS: 'ADD REPS APPROVED',
-  HOLD: 'HOLD APPROVED',
-  DELOAD: 'DELOAD APPROVED',
-};
-
 export function bannerLabel(action: RecommendationAction): string {
-  return BANNER_VERB[action];
+  return `${PROGRESSION_ACTION_LABEL[action]} approved`;
 }
 
 /** "Coach Morgan accepted +2.5 kg on your Back Squat. Today's target is locked at 157.5 kg." */

@@ -253,7 +253,7 @@ export function WorkoutGenerator({ guardrails, catalog, unit }: { guardrails: Gu
             </table>
           </div>
           <p className="font-mono text-label-sm text-muted">
-            Loads come only from your progression engine; the generator never raises a deload or hold. Avoid-limited exercises are never suggested.
+            Loads come only from your progression engine; the generator never turns a lighter week or a repeat into an increase. Avoid-limited exercises are never suggested.
           </p>
           {saved ? (
             <p role="status" className="text-meta font-medium text-emerald">

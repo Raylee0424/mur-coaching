@@ -13,6 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { DEFAULT_THRESHOLDS, thresholdsFromResolved, traceRules } from './engine';
 import { repsAtTopWeight } from './engine/rules';
 import type { Prescription, SessionInput } from './engine/types';
+import { prescriptionFromSettings } from './stored-rx';
 
 const HISTORY_LIMIT = 20;
 
@@ -43,13 +44,7 @@ export class ExplainService {
     const settings = rec.settings as unknown as ResolvedEngineSettings | null;
     const wx = [...logs].sort((a, b) => b.workoutLog.performedAt.getTime() - a.workoutLog.performedAt.getTime()).find((l) => l.workoutExercise)?.workoutExercise;
     const rx: Prescription | null = settings
-      ? {
-          targetSets: rec.recommendedSets ?? wx?.targetSets ?? 3,
-          repsMin: settings.repsMin.value,
-          repsMax: settings.repsMax.value,
-          targetRpe: settings.rpeCap.value,
-          loadIncrementKg: settings.loadIncrementKg.value,
-        }
+      ? prescriptionFromSettings(settings, rec.recommendedSets ?? wx?.targetSets ?? null)
       : wx
         ? {
             targetSets: wx.targetSets,

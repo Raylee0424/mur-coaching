@@ -143,7 +143,7 @@ export function WhyDrawer({
               ),
               headerExtra: (
                 <div className="mt-2.5 flex items-center gap-2">
-                  <ActionBadge action={data.action} />
+                  <ActionBadge action={data.action} showCode />
                 </div>
               ),
             }
@@ -357,8 +357,8 @@ function RuleTrace({ data }: { data: ExplainDto }) {
                   <Icon icon={RULE_ICON[status]} />
                 </span>
                 <span className="min-w-0 break-words">
-                  <span className={clsx('block font-sans text-label-md', status === 'decided' ? 'text-emerald' : 'text-ink')}>
-                    {ACTION_META[step.action].code}?
+                  <span title={step.action} className={clsx('block font-sans text-label-md', status === 'decided' ? 'text-emerald' : 'text-ink')}>
+                    {ACTION_META[step.action].label}?
                   </span>
                   <span className="block font-sans text-label-sm font-normal text-muted">{step.condition}</span>
                 </span>
@@ -471,7 +471,7 @@ function WhatIf({ data, unit }: { data: ExplainDto; unit: WeightUnit }) {
   if (sim.status === 'ok') {
     const a = sim.data.action;
     tone = ACTION_META[a].text;
-    result = `With cap ${cap.toFixed(1)}${inc !== baseInc ? ` and +${inc} kg` : ''} this would be ${a}`;
+    result = `With cap ${cap.toFixed(1)}${inc !== baseInc ? ` and +${inc} kg` : ''} this would be ${ACTION_META[a].label.toLowerCase()}`;
     if (a === 'INCREASE_LOAD' && last) result += ` (${formatWeight(simulatedLoad(last.topWeightKg, inc), unit)})`;
     else if (sim.data.recommendedWeightKg !== null) result += ` (${formatWeight(sim.data.recommendedWeightKg, unit)})`;
     result += '.';
@@ -557,7 +557,7 @@ function History({ events, unit }: { events: CallHistoryEvent[]; unit: WeightUni
               {e.type === 'CALL' ? (
                 <div>
                   <p className="text-ui">
-                    Engine proposed {ACTION_META[e.action].label}
+                    Engine proposed: {ACTION_META[e.action].label}
                     {e.weightKg !== null ? <span className="font-mono"> ({targetText({ weightKg: e.weightKg, repsMin: e.repsMin, repsMax: e.repsMax }, unit)})</span> : null}
                   </p>
                   <p className="text-meta text-muted">{e.autoApproved ? 'Auto-approved' : e.status.charAt(0) + e.status.slice(1).toLowerCase()}</p>

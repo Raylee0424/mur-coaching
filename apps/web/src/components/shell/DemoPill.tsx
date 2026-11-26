@@ -26,10 +26,10 @@ export function DemoPill({ role }: { role: Role }) {
           size="sm"
           pendingLabel="Switching…"
           aria-label={`Demo data. Switch to ${otherLabel}`}
-          className="ml-1.5"
+          className="ml-1.5 w-8 px-0 sm:w-auto sm:px-3.5"
         >
           <Icon icon={ArrowLeftRight} size={14} />
-          {otherLabel}
+          <span className="hidden sm:inline">{otherLabel}</span>
         </SubmitButton>
       </span>
       {state?.ok === false ? (

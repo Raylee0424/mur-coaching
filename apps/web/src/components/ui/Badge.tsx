@@ -16,9 +16,10 @@ const TONES: Record<BadgeTone, string> = {
 };
 
 /** Stitch pill status badge. Always carries text: colour is never the only signal. */
-export function Badge({ tone = 'slate', icon, children }: { tone?: BadgeTone; icon?: LucideIcon; children: ReactNode }) {
+export function Badge({ tone = 'slate', icon, title, children }: { tone?: BadgeTone; icon?: LucideIcon; title?: string; children: ReactNode }) {
   return (
     <span
+      title={title}
       className={clsx(
         'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 font-sans text-label-sm',
         TONES[tone],

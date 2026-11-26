@@ -181,7 +181,7 @@ export default async function ClientHome() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full bg-primary px-2 py-0.5 font-mono text-label-sm text-primary-ink">UPDATED</span>
-                  <p className={clsx('font-mono text-label-sm uppercase', ACTION_META[banner.action].text)}>{bannerLabel(banner.action)}</p>
+                  <p className={clsx('font-sans text-label-md', ACTION_META[banner.action].text)}>{bannerLabel(banner.action)}</p>
                 </div>
                 <p className="mt-0.5 text-label-md text-ink">{bannerText(banner, unit)}</p>
               </div>

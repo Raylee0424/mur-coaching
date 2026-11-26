@@ -94,3 +94,28 @@ export function undoMessage(status: ResolvableStatus, items: readonly { clientNa
   if (items.length === 1 && only) return `${verb} ${only.clientName} · ${only.exerciseName}`;
   return `${verb} ${items.length} ${items.length === 1 ? 'call' : 'calls'}`;
 }
+
+export interface ClientGroup<T> {
+  clientId: string;
+  clientName: string;
+  items: T[];
+}
+
+/** Groups keep the order in which each client first appears; rows keep their order inside a group. */
+export function groupByClient<T extends { clientId: string; clientName: string }>(items: readonly T[]): ClientGroup<T>[] {
+  const groups = new Map<string, ClientGroup<T>>();
+  for (const item of items) {
+    const g = groups.get(item.clientId);
+    if (g) g.items.push(item);
+    else groups.set(item.clientId, { clientId: item.clientId, clientName: item.clientName, items: [item] });
+  }
+  return [...groups.values()];
+}
+
+export function suggestionsText(n: number): string {
+  return n === 1 ? '1 suggestion' : `${n} suggestions`;
+}
+
+export function selectedText(n: number): string {
+  return `${n} selected`;
+}

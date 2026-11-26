@@ -39,3 +39,4 @@ export * from './health';
 export * from './data-io';
 export * from './social';
 export * from './glossary';
+export * from './progression-labels';

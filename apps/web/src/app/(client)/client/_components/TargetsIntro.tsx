@@ -4,12 +4,16 @@ import { Icon } from '@/components/ui/Icon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Term } from '@/components/ui/Term';
 
-const STEPS = ['You log your sets', 'Engine checks your last 3 sessions', 'It suggests your next weight'] as const;
+const STEPS = [
+  { full: 'You log your sets', short: 'Log sets' },
+  { full: 'Engine checks your last 3 sessions', short: 'Engine checks' },
+  { full: 'It suggests your next weight', short: 'Next target' },
+] as const;
 
 /** First-run explainer on Today. Dismissal is stored in a cookie by a server action. */
 export function TargetsIntro() {
   return (
-    <section aria-labelledby="targets-intro-heading" className="rounded-md border border-line bg-card p-5">
+    <section aria-labelledby="targets-intro-heading" className="rounded-md border border-line bg-card p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <span className="font-mono text-label-sm uppercase text-primary">New here?</span>
@@ -23,13 +27,14 @@ export function TargetsIntro() {
           </SubmitButton>
         </form>
       </div>
-      <ol className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {STEPS.map((step, i) => (
-          <li key={step} className="flex items-center gap-3 rounded-sm border border-line bg-canvas-low px-3.5 py-3">
-            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-container font-mono text-label-sm text-primary">
+      <ol className="mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:gap-3">
+        {STEPS.map(({ full, short }, i) => (
+          <li key={full} className="flex min-w-0 items-center gap-2 rounded-full border border-line bg-canvas-low px-2 py-1.5 sm:gap-3 sm:rounded-sm sm:px-3.5 sm:py-3">
+            <span className="inline-flex size-6 shrink-0 sm:size-7 items-center justify-center rounded-full bg-primary-container font-mono text-label-sm text-primary">
               {i + 1}
             </span>
-            <span className="text-label-md text-ink">{step}</span>
+            <span className="min-w-0 truncate text-label-sm text-ink sm:hidden">{short}</span>
+            <span className="hidden text-label-md text-ink sm:inline">{full}</span>
           </li>
         ))}
       </ol>

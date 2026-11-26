@@ -45,7 +45,7 @@ export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; 
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ActionBadge action={rec.action} />
+          <ActionBadge action={rec.action} showCode />
           {status ? (
             <Badge tone={status.tone}>
               {status.label}
