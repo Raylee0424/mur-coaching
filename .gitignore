@@ -8,3 +8,7 @@ next-env.d.ts
 *.tsbuildinfo
 docs/brain
 design/
+
+# Ticket and plan files
+tasks/*/*
+!tasks/*/.gitkeep
