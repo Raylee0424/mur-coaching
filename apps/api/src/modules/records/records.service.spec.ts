@@ -83,7 +83,11 @@ describe('RecordsService.list', () => {
     const { service } = setup({ stored: [row(1, 180, 18), row(5, 150, 2)] });
     const out = await service.list('c1', at(20));
     expect(out.exercises).toHaveLength(1);
-    expect(out.exercises[0]?.cells.map((c) => c?.weightKg ?? null).slice(0, 4)).toEqual(['180.00', '150.00', '150.00', null]);
+    const cells = out.exercises[0]?.cells.map((c) => c?.weightKg ?? null) ?? [];
+    expect(cells).toHaveLength(12);
+    expect(cells.slice(0, 6)).toEqual(['180.00', '150.00', '150.00', '150.00', '150.00', null]);
+    expect(out.exercises[0]?.best).toMatchObject({ reps: 1, setReps: 1, weightKg: '180.00', e1rmKg: '186.00' });
+    expect(out.exercises[0]?.trendE1rmKg).toEqual([]);
     expect(out.newRecords).toBe(2);
   });
 });

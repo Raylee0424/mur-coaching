@@ -1,59 +1,74 @@
-import { PauseCircle, PlusCircle, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react';
-import type { RecommendationAction } from '@coaching/shared';
+import { PlusCircle, Repeat, TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react';
+import {
+  PROGRESSION_ACTION_LABEL,
+  PROGRESSION_ACTION_TONE,
+  type ProgressionActionTone,
+  type RecommendationAction,
+} from '@coaching/shared';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 
-/** Single source for how each engine call looks across Stitch coach & athlete screens. */
-export const ACTION_META: Record<
-  RecommendationAction,
-  { label: string; code: string; icon: LucideIcon; tone: BadgeTone; text: string; rule: string; stroke: string; box: string }
-> = {
-  INCREASE_LOAD: {
-    label: 'Increase load',
-    code: 'INCREASE_LOAD',
-    icon: TrendingUp,
-    tone: 'emerald',
-    text: 'text-emerald',
-    rule: 'border-l-emerald',
-    stroke: 'stroke-emerald',
-    box: 'border-emerald/40 bg-emerald-bg',
+const TONE_CLASSES: Record<ProgressionActionTone, { tone: BadgeTone; text: string; rule: string; stroke: string; box: string }> = {
+  lime: {
+    tone: 'signal',
+    text: 'text-primary',
+    rule: 'border-l-primary',
+    stroke: 'stroke-primary',
+    box: 'border-primary/40 bg-primary-container',
   },
-  INCREASE_REPS: {
-    label: 'Add reps',
-    code: 'INCREASE_REPS',
-    icon: PlusCircle,
+  sky: {
     tone: 'sky',
     text: 'text-sky',
     rule: 'border-l-sky',
     stroke: 'stroke-sky',
     box: 'border-sky/40 bg-sky-bg',
   },
-  HOLD: {
-    label: 'Hold',
-    code: 'HOLD',
-    icon: PauseCircle,
+  muted: {
+    tone: 'slate',
+    text: 'text-muted',
+    rule: 'border-l-line-strong',
+    stroke: 'stroke-muted',
+    box: 'border-line bg-canvas-low',
+  },
+  amber: {
     tone: 'amber',
     text: 'text-amber',
     rule: 'border-l-amber',
     stroke: 'stroke-amber',
     box: 'border-amber/40 bg-amber-bg',
   },
-  DELOAD: {
-    label: 'Deload',
-    code: 'DELOAD',
-    icon: TrendingDown,
-    tone: 'red',
-    text: 'text-rose',
-    rule: 'border-l-rose',
-    stroke: 'stroke-rose',
-    box: 'border-rose/40 bg-rose-bg',
-  },
 };
 
-export function ActionBadge({ action }: { action: RecommendationAction }) {
+const ICONS: Record<RecommendationAction, LucideIcon> = {
+  INCREASE_LOAD: TrendingUp,
+  INCREASE_REPS: PlusCircle,
+  HOLD: Repeat,
+  DELOAD: TrendingDown,
+};
+
+const metaOf = (action: RecommendationAction) => ({
+  label: PROGRESSION_ACTION_LABEL[action],
+  code: action,
+  icon: ICONS[action],
+  ...TONE_CLASSES[PROGRESSION_ACTION_TONE[action]],
+});
+
+/** Single source for how each engine call looks across Stitch coach & athlete screens. */
+export const ACTION_META: Record<
+  RecommendationAction,
+  { label: string; code: string; icon: LucideIcon; tone: BadgeTone; text: string; rule: string; stroke: string; box: string }
+> = {
+  INCREASE_LOAD: metaOf('INCREASE_LOAD'),
+  INCREASE_REPS: metaOf('INCREASE_REPS'),
+  HOLD: metaOf('HOLD'),
+  DELOAD: metaOf('DELOAD'),
+};
+
+/** `showCode` adds the enum code as a tooltip; coach screens only. */
+export function ActionBadge({ action, showCode = false, count }: { action: RecommendationAction; showCode?: boolean; count?: number }) {
   const meta = ACTION_META[action];
   return (
-    <Badge tone={meta.tone} icon={meta.icon}>
-      {meta.code}
+    <Badge tone={meta.tone} icon={meta.icon} title={showCode ? meta.code : undefined}>
+      {count === undefined ? meta.label : `${count} ${meta.label}`}
     </Badge>
   );
 }

@@ -8,6 +8,7 @@ import { useState, useTransition } from 'react';
 import { AI_LIMITS } from '@coaching/shared';
 import type { AiCitation, AiConversationDto, AiMessageDto, CoachOverviewDto } from '@coaching/shared';
 import { askCoach, deleteCoachConversation } from '@/actions/ai';
+import { ACTION_META } from '@/components/progression/ActionBadge';
 import { Badge } from '@/components/ui/Badge';
 import { Button, buttonClass } from '@/components/ui/Button';
 import { FormError, Input, Label } from '@/components/ui/Field';
@@ -25,7 +26,7 @@ function CitationCard({ c }: { c: AiCitation }) {
         <p className="font-mono text-label-sm text-muted">{c.detail}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {c.kind === 'ENGINE' ? <Badge tone={c.action === 'DELOAD' ? 'amber' : c.action === 'HOLD' ? 'slate' : 'emerald'}>{ACTION_TEXT[c.action]}</Badge> : null}
+        {c.kind === 'ENGINE' ? <Badge tone={ACTION_META[c.action].tone}>{ACTION_TEXT[c.action]}</Badge> : null}
         <Link href={citationHref(c)} className={buttonClass('ghost', undefined, 'sm')}>
           {c.kind === 'ENGINE' ? 'Open in logger' : 'View'}
           <span className="sr-only"> {c.label}</span>

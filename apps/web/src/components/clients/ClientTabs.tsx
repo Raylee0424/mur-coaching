@@ -5,7 +5,7 @@ import { CLIENT_TABS, tabHref, type ClientTab } from './overview-model';
 /** Stitch client section tabs with electric-lime active underline (`coach_client_detail`). */
 export function ClientTabs({ clientId, active, pending = 0 }: { clientId: string; active: ClientTab | 'roadmap' | 'nutrition'; pending?: number }) {
   return (
-    <nav aria-label="Client sections" className="mb-6 flex items-center gap-6 overflow-x-auto border-b border-line">
+    <nav aria-label="Client sections" className="mb-6 flex items-center gap-6 relative overflow-x-auto border-b border-line">
       {CLIENT_TABS.map((t) => {
         const on = t.key === active;
         return (

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { RecommendationAction } from '@coaching/shared';
+import { ProgressionReasonCase, REASON_CASE_ACTION, RecommendationAction } from '@coaching/shared';
 import { CLIENT_PLANS, WORKOUT_TEMPLATE, buildSets } from '../../../../prisma/seed/demo-history';
-import { evaluate } from './engine';
+import { evaluate, reasonCaseOf } from './engine';
+import { DEFAULT_THRESHOLDS } from './settings';
 import { computeSessionMetrics, estimateOneRepMax, roundToIncrement } from './metrics';
 import type { Prescription, SessionInput, SetInput } from './types';
 
@@ -122,5 +123,66 @@ describe('engine edge cases', () => {
   it('sorts unordered history by performedAt', () => {
     const h = [session(3, work(10, 52.5)), session(1, work(9, 50)), session(2, work(10, 50))];
     expect(evaluate(h, rx)?.sourceExerciseLogIds).toEqual(['s1', 's2', 's3']);
+  });
+});
+
+describe('reasonCaseOf', () => {
+  const marginT = { ...DEFAULT_THRESHOLDS, loadMarginRpe: 1 };
+  const fixtures: [string, SessionInput[], typeof DEFAULT_THRESHOLDS][] = [
+    ['TOO_FEW_SESSIONS', [session(1, work(10, 50))], DEFAULT_THRESHOLDS],
+    ['DELOAD_PLATEAU', [session(1, work(8, 100, 9.5)), session(2, work(8, 100, 9.5)), session(3, work(8, 100, 9.5))], DEFAULT_THRESHOLDS],
+    ['DELOAD_DECLINE', [session(1, work(10, 100, 8)), session(2, work(9, 100, 8)), session(3, work(8, 100, 8))], DEFAULT_THRESHOLDS],
+    ['HOLD_SETS_MISSED', [session(1, work(10, 50)), session(2, work(10, 50, 8, 2))], DEFAULT_THRESHOLDS],
+    ['HOLD_RPE_MISSING', [session(1, work(9, 50, null)), session(2, work(10, 50, null))], DEFAULT_THRESHOLDS],
+    ['HOLD_RPE_HIGH', [session(1, work(9, 50, 9)), session(2, work(9, 50, 8.5))], DEFAULT_THRESHOLDS],
+    ['HOLD_REPS_LOW', [session(1, work(8, 50)), session(2, work(7, 50))], DEFAULT_THRESHOLDS],
+    ['HOLD_LOAD_MARGIN', [session(1, work(10, 50, 8)), session(2, work(10, 50, 8))], marginT],
+    ['INCREASE_LOAD', [session(1, work(9, 50)), session(2, work(10, 50))], DEFAULT_THRESHOLDS],
+    ['INCREASE_REPS', [session(1, work(8, 50)), session(2, work(9, 50))], DEFAULT_THRESHOLDS],
+  ];
+
+  it.each(fixtures)('%s fixture returns that case and agrees with evaluate', (expected, history, t) => {
+    const got = reasonCaseOf(history, rx, t);
+    expect(got?.reasonCase).toBe(expected);
+    expect(got?.action).toBe(evaluate(history, rx, t)?.action);
+    expect(REASON_CASE_ACTION[got!.reasonCase]).toBe(got?.action);
+  });
+
+  it('every case is covered by a fixture', () => {
+    expect(fixtures.map(([c]) => c).sort()).toEqual(Object.values(ProgressionReasonCase).sort());
+  });
+
+  it('case and action always agree on the seeded histories', () => {
+    for (const [client, lift] of [
+      ['Alex', 'Barbell Bench Press'],
+      ['Alex', 'Back Squat'],
+      ['Alex', 'Triceps Pushdown'],
+      ['Jordan', 'Barbell Bench Press'],
+      ['Jordan', 'Incline Dumbbell Press'],
+      ['Jordan', 'Back Squat'],
+    ] as const) {
+      const { sessions, prescription } = seededHistory(client, lift);
+      expect(REASON_CASE_ACTION[reasonCaseOf(sessions, prescription)!.reasonCase]).toBe(evaluate(sessions, prescription)?.action);
+    }
+  });
+
+  it('deterministic sweep: case and action agree, nulls match', () => {
+    for (const rpe of [null, 6, 7.5, 8, 8.5, 9, 9.5]) {
+      for (const reps of [6, 7, 8, 9, 10, 11]) {
+        for (const sets of [1, 2, 3, 4]) {
+          for (const n of [0, 1, 2, 3]) {
+            const history = Array.from({ length: n }, (_, i) => session(i + 1, work(Math.max(1, reps - (n - 1 - i)), 60, rpe, sets)));
+            const e = evaluate(history, rx);
+            const c = reasonCaseOf(history, rx);
+            if (e === null) {
+              expect(c).toBeNull();
+            } else {
+              expect(c?.action).toBe(e.action);
+              expect(REASON_CASE_ACTION[c!.reasonCase]).toBe(e.action);
+            }
+          }
+        }
+      }
+    }
   });
 });

@@ -45,7 +45,7 @@ export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; 
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ActionBadge action={rec.action} />
+          <ActionBadge action={rec.action} showCode />
           {status ? (
             <Badge tone={status.tone}>
               {status.label}
@@ -57,7 +57,7 @@ export function LiftCard({ rec, exerciseName, unit }: { rec: RecommendationDto; 
       </header>
 
       <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-12">
-        <div className="overflow-x-auto rounded-sm border border-line bg-canvas-low sm:col-span-8">
+        <div className="relative overflow-x-auto rounded-sm border border-line bg-canvas-low sm:col-span-8">
           <table className="w-full min-w-[16rem] border-collapse text-left tabular-nums">
             <caption className="sr-only">Last {recent.length} sessions, newest first</caption>
             <thead>

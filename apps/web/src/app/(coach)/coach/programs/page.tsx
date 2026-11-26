@@ -69,7 +69,7 @@ export default async function ProgramsPage({ searchParams }: { searchParams: Sea
           </EmptyState>
         )
       ) : (
-        <div className="overflow-x-auto rounded-md border border-line bg-card">
+        <div className="relative overflow-x-auto rounded-md border border-line bg-card">
           <table className={clsx(TABLE, 'min-w-[44rem]')}>
             <caption className="sr-only">{tab === 'templates' ? 'Templates' : 'Programs'}</caption>
             <thead className={THEAD}>

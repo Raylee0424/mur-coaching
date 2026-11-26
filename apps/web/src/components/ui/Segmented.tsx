@@ -14,7 +14,7 @@ export interface SegmentedItem {
 /** Stitch pill tab filter group (server re-fetches on navigation). */
 export function Segmented({ items, label }: { items: SegmentedItem[]; label: string }) {
   return (
-    <nav aria-label={label} className="inline-flex items-center gap-1 rounded-full border border-line bg-card p-1">
+    <nav aria-label={label} className="relative inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-line bg-card p-1">
       {items.map((i) => (
         <Link
           key={i.href}

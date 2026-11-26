@@ -4,12 +4,12 @@ import {
   bannerLabel,
   bannerText,
   greetingFor,
-  initials,
   miniSeries,
   setByLine,
   shortDate,
   sparkPoints,
   targetSourceNote,
+  todayPlainLine,
   todayTargetLine,
   whyBullets,
   whyTitle,
@@ -32,15 +32,18 @@ describe('today header helpers', () => {
     expect(greetingFor(20)).toBe('Good evening');
     expect(greetingFor(2)).toBe('Good evening');
   });
-  it('builds initials', () => {
-    expect(initials('Marcus Vale')).toBe('MV');
-    expect(initials('alex')).toBe('A');
-    expect(initials('  ')).toBe('?');
-  });
   it('formats target lines in the display unit', () => {
     expect(todayTargetLine({ weightKg: '157.50', repsMin: 5, repsMax: 5, rpe: '8.50' }, 'KG')).toBe('157.5 kg × 5 @ RPE 8.5');
     expect(todayTargetLine({ weightKg: '102.06', repsMin: 5, repsMax: 5, rpe: null }, 'LB')).toBe('225 lb × 5');
     expect(todayTargetLine({ weightKg: null, repsMin: null, repsMax: null, rpe: null }, 'KG')).toBe('');
+  });
+  it('writes the target in plain words', () => {
+    expect(todayPlainLine({ repsMin: 6, repsMax: 8, rpe: '8.00' })).toBe('6-8 reps, leave about 2 reps in the tank');
+    expect(todayPlainLine({ repsMin: 5, repsMax: 5, rpe: '9' })).toBe('5 reps, leave about 1 rep in the tank');
+    expect(todayPlainLine({ repsMin: 3, repsMax: null, rpe: '8.5' })).toBe('3 reps, leave 1-2 reps in the tank');
+    expect(todayPlainLine({ repsMin: 1, repsMax: 1, rpe: '10' })).toBe('1 rep, go to your limit, no reps left in the tank');
+    expect(todayPlainLine({ repsMin: null, repsMax: null, rpe: '7' })).toBe('Leave about 3 reps in the tank');
+    expect(todayPlainLine({ repsMin: null, repsMax: null, rpe: null })).toBe('');
   });
   it('explains inferred targets', () => {
     expect(targetSourceNote('LAST_SESSION')).toMatch(/last session/);
@@ -58,19 +61,19 @@ describe('banner', () => {
     exerciseId: 'sq',
     exerciseName: 'Back Squat',
     autoApproved: false,
-    approvedByName: 'Coach Ray',
+    approvedByName: 'Coach Morgan',
     resolvedAt: '2026-11-20T10:00:00.000Z',
     fromWeightKg: 155,
     toWeightKg: '157.50',
   };
   it('names the approver and the jump', () => {
-    expect(bannerLabel('INCREASE_LOAD')).toBe('INCREASE LOAD APPROVED');
-    expect(bannerText(base, 'KG')).toBe("Coach Ray accepted +2.5 kg on your Back Squat. Today's target is locked at 157.5 kg.");
+    expect(bannerLabel('INCREASE_LOAD')).toBe('Add weight approved');
+    expect(bannerText(base, 'KG')).toBe("Coach Morgan accepted +2.5 kg on your Back Squat. Today's target is locked at 157.5 kg.");
   });
   it('handles auto-approval and other actions', () => {
     expect(bannerText({ ...base, autoApproved: true, approvedByName: null }, 'KG')).toMatch(/^The engine auto-approved \+2\.5 kg/);
     expect(bannerText({ ...base, action: 'HOLD', fromWeightKg: null }, 'KG')).toBe(
-      "Coach Ray accepted keeping your Back Squat where it is. Today's target is locked at 157.5 kg.",
+      "Coach Morgan accepted keeping your Back Squat where it is. Today's target is locked at 157.5 kg.",
     );
   });
 });
@@ -124,7 +127,7 @@ describe('why this call', () => {
     expect(setByLine({ ...e, autoApproved: true }, 'Coach Alex')).toBe('Set by: Engine, auto-approved');
     expect(setByLine({ ...e, status: 'PENDING' }, null)).toMatch(/waiting/);
     expect(
-      setByLine({ ...e, override: { weightKg: '160', repsMin: 4, repsMax: 4, rpe: null, note: null, byName: 'Alex Ray', at: null } }, null),
-    ).toBe("Set by: Alex Ray, who adjusted the engine's call");
+      setByLine({ ...e, override: { weightKg: '160', repsMin: 4, repsMax: 4, rpe: null, note: null, byName: 'Alex Morgan', at: null } }, null),
+    ).toBe("Set by: Alex Morgan, who adjusted the engine's call");
   });
 });

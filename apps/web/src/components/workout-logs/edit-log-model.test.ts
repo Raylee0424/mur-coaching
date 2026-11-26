@@ -13,6 +13,7 @@ const set = (id: string, reps: number, kg: string, rpe: string | null, warm = fa
   rir: null,
   tempo: null,
   restSeconds: null,
+  personalRecord: null,
 });
 
 const log: WorkoutLogDto = {
@@ -20,6 +21,7 @@ const log: WorkoutLogDto = {
   clientId: 'c1',
   assignmentId: 'a1',
   workoutId: 'w1',
+  workout: null,
   performedAt: '2026-11-20T10:00:00.000Z',
   notes: null,
   loggedById: null,
@@ -31,7 +33,7 @@ const log: WorkoutLogDto = {
       exerciseId: 'bench',
       workoutExerciseId: 'we1',
       order: 1,
-      exercise: { id: 'bench', name: 'Bench' },
+      exercise: { id: 'bench', name: 'Bench', muscleGroup: 'CHEST' as const },
       swappedFromExerciseId: null,
       swapReason: null,
       swappedFrom: null,
@@ -44,7 +46,7 @@ const log: WorkoutLogDto = {
       exerciseId: 'legpress',
       workoutExerciseId: null,
       order: 2,
-      exercise: { id: 'legpress', name: 'Leg press' },
+      exercise: { id: 'legpress', name: 'Leg press', muscleGroup: 'QUADS' as const },
       swappedFromExerciseId: 'squat',
       swapReason: 'Pain: left knee',
       swappedFrom: { id: 'squat', name: 'Squat' },

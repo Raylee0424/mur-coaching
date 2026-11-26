@@ -1,5 +1,5 @@
 import type { DecimalString, IsoDateString } from './common';
-import type { SwapReason } from './enums';
+import type { MuscleGroup, SwapReason } from './enums';
 
 export interface SetLogDto {
   id: string;
@@ -13,6 +13,8 @@ export interface SetLogDto {
   /** e.g. `3-1-1-0` (eccentric-pause-concentric-top). */
   tempo: string | null;
   restSeconds: number | null;
+  /** Set when this set holds a current personal record (one per exercise and rep count). */
+  personalRecord: { id: string } | null;
 }
 
 export interface ExerciseLogDto {
@@ -21,7 +23,7 @@ export interface ExerciseLogDto {
   exerciseId: string;
   workoutExerciseId: string | null;
   order: number;
-  exercise: { id: string; name: string };
+  exercise: { id: string; name: string; muscleGroup: MuscleGroup };
   sets: SetLogDto[];
   swappedFromExerciseId: string | null;
   swapReason: string | null;
@@ -34,6 +36,8 @@ export interface WorkoutLogDto {
   clientId: string;
   assignmentId: string | null;
   workoutId: string | null;
+  /** Program day this session followed; null for ad-hoc sessions or a deleted day. */
+  workout: { id: string; name: string } | null;
   performedAt: IsoDateString;
   notes: string | null;
   /** Set when a coach logged the session for the client (live or in person). */

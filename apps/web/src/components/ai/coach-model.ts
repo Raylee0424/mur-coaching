@@ -1,11 +1,7 @@
-import type { AiCitation, AiMessageDto, RecommendationAction } from '@coaching/shared';
+import { PROGRESSION_ACTION_LABEL } from '@coaching/shared';
+import type { AiCitation, AiMessageDto } from '@coaching/shared';
 
-export const ACTION_TEXT: Record<RecommendationAction, string> = {
-  INCREASE_LOAD: 'Add load',
-  INCREASE_REPS: 'Add reps',
-  HOLD: 'Hold',
-  DELOAD: 'Deload',
-};
+export const ACTION_TEXT = PROGRESSION_ACTION_LABEL;
 
 /** Where a citation opens: engine calls go to the logger (where the target is used), PRs to records, sessions to history. */
 export function citationHref(c: AiCitation): string {

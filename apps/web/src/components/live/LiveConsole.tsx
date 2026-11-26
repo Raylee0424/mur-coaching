@@ -170,7 +170,7 @@ export function LiveConsole({ initial, exercises, unit }: { initial: LiveSession
       </div>
 
       {session.participants.length > 1 ? (
-        <div role="tablist" aria-label="Athletes" className="flex gap-4 overflow-x-auto border-b border-line">
+        <div role="tablist" aria-label="Athletes" className="flex gap-4 relative overflow-x-auto border-b border-line">
           {session.participants.map((p) => (
             <button
               key={p.clientId}

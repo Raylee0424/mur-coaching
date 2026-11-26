@@ -87,7 +87,7 @@ export default async function BodyPage() {
               />
               <details className="mt-3">
                 <summary className="cursor-pointer font-mono text-label-sm text-primary">Show Weigh-In Log ({s.series.length})</summary>
-                <div className="mt-2 overflow-x-auto rounded-sm border border-line bg-card">
+                <div className="mt-2 relative overflow-x-auto rounded-sm border border-line bg-card">
                   <table className={TABLE}>
                     <thead className={THEAD}>
                       <tr>

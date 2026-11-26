@@ -4,7 +4,7 @@ import { Role } from '@coaching/shared';
 import { AppShell } from '@/components/shell/AppShell';
 import { checkInsApi, formChecksApi, messagingApi, progressionApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
-import { COACH_NAV, onboardingFor } from '@/lib/routes';
+import { COACH_NAV, COACH_TABS, navFor, onboardingFor } from '@/lib/routes';
 
 export default async function CoachLayout({ children }: { children: ReactNode }) {
   const user = await requireUser(Role.COACH);
@@ -17,7 +17,7 @@ export default async function CoachLayout({ children }: { children: ReactNode })
     formChecksApi.queue().then((q) => q.pending.length).catch(() => 0),
   ]);
   return (
-    <AppShell user={user} nav={COACH_NAV} badges={{ '/coach/progression': pending, '/coach/messages': unread, '/coach/check-ins': unreviewed, '/coach/form-checks': formChecks }}>
+    <AppShell user={user} nav={navFor(COACH_NAV, user)} tabs={COACH_TABS} badges={{ '/coach/progression': pending, '/coach/messages': unread, '/coach/check-ins': unreviewed, '/coach/form-checks': formChecks }}>
       {children}
     </AppShell>
   );

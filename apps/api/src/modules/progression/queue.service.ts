@@ -5,10 +5,13 @@ import type {
   RecommendationAction,
   RecommendationQueueItem,
   RecommendationQueueResponse,
+  ResolvedEngineSettings,
   SessionMetrics,
 } from '@coaching/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ACCESSIBLE_LINK_STATUSES } from '../clients/link-status';
+import type { SessionInput } from './engine/types';
+import { queueReason } from './queue-basis';
 import type { QueueQuery } from './dto/queue.dto';
 import type { ResolvableStatus } from './dto/update-recommendation.dto';
 
@@ -48,8 +51,34 @@ export class QueueService {
     const byAction = emptyCounts();
     for (const g of grouped) byAction[g.action as RecommendationAction] = g._count._all;
 
+    // Source sessions for replaying the engine. Only logs belonging to the row's own client are used.
+    const logIds = [...new Set(rows.flatMap((r) => r.sourceExerciseLogIds))];
+    const clientIds = [...new Set(rows.map((r) => r.clientId))];
+    const logs = logIds.length
+      ? await this.prisma.exerciseLog.findMany({
+          where: { id: { in: logIds }, workoutLog: { clientId: { in: clientIds } } },
+          select: {
+            id: true,
+            workoutLog: { select: { clientId: true, performedAt: true } },
+            sets: { select: { reps: true, weightKg: true, rpe: true, isWarmup: true } },
+          },
+        })
+      : [];
+    const logById = new Map(logs.map((l) => [l.id, l]));
+
     const items: RecommendationQueueItem[] = rows.map((r) => {
       const metrics = r.metrics as unknown as SessionMetrics[] | null;
+      const inputs: SessionInput[] = r.sourceExerciseLogIds.flatMap((id) => {
+        const l = logById.get(id);
+        if (!l || l.workoutLog.clientId !== r.clientId) return [];
+        return [
+          {
+            exerciseLogId: l.id,
+            performedAt: l.workoutLog.performedAt,
+            sets: l.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg.toNumber(), rpe: s.rpe?.toNumber() ?? null, isWarmup: s.isWarmup })),
+          },
+        ];
+      });
       const last = metrics?.[metrics.length - 1];
       return {
         id: r.id,
@@ -67,6 +96,14 @@ export class QueueService {
           repsMin: r.recommendedRepsMin,
           repsMax: r.recommendedRepsMax,
         },
+        ...queueReason({
+          action: r.action,
+          metrics,
+          settings: r.settings as unknown as ResolvedEngineSettings | null,
+          recommendedSets: r.recommendedSets,
+          sourceIds: r.sourceExerciseLogIds,
+          inputs,
+        }),
       };
     });
     return { items, counts: { total: Object.values(byAction).reduce((a, b) => a + b, 0), byAction } };

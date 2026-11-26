@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_COLUMNS, parseColumns, parseRosterFilter, rosterHref, rosterQuery, rpeTrend } from './roster-model';
+import { ATTENTION_LABELS, DEFAULT_COLUMNS, parseColumns, parseRosterFilter, rosterHref, rosterMeta, rosterQuery, rpeTrend } from './roster-model';
 
 describe('roster filters', () => {
   it('falls back to all for unknown values', () => {
@@ -42,5 +42,16 @@ describe('rpeTrend', () => {
     expect(rpeTrend(7.9, 8.1)).toEqual({ delta: -0.2, dir: 'down' });
     expect(rpeTrend(8.5, 8)).toEqual({ delta: 0.5, dir: 'up' });
     expect(rpeTrend(8, 8)).toEqual({ delta: 0, dir: 'flat' });
+  });
+});
+
+describe('roster header and labels', () => {
+  it('shows paused only when someone is paused', () => {
+    expect(rosterMeta({ ACTIVE: 4, PAUSED: 1 })).toBe('4 active · 1 paused');
+    expect(rosterMeta({ ACTIVE: 4, PAUSED: 0 })).toBe('4 active');
+  });
+
+  it('uses plain words for the lighter week flag', () => {
+    expect(ATTENTION_LABELS.PENDING_DELOAD).toBe('Lighter week pending');
   });
 });

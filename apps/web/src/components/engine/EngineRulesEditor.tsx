@@ -108,7 +108,7 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
           </Button>
         }
       >
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className={clsx(TABLE, 'min-w-[44rem]')}>
             <caption className="sr-only">Progression rules, in the order the engine checks them</caption>
             <thead className={THEAD}>
@@ -130,14 +130,14 @@ export function EngineRulesEditor({ initial, previewTargets, unit }: Props) {
                     <td className={clsx(TD, 'h-auto py-4 font-mono text-faint')}>{i + 1}</td>
                     <td className={clsx(TD, 'h-auto whitespace-nowrap py-4')}>
                       <div className="flex flex-col items-start gap-1.5">
-                        <ActionBadge action={group.action} />
+                        <ActionBadge action={group.action} showCode />
                         {overridden ? <OverriddenTag /> : null}
                       </div>
                     </td>
                     <td className={clsx(TD, 'h-auto py-4 text-meta')}>{group.condition(saved.effective)}</td>
                     <td className={clsx(TD, 'h-auto whitespace-nowrap py-4 font-mono')}>{group.threshold(saved.effective)}</td>
                     <td className={clsx(TD, 'h-auto py-4 text-right')}>
-                      <Button variant="ghost" size="sm" aria-label={`Edit ${ACTION_META[group.action].label} rule`} onClick={() => setEditing(group)}>
+                      <Button variant="ghost" size="sm" aria-label={`Edit the ${ACTION_META[group.action].label} rule`} onClick={() => setEditing(group)}>
                         <Icon icon={Pencil} />
                         Edit
                       </Button>
@@ -268,7 +268,7 @@ function RuleEditSheet({
       }
     >
       <div className="space-y-5">
-        <ActionBadge action={group.action} />
+        <ActionBadge action={group.action} showCode />
         <div className="grid gap-4 sm:grid-cols-2">
           {group.keys.map((k) => {
             const meta = RULE_FIELD_META[k];

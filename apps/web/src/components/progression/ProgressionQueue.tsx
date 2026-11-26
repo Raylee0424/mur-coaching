@@ -1,7 +1,6 @@
 'use client';
 
 import clsx from 'clsx';
-import { CheckCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RecommendationQueueItem, RecommendationQueueResponse, ResolvableStatus, WeightUnit } from '@coaching/shared';
@@ -11,27 +10,32 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/Icon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchField } from '@/components/ui/SearchField';
-import { TABLE, TD, TH, THEAD } from '@/components/ui/table';
+import { StatStrip } from '@/components/ui/StatStrip';
 import { useToast } from '@/components/ui/Toast';
 import { formatTarget } from '@/lib/format';
+import { initials } from '@/lib/initials';
 import { formatWeight } from '@/lib/units';
 import { ACTION_META, ActionBadge } from './ActionBadge';
 import {
   ACTION_FILTERS,
   cancel,
   flushAll,
+  groupByClient,
   pruneSelection,
   queueHref,
   schedule,
   scheduledIds,
+  selectedText,
   selectionState,
   toggleAll,
+  suggestionsText,
   toggleId,
   undoMessage,
   visibleItems,
   type ActionFilter,
   type ScheduledMap,
 } from './queue-model';
+import { plainReason } from './reason-model';
 import { WhyDrawer } from './WhyDrawer';
 
 interface Props {
@@ -134,6 +138,7 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
   const state = selectionState(items, selected);
   const filtersActive = q !== '' || action !== 'ALL';
   const hrefFor = useCallback((text: string) => queueHref(action, text), [action]);
+  const groups = groupByClient(items);
 
   return (
     <>
@@ -143,7 +148,17 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
         actions={<SearchField value={q} label="Search the queue by client or lift" placeholder="Filter by client or lift..." hrefFor={hrefFor} />}
       />
       <div className="space-y-5">
-        {/* Stitch tinted action filter bar + Accept selected CTA */}
+        <StatStrip
+          label="Queue summary"
+          dense
+          items={[
+            { label: 'Targets to review', value: String(counts.total), emphasis: counts.total > 0 },
+            { label: 'Add weight', value: String(counts.byAction.INCREASE_LOAD) },
+            { label: 'Add reps', value: String(counts.byAction.INCREASE_REPS) },
+            { label: 'Lighter weeks', value: String(counts.byAction.DELOAD) },
+          ]}
+        />
+
         <div className="flex flex-wrap items-center justify-between gap-4">
           <nav aria-label="Filter by call" className="flex flex-wrap items-center gap-2">
             <Link
@@ -163,6 +178,7 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
                 <Link
                   key={a}
                   href={queueHref(a, q)}
+                  title={meta.code}
                   aria-current={on ? 'page' : undefined}
                   className={clsx(
                     'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 font-sans text-label-sm transition-colors',
@@ -172,16 +188,26 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
                   )}
                 >
                   <Icon icon={meta.icon} size={14} />
-                  {meta.code} <span className="tabular-nums">({counts.byAction[a]})</span>
+                  {meta.label} <span className="tabular-nums">({counts.byAction[a]})</span>
                 </Link>
               );
             })}
           </nav>
 
-          <Button onClick={() => resolve([...selected], 'ACCEPTED')} disabled={selected.size === 0}>
-            <Icon icon={CheckCheck} />
-            Accept selected ({selected.size})
-          </Button>
+          {items.length > 0 ? (
+            <label className="inline-flex cursor-pointer items-center gap-2 font-sans text-label-md text-muted">
+              <input
+                type="checkbox"
+                checked={state === 'all'}
+                ref={(el) => {
+                  if (el) el.indeterminate = state === 'some';
+                }}
+                onChange={() => setSelected(toggleAll(items, selected))}
+                className="size-4 rounded"
+              />
+              Select all shown
+            </label>
+          ) : null}
         </div>
 
         {items.length === 0 ? (
@@ -195,47 +221,59 @@ export function ProgressionQueue({ queue, action, q, unit }: Props) {
             <EmptyState title="Queue is clear">New calls appear after clients log sessions.</EmptyState>
           )
         ) : (
-          <div className="overflow-x-auto rounded-md border border-line bg-card">
-            <table className={clsx(TABLE, 'min-w-[60rem]')}>
-              <caption className="sr-only">Pending progression recommendations</caption>
-              <thead className={THEAD}>
-                <tr>
-                  <th scope="col" className={clsx(TH, 'w-12 px-4')}>
-                    <input
-                      type="checkbox"
-                      aria-label="Select all"
-                      checked={state === 'all'}
-                      ref={(el) => {
-                        if (el) el.indeterminate = state === 'some';
-                      }}
-                      onChange={() => setSelected(toggleAll(items, selected))}
-                      className="size-4 rounded"
+          <div className="flex flex-col gap-4">
+            {groups.map((group) => (
+              <section key={group.clientId} aria-labelledby={`queue-client-${group.clientId}`} className="rounded-md border border-line bg-card">
+                <header className="flex items-center gap-3 border-b border-line px-4 py-3 sm:px-5">
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-raised font-mono text-label-md text-primary"
+                  >
+                    {initials(group.clientName)}
+                  </span>
+                  <h2 id={`queue-client-${group.clientId}`} className="min-w-0 truncate font-display text-title-md text-ink">
+                    <Link href={`/coach/clients/${group.clientId}?tab=lifts`} className="hover:text-primary">
+                      {group.clientName}
+                    </Link>
+                  </h2>
+                  <span className="ml-auto shrink-0 font-sans text-label-md text-muted">{suggestionsText(group.items.length)}</span>
+                </header>
+                <ul className="divide-y divide-line">
+                  {group.items.map((item) => (
+                    <Row
+                      key={item.id}
+                      item={item}
+                      unit={unit}
+                      selected={selected.has(item.id)}
+                      onToggle={() => setSelected((s) => toggleId(s, item.id))}
+                      onWhy={() => setWhy(item.id)}
+                      onResolve={(status) => resolve([item.id], status)}
                     />
-                  </th>
-                  <th scope="col" className={TH}>Client</th>
-                  <th scope="col" className={TH}>Exercise</th>
-                  <th scope="col" className={TH}>Current → Proposed</th>
-                  <th scope="col" className={TH}>Recommendation</th>
-                  <th scope="col" className={TH}>Engine Reason</th>
-                  <th scope="col" className={clsx(TH, 'text-right')}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <Row
-                    key={item.id}
-                    item={item}
-                    unit={unit}
-                    selected={selected.has(item.id)}
-                    onToggle={() => setSelected((s) => toggleId(s, item.id))}
-                    onWhy={() => setWhy(item.id)}
-                    onResolve={(status) => resolve([item.id], status)}
-                  />
-                ))}
-              </tbody>
-            </table>
+                  ))}
+                </ul>
+              </section>
+            ))}
           </div>
         )}
+
+        <p aria-live="polite" className="sr-only">
+          {selected.size > 0 ? selectedText(selected.size) : ''}
+        </p>
+        {selected.size > 0 ? (
+          <div
+            role="region"
+            aria-label="Bulk actions"
+            className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom)+0.5rem)] z-30 flex flex-wrap items-center gap-3 rounded-full border border-line bg-raised px-4 py-2 md:bottom-4"
+          >
+            <span className="font-sans text-label-md text-ink">{selectedText(selected.size)}</span>
+            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+            <Button variant="primary" className="ml-auto" onClick={() => resolve([...selected], 'ACCEPTED')}>
+              Accept selected ({selected.size})
+            </Button>
+          </div>
+        ) : null}
 
         {why ? (
           <WhyDrawer
@@ -275,51 +313,45 @@ function Row({
   const current = item.current ? `${formatWeight(item.current.weightKg, unit)} × ${item.current.reps}` : '—';
   const who = `${item.clientName} ${item.exerciseName}`;
   return (
-    <tr
+    <li
       className={clsx(
-        'border-t border-line transition-colors hover:bg-raised',
+        'grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-3 px-4 py-4 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:px-5',
         selected && 'bg-raised shadow-[inset_3px_0_0_theme(colors.primary.DEFAULT)]',
       )}
     >
-      <td className="px-4 py-4 align-middle">
+      <label className="-m-2 inline-flex size-11 items-center justify-center">
         <input type="checkbox" aria-label={`Select ${who}`} checked={selected} onChange={onToggle} className="size-4 rounded" />
-      </td>
-      <td className={clsx(TD, 'whitespace-nowrap')}>
-        <Link href={`/coach/clients/${item.clientId}?tab=lifts`} className="font-sans text-label-md text-ink hover:text-primary">
-          {item.clientName}
-        </Link>
-      </td>
-      <td className={clsx(TD, 'whitespace-nowrap text-ink')}>{item.exerciseName}</td>
-      <td className={clsx(TD, 'whitespace-nowrap font-mono text-label-md text-ink')}>
-        {current} <span className="text-muted">→</span>{' '}
-        <span className={ACTION_META[item.action].text}>{proposed || '—'}</span>
-      </td>
-      <td className={clsx(TD, 'whitespace-nowrap')}>
-        <ActionBadge action={item.action} />
-      </td>
-      <td className={TD}>
-        <span className="line-clamp-2 max-w-[22rem] font-sans text-label-md font-normal text-muted" title={item.reason}>
-          {item.reason}
-        </span>
-      </td>
-      <td className={clsx(TD, 'whitespace-nowrap text-right')}>
-        <div className="inline-flex items-center justify-end gap-2">
+      </label>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-sans text-label-lg text-ink">{item.exerciseName}</span>
+          <ActionBadge action={item.action} showCode />
+        </div>
+        <div className="flex flex-wrap items-center gap-x-1.5 font-mono text-label-md tabular-nums text-ink">
+          <span>{current}</span>
+          <span className="text-muted">→</span>
+          <span className={ACTION_META[item.action].text}>{proposed || '—'}</span>
+        </div>
+        <p className="break-words font-sans text-body-md text-muted">
+          {plainReason(item, unit)}{' '}
           <button
             type="button"
             aria-label={`Why this call for ${who}`}
             onClick={onWhy}
-            className="mr-1 font-sans text-label-sm text-primary underline hover:text-primary-soft"
+            className="font-sans text-label-sm text-primary underline hover:text-primary-soft"
           >
             Why?
           </button>
-          <Button variant="primary" size="sm" aria-label={`Accept ${who}`} onClick={() => onResolve('ACCEPTED')}>
-            Accept
-          </Button>
-          <Button variant="secondary" size="sm" aria-label={`Dismiss ${who}`} onClick={() => onResolve('DISMISSED')}>
-            Dismiss
-          </Button>
-        </div>
-      </td>
-    </tr>
+        </p>
+      </div>
+      <div className="col-span-2 grid grid-cols-2 gap-2 sm:col-span-1 sm:flex sm:items-center">
+        <Button variant="secondary" size="sm" className="w-full sm:w-auto" aria-label={`Dismiss ${who}`} onClick={() => onResolve('DISMISSED')}>
+          Dismiss
+        </Button>
+        <Button variant="primary" size="sm" className="w-full sm:w-auto" aria-label={`Accept ${who}`} onClick={() => onResolve('ACCEPTED')}>
+          Accept
+        </Button>
+      </div>
+    </li>
   );
 }

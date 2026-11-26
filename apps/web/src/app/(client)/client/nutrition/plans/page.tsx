@@ -39,7 +39,7 @@ export default async function MealPlansPage({ searchParams }: { searchParams: Pr
       />
 
       <div className="flex flex-col gap-6">
-        <nav aria-label="Library sections" className="flex items-center gap-6 overflow-x-auto border-b border-line">
+        <nav aria-label="Library sections" className="flex items-center gap-6 relative overflow-x-auto border-b border-line">
           {TABS.map((t) => (
             <Link
               key={t.key}

@@ -63,9 +63,18 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
   return (
     <>
       <PageHeader title={exercise.name} back={{ href: '/client/history?tab=charts', label: 'Back to history' }} />
-      <div className="max-w-3xl space-y-6">
+      <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+        {stats.length > 0 ? (
+          <div className="lg:col-span-12">
+            <StatStrip label="Lift stats" items={stats} />
+          </div>
+        ) : null}
+
         {rec && tone ? (
-          <section aria-labelledby="next-target" className={clsx('space-y-3 rounded-md border p-6', ACTION_META[rec.action].box)}>
+          <section
+            aria-labelledby="next-target"
+            className={clsx('space-y-3 rounded-md border p-6', ACTION_META[rec.action].box, last3.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12')}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id="next-target" className="font-mono text-label-sm uppercase text-muted">
                 Next Session Target
@@ -104,37 +113,39 @@ export default async function LiftDetailPage({ params }: { params: Promise<{ exe
             {rec.status === RecommendationStatus.PENDING ? (
               <p className="font-mono text-label-sm text-amber">Waiting for your coach to approve this change.</p>
             ) : null}
-            <p className="text-ui text-ink">{rec.reason}</p>
+            <p className="max-w-prose text-ui text-ink">{rec.reason}</p>
           </section>
         ) : (
-          <EmptyState title="No target yet">Log this lift in a session and your next target shows up here.</EmptyState>
+          <div className={last3.length > 0 ? 'lg:col-span-7' : 'lg:col-span-12'}>
+            <EmptyState title="No target yet">Log this lift in a session and your next target shows up here.</EmptyState>
+          </div>
         )}
 
-        {stats.length > 0 ? <StatStrip label="Lift stats" items={stats} /> : null}
-
         {last3.length > 0 ? (
-          <Panel title={`Last ${last3.length === 1 ? 'session' : `${last3.length} sessions`}`}>
-            <table className={TABLE}>
-              <caption className="sr-only">Recent sessions, newest first</caption>
-              <thead className={THEAD}>
-                <tr>
-                  <th scope="col" className={TH}>Date</th>
-                  <th scope="col" className={TH_NUM}>Weight</th>
-                  <th scope="col" className={TH_NUM}>Reps</th>
-                  <th scope="col" className={TH_NUM}>RPE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {last3.map((s) => (
-                  <tr key={s.exerciseLogId} className={TR}>
-                    <td className={`${TD} h-12 font-mono text-muted`}>{shortDate(s.performedAt)}</td>
-                    <td className={`${TD_NUM} h-12`}>{`${formatStepValue('weight', kgToDisplay(s.topWeightKg, unit))} ${unitLabel(unit)}`}</td>
-                    <td className={`${TD_NUM} h-12`}>{s.topSetReps}</td>
-                    <td className={`${TD_NUM} h-12`}>{s.avgRpe === null ? '—' : formatStepValue('rpe', s.avgRpe)}</td>
+          <Panel title={`Last ${last3.length === 1 ? 'session' : `${last3.length} sessions`}`} className="lg:col-span-5">
+            <div className="relative overflow-x-auto">
+              <table className={TABLE}>
+                <caption className="sr-only">Recent sessions, newest first</caption>
+                <thead className={THEAD}>
+                  <tr>
+                    <th scope="col" className={TH}>Date</th>
+                    <th scope="col" className={TH_NUM}>Weight</th>
+                    <th scope="col" className={TH_NUM}>Reps</th>
+                    <th scope="col" className={TH_NUM}>RPE</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {last3.map((s) => (
+                    <tr key={s.exerciseLogId} className={TR}>
+                      <td className={`${TD} h-12 font-mono text-muted`}>{shortDate(s.performedAt)}</td>
+                      <td className={`${TD_NUM} h-12`}>{`${formatStepValue('weight', kgToDisplay(s.topWeightKg, unit))} ${unitLabel(unit)}`}</td>
+                      <td className={`${TD_NUM} h-12`}>{s.topSetReps}</td>
+                      <td className={`${TD_NUM} h-12`}>{s.avgRpe === null ? '—' : formatStepValue('rpe', s.avgRpe)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Panel>
         ) : null}
       </div>

@@ -45,7 +45,7 @@ export function WhyThisCall({
     <SheetButton label={label} title={`Why this call: ${exerciseName}`} variant="drawer" buttonVariant="ghost" buttonClassName="h-11 px-4">
       <div className="space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <ActionBadge action={rec.action} />
+          <ActionBadge action={rec.action} showCode />
           {target ? <span className={clsx('font-mono text-metric', ACTION_META[rec.action].text)}>{target}</span> : null}
         </div>
         <section>

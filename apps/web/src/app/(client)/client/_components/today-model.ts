@@ -1,4 +1,4 @@
-import { RecommendationAction } from '@coaching/shared';
+import { PROGRESSION_ACTION_LABEL, RecommendationAction } from '@coaching/shared';
 import type { ExplainDto, TargetSource, TodayBanner, WeightUnit } from '@coaching/shared';
 import { formatStepValue, formatTargetLine } from '@/components/logger/logger-model';
 import { toNumber } from '@/lib/format';
@@ -9,14 +9,6 @@ export function greetingFor(hour: number): string {
   if (hour < 12) return 'Good morning';
   if (hour < 18) return 'Good afternoon';
   return 'Good evening';
-}
-
-export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  const first = parts[0]?.[0] ?? '';
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
-  return (first + last).toUpperCase();
 }
 
 /** "Nov 12" in UTC, matching formatDate so a session never shifts a day. */
@@ -34,6 +26,28 @@ export function todayTargetLine(
   return formatTargetLine({ weightKg: num(t.weightKg), repsMin: t.repsMin, repsMax: t.repsMax, rpe: num(t.rpe) }, unit);
 }
 
+/** Reps left in the tank for an RPE target, in words: "about 2 reps", "1-2 reps". */
+function tankPhrase(rpe: number): string {
+  const rir = Math.max(0, 10 - rpe);
+  if (rir === 0) return 'go to your limit, no reps left in the tank';
+  if (Number.isInteger(rir)) return `leave about ${rir} ${rir === 1 ? 'rep' : 'reps'} in the tank`;
+  return `leave ${Math.floor(rir)}-${Math.ceil(rir)} reps in the tank`;
+}
+
+/**
+ * Plain-language version of the engine target, shown before the telemetry line:
+ * "6-8 reps, leave about 2 reps in the tank". Empty when the target has no reps or effort.
+ */
+export function todayPlainLine(t: { repsMin: number | null; repsMax: number | null; rpe: string | null }): string {
+  const lo = t.repsMin ?? t.repsMax;
+  const hi = t.repsMax ?? t.repsMin;
+  const reps = lo === null || hi === null ? null : lo === hi ? `${lo} ${lo === 1 ? 'rep' : 'reps'}` : `${lo}-${hi} reps`;
+  const rpe = num(t.rpe);
+  const effort = rpe === null ? null : tankPhrase(rpe);
+  const line = [reps, effort].filter(Boolean).join(', ');
+  return line ? line[0]!.toUpperCase() + line.slice(1) : '';
+}
+
 export function targetSourceNote(source: TargetSource): string | null {
   switch (source) {
     case 'LAST_SESSION':
@@ -47,18 +61,11 @@ export function targetSourceNote(source: TargetSource): string | null {
   }
 }
 
-const BANNER_VERB: Record<RecommendationAction, string> = {
-  INCREASE_LOAD: 'INCREASE LOAD APPROVED',
-  INCREASE_REPS: 'ADD REPS APPROVED',
-  HOLD: 'HOLD APPROVED',
-  DELOAD: 'DELOAD APPROVED',
-};
-
 export function bannerLabel(action: RecommendationAction): string {
-  return BANNER_VERB[action];
+  return `${PROGRESSION_ACTION_LABEL[action]} approved`;
 }
 
-/** "Coach Ray accepted +2.5 kg on your Back Squat. Today's target is locked at 157.5 kg." */
+/** "Coach Morgan accepted +2.5 kg on your Back Squat. Today's target is locked at 157.5 kg." */
 export function bannerText(b: TodayBanner, unit: WeightUnit): string {
   const who = b.autoApproved || !b.approvedByName ? 'The engine auto-approved' : `${b.approvedByName} accepted`;
   const to = b.toWeightKg === null ? null : `${formatStepValue('weight', kgToDisplay(toNumber(b.toWeightKg), unit))} ${unitLabel(unit)}`;

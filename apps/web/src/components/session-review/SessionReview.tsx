@@ -50,7 +50,7 @@ export function SessionReview({ review, unit }: { review: SessionReviewDto; unit
               {summary ? <p className="font-mono text-ui">{summary}</p> : null}
               {ex.notes ? <p className="text-meta text-muted">Client note: {ex.notes}</p> : null}
 
-              <div role="table" aria-label={`${ex.name} sets`} className="overflow-x-auto">
+              <div role="table" aria-label={`${ex.name} sets`} className="relative overflow-x-auto">
                 <div className="min-w-[28rem] divide-y divide-line">
                   <div role="row" className="grid grid-cols-[3rem_1fr_5rem] gap-3 pb-1.5 font-mono text-micro uppercase text-muted">
                     <span role="columnheader">Set</span>

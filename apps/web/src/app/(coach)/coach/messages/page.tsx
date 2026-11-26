@@ -9,14 +9,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { messagingApi } from '@/lib/api/endpoints';
 import { requireUser } from '@/lib/auth';
+import { initials } from '@/lib/initials';
 import { firstParam } from '@/lib/form';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-function initials(name: string): string {
-  const parts = name.replace(' (Demo)', '').trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '')).toUpperCase() || '?';
-}
 
 export default async function CoachMessagesPage({ searchParams }: { searchParams: SearchParams }) {
   await requireUser(Role.COACH);

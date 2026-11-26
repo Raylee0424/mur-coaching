@@ -4,6 +4,10 @@ import type {
   GroupLeaderboardDto,
   SharedWorkoutDto,
   SocialOverviewDto,
+  ModerationReportDto,
+  ModerationReportPage,
+  ModerationReportsQuery,
+  ReportStatus,
   CreateGroupRequest,
   CreateReportRequest,
   ShareWorkoutRequest,
@@ -282,6 +286,7 @@ export const workoutLogsApi = {
     apiFetch<Paginated<WorkoutLogDto>>(`/clients/${encodeURIComponent(clientId)}/workout-logs`, {
       ...(query ? { query: { ...query } } : {}),
     }),
+  get: (id: string) => apiFetch<WorkoutLogDto>(`/workout-logs/${encodeURIComponent(id)}`),
   update: (id: string, body: UpdateWorkoutLogRequest) =>
     apiFetch<WorkoutLogDto>(`/workout-logs/${encodeURIComponent(id)}`, { method: 'PATCH', body }),
   remove: (id: string) => apiFetch<void>(`/workout-logs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
@@ -661,4 +666,12 @@ export const socialApi = {
   block: (userId: string) => apiFetch<void>('/me/blocks', { method: 'POST', body: { userId } }),
   unblock: (userId: string) => apiFetch<void>(idPath('/me/blocks', userId), { method: 'DELETE' }),
   report: (body: CreateReportRequest) => apiFetch<void>('/me/reports', { method: 'POST', body }),
+};
+
+/** Platform moderators only; the API answers 404 to everyone else. */
+export const moderationApi = {
+  reports: (query?: ModerationReportsQuery) =>
+    apiFetch<ModerationReportPage>('/moderation/reports', { query: { status: query?.status, cursor: query?.cursor } }),
+  setStatus: (id: string, status: ReportStatus) =>
+    apiFetch<ModerationReportDto>(idPath('/moderation/reports', id), { method: 'PATCH', body: { status } }),
 };

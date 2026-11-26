@@ -243,7 +243,7 @@ export function ProgramBuilder({ program, library, clients, conflicts = [], spor
 
       <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
         <div>
-          <div role="tablist" aria-label="Weeks" aria-orientation="vertical" className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+          <div role="tablist" aria-label="Weeks" aria-orientation="vertical" className="flex gap-1 relative overflow-x-auto lg:flex-col lg:overflow-visible">
             {weeks.map((w) => (
               <button
                 key={w}
@@ -276,7 +276,7 @@ export function ProgramBuilder({ program, library, clients, conflicts = [], spor
                 <span className="ml-2.5 font-sans text-label-md font-normal text-primary">
                   {block.mesoName}
                   {block.microLabel ? ` · ${block.microLabel}` : ''}
-                  {block.isDeload ? ' · DELOAD' : ''}
+                  {block.isDeload ? ' · Lighter week' : ''}
                   {block.rpe ? ` · RPE ${block.rpe}` : ''}
                 </span>
               ) : null}

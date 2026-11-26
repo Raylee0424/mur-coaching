@@ -43,7 +43,7 @@ export function ImportHistory({ jobs }: { jobs: ImportJobDto[] }) {
       {jobs.length === 0 ? (
         <p className="px-6 py-5 text-ui text-muted">No imports yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className={TABLE}>
             <thead className={THEAD}>
               <tr>

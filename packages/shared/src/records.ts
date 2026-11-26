@@ -1,7 +1,7 @@
 import type { DecimalString, IsoDateString } from './common';
 
 /** Rep counts shown in the PR matrix. A bracket holds the heaviest working set of at least that many reps. */
-export const PR_BRACKETS = [1, 3, 5, 8, 10, 15, 20] as const;
+export const PR_BRACKETS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 
 /** Window for "sets", "avg RPE" and "net delta" on the stats table, and for "new PRs". */
 export const RECORDS_WINDOW_DAYS = 30;
@@ -31,6 +31,10 @@ export interface ExerciseRecordsDto {
   cells: (RecordCellDto | null)[];
   /** Best estimated 1RM across the exercise's records. */
   bestE1rmKg: DecimalString;
+  /** The record that holds `bestE1rmKg`; its `reps` and `setReps` are the set's own reps. */
+  best: RecordCellDto;
+  /** Session e1RM inside the window, oldest first (sparkline). Empty when the lift was not trained in it. */
+  trendE1rmKg: DecimalString[];
   stats: ExerciseStatsSummary;
 }
 

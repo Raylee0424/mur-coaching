@@ -93,7 +93,7 @@ export function LimitationsPanel({ clientId, limitations, exercises, today, larg
             <EmptyState title="No limitations">Add an injury to flag affected exercises and sort safer swaps first.</EmptyState>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className={clsx(TABLE, 'min-w-[36rem]')}>
               <caption className="sr-only">Injuries and limitations</caption>
               <thead className={THEAD}>

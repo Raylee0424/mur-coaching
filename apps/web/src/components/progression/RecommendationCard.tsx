@@ -60,7 +60,7 @@ export function RecommendationCard({ recommendation: rec, exerciseName, canDismi
               {rec.resolvedAt ? ` · ${formatDate(rec.resolvedAt)}` : ''}
             </Badge>
           )}
-          <ActionBadge action={rec.action} />
+          <ActionBadge action={rec.action} showCode />
         </div>
       </header>
       {effective.overridden ? (

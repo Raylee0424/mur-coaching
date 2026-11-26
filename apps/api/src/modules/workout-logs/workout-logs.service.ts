@@ -15,12 +15,14 @@ import {
 } from './dto/workout-log.dto';
 
 const logInclude = {
+  workout: { select: { id: true, name: true } },
   exerciseLogs: {
     orderBy: { order: 'asc' },
     include: {
-      exercise: { select: { id: true, name: true } },
+      exercise: { select: { id: true, name: true, muscleGroup: true } },
       swappedFrom: { select: { id: true, name: true } },
-      sets: { orderBy: { setNumber: 'asc' } },
+      // Read before the records rebuild that follows a write, so a create/update response can lag one save.
+      sets: { orderBy: { setNumber: 'asc' }, include: { personalRecord: { select: { id: true } } } },
     },
   },
 } satisfies Prisma.WorkoutLogInclude;

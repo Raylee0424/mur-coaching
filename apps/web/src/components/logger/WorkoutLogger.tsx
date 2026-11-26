@@ -2,8 +2,9 @@
 
 import clsx from 'clsx';
 import { AlertTriangle, Check, CloudCheck, PlayCircle, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { PLATES_KG, PLATES_LB, TEMPO_PATTERN, WORKOUT_LOG_LIMITS, WeightUnit, plateLoader } from '@coaching/shared';
+import { TEMPO_PATTERN, WORKOUT_LOG_LIMITS, WeightUnit, plateLoader } from '@coaching/shared';
 import type {
   ExerciseAlternativeDto,
   ExerciseDto,
@@ -16,7 +17,8 @@ import type {
   VoiceIntent,
 } from '@coaching/shared';
 import { submitWorkoutLog } from '@/actions/workout-logs';
-import { DEFAULT_BAR, describePlates } from '@/components/calculators/calculators-model';
+import { DEFAULT_BAR, allPlates, describePlates } from '@/components/calculators/calculators-model';
+import { usePlateSet } from '@/components/calculators/usePlateSet';
 import { LimitationBadge } from '@/components/limitations/LimitationBadge';
 import { EFFORT_MODE_STORAGE_KEY } from '@/components/profile/AthletePreferences';
 import { ExercisePicker } from '@/components/programs/ExercisePicker';
@@ -170,6 +172,8 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
     return () => window.removeEventListener('beforeunload', warn);
   }, [done, totalSets]);
 
+  const { plates: gymPlates } = usePlateSet(unit);
+
   if (done) return <SessionComplete targets={done.targets} unit={unit} setsLogged={done.sets} clipSets={done.clipSets} />;
   if (!exercise) return null;
 
@@ -184,7 +188,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
   const editingSet = editing ? logged.find((s) => s.key === editing) : undefined;
   const targetLine = plan?.target ? formatTargetLine(plan.target, unit) : '';
   const restTarget = restOverride ?? plan?.restSeconds ?? null;
-  const plates = plateLoader(values.weight, DEFAULT_BAR[unit], unit === WeightUnit.LB ? PLATES_LB : PLATES_KG);
+  const plates = plateLoader(values.weight, DEFAULT_BAR[unit], gymPlates);
 
   function goTo(i: number, next: FlowStart = flow): void {
     const target = next.draft.exercises[i];
@@ -377,7 +381,7 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
           ) : null}
           {draft.exercises.length > 1 ? (
             <nav aria-label="Exercises in this session">
-              <ol className="flex gap-2 overflow-x-auto pb-1">
+              <ol className="flex gap-2 relative overflow-x-auto pb-1">
                 {draft.exercises.map((e, i) => {
                   const label = plans[e.key]?.name || byId.get(e.exerciseId)?.name || 'New exercise';
                   const active = i === index;
@@ -697,7 +701,11 @@ export function WorkoutLogger({ mode, today, workoutName, lastLog, catalog, temp
             </div>
             <p className="font-mono text-label-sm text-muted">
               Per side on {DEFAULT_BAR[unit]} {unitLabel(unit)} barbell
+              {plates && plates.shortfall > 0 ? ` · ${formatStepValue('weight', plates.shortfall)} ${unitLabel(unit)} short` : ''}
             </p>
+            <Link href="/client/tools" className="font-sans text-label-sm text-primary underline-offset-2 hover:underline">
+              {gymPlates.length < allPlates(unit).length ? 'Using your gym’s plates · Edit' : 'Missing some plates? Set your gym’s plates'}
+            </Link>
           </section>
 
           <section className="flex flex-col gap-2.5 rounded-md border border-line bg-card p-5">

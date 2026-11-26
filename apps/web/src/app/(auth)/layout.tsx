@@ -1,9 +1,9 @@
 import clsx from 'clsx';
-import { TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { RecommendationAction } from '@coaching/shared';
+import { ActionBadge } from '@/components/progression/ActionBadge';
 import { Wordmark } from '@/components/shell/Wordmark';
-import { Icon } from '@/components/ui/Icon';
 
 const LOG = [
   { date: 'Nov 20', weight: '155.0 kg', reps: '5 / 5', rpe: '8.0', highlight: true },
@@ -21,10 +21,7 @@ function EnginePreview() {
             <span className="font-sans text-label-sm uppercase tracking-wider text-muted">LIVE ENGINE PREVIEW</span>
             <p className="mt-0.5 font-display text-title-lg text-ink">Barbell Back Squat</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald/40 bg-emerald-bg px-3 py-1 font-sans text-label-sm text-emerald">
-            <Icon icon={TrendingUp} size={14} />
-            INCREASE_LOAD
-          </span>
+          <ActionBadge action={RecommendationAction.INCREASE_LOAD} />
         </div>
 
         <div className="overflow-hidden rounded-sm border border-line bg-canvas-low">

@@ -10,8 +10,8 @@ export default async function ClientLivePage() {
   return (
     <>
       <PageHeader title="Live session" back={{ href: '/client', label: 'Today' }} />
-      <div className="max-w-3xl space-y-3">
-        <p className="text-meta text-muted">Sets your coach logs for you appear here as they happen and land in your history.</p>
+      <div className="space-y-3">
+        <p className="max-w-prose text-meta text-muted">Sets your coach logs for you appear here as they happen and land in your history.</p>
         <ClientLiveFeed initial={session} unit={user.weightUnit} />
       </div>
     </>

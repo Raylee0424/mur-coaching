@@ -15,6 +15,7 @@ export function middleware(request: NextRequest): NextResponse {
 
   const inCoach = pathname === '/coach' || pathname.startsWith('/coach/');
   const inClient = pathname === '/client' || pathname.startsWith('/client/');
+  const inModeration = pathname === '/moderation' || pathname.startsWith('/moderation/');
   const inWelcome = pathname === '/welcome' || pathname.startsWith('/welcome/');
 
   if (inWelcome) {
@@ -35,6 +36,14 @@ export function middleware(request: NextRequest): NextResponse {
     if (inCoach && claims.role !== Role.COACH) return redirectTo(homeFor(claims.role));
     if (inClient && claims.role !== Role.CLIENT) return redirectTo(homeFor(claims.role));
     return NextResponse.next();
+  }
+
+  // Any role may be a moderator; the API decides (404 otherwise). Only a session is required here.
+  if (inModeration) {
+    if (claims) return NextResponse.next();
+    const res = redirectTo('/login');
+    if (token) res.cookies.delete(SESSION_COOKIE);
+    return res;
   }
 
   // Verifying needs a session (the code belongs to the signed-in account).
