@@ -1,3 +1,4 @@
+import clsx from 'clsx';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -8,11 +9,14 @@ import { Icon } from './Icon';
 export function PageHeader({
   title,
   meta,
+  metaOnPhone,
   actions,
   back,
 }: {
   title: string;
   meta?: ReactNode;
+  /** Show `meta` below the sm breakpoint too (truncates instead of hiding). */
+  metaOnPhone?: boolean;
   actions?: ReactNode;
   back?: { href: string; label: string };
 }) {
@@ -26,7 +30,7 @@ export function PageHeader({
           </Link>
         ) : null}
         <h1 className="min-w-0 text-balance break-words font-display text-title-lg text-ink">{title}</h1>
-        {meta ? <span className="hidden truncate font-sans text-label-md text-muted sm:inline">{meta}</span> : null}
+        {meta ? <span className={clsx('min-w-0 truncate font-sans text-label-md text-muted', metaOnPhone ? 'inline' : 'hidden sm:inline')}>{meta}</span> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-3">{actions}</div> : null}
     </header>

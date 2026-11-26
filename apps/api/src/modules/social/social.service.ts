@@ -22,8 +22,8 @@ import { HealthService } from '../health/health.service';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const DAY_MS = 86_400_000;
-const nameOf = (u: { name: string; displayName: string | null }): string => u.displayName?.trim() || u.name;
-const USER_NAME = { select: { id: true, name: true, displayName: true } } as const;
+export const nameOf = (u: { name: string; displayName: string | null }): string => u.displayName?.trim() || u.name;
+export const USER_NAME = { select: { id: true, name: true, displayName: true } } as const;
 
 export function inviteCode(): string {
   return Array.from({ length: SOCIAL_LIMITS.inviteCodeLength }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');

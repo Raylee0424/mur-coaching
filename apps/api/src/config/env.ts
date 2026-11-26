@@ -45,6 +45,11 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   AI_MODEL: z.string().min(1).default('claude-sonnet-4-6'),
   AUTOMATIONS_INTERVAL_MINUTES: z.coerce.number().int().min(0).max(1440).default(5),
+  /**
+   * Platform moderators: comma-separated emails, compared case-insensitively after trimming. Unset or empty = nobody
+   * can open the moderation queue. Read on every moderation request, so edits apply after a restart.
+   */
+  MODERATOR_EMAILS: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;

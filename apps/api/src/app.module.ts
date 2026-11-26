@@ -31,6 +31,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { HealthModule } from './modules/health/health.module';
 import { DataIoModule } from './modules/data-io/data-io.module';
 import { SocialModule } from './modules/social/social.module';
+import { ModerationModule } from './modules/moderation/moderation.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { CallsModule } from './modules/calls/calls.module';
 import { AutomationsModule } from './modules/automations/automations.module';
@@ -46,7 +47,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     PrismaModule,
     // Limits are per route via @RateLimit; no global ThrottlerGuard.
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 60 }], errorMessage: 'Too many requests. Wait a few minutes and try again.' }),
-    BillingModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule, LeadsModule, ResourcesModule, RoadmapsModule, MessagingModule, CheckInsModule, BodyModule, VideosModule, CallsModule, AutomationsModule, LiveModule, NutritionModule, AnalyticsModule, ReadinessModule, AiModule, HealthModule, DataIoModule, SocialModule],
+    BillingModule, MailModule, AuthModule, ClientsModule, ProgressionModule, WorkoutLogsModule, ExercisesModule, ProgramsModule, InvitesModule, LimitationsModule, TemplatesModule, ExerciseNotesModule, TodayModule, RecordsModule, ScheduleModule, SessionFeedbackModule, ClientGroupsModule, LeadsModule, ResourcesModule, RoadmapsModule, MessagingModule, CheckInsModule, BodyModule, VideosModule, CallsModule, AutomationsModule, LiveModule, NutritionModule, AnalyticsModule, ReadinessModule, AiModule, HealthModule, DataIoModule, SocialModule, ModerationModule],
   providers: [
     // Order matters: authenticate first, then authorize by role.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

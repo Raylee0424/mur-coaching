@@ -59,4 +59,10 @@ describe('middleware', () => {
     expect(middleware(request('/verify')).headers.get('location')).toBe('http://localhost:3000/login');
     expect(middleware(request('/verify', 'CLIENT')).headers.get('location')).toBeNull();
   });
+
+  it('requires a session for /moderation but lets either role through', () => {
+    expect(middleware(request('/moderation')).headers.get('location')).toBe('http://localhost:3000/login');
+    expect(middleware(request('/moderation', 'COACH')).headers.get('location')).toBeNull();
+    expect(middleware(request('/moderation', 'CLIENT')).headers.get('location')).toBeNull();
+  });
 });
