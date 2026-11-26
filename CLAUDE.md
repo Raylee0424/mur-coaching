@@ -39,6 +39,12 @@ Brain: `docs/brain/` (symlink to `/Users/raylee/Documents/Obsidian Vault/Project
 3. NEVER scan or bulk-read `design/stitch/`. Read ONLY the `code.html` files that Stitch Screens maps to the current feature.
 4. Never bulk-read the brain folder.
 
+## Agent Workflow
+- Features: ticket in `tasks/current/<ticket>.md` → `architect` writes `<ticket>-plan.md` → `implementor` builds it → main session reviews the diff.
+- Bugs: `debug` appends Findings to the ticket → `implementor` applies the fix.
+- Small edits (1–2 files): use `caveman:cavecrew-builder`, not the full flow.
+- When done, move the ticket and plan to `tasks/archive/` (gitignored).
+
 ## Memory Offload Rule
 After every batch, so the user can `/clear` before the next one:
 
