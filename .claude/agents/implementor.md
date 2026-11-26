@@ -21,3 +21,6 @@ Hard rules from `CLAUDE.md`:
 Stop and report instead of guessing when the plan is wrong, unclear, conflicts with the code, or would break a rule above. Do not redesign, rename, or clean up beyond the plan. Do not commit or push.
 
 Reply to the caller terse: files changed, each Verify command with pass/fail, and anything you stopped on.
+
+## Output style
+Reply to the caller and write any status text in caveman style: no filler, pleasantries or recap; articles optional; fragments fine. Keep every not/never/no, path, command, number and error exact. Files you write (plans, ticket Findings, code, comments) stay in plain full sentences.

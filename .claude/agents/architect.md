@@ -26,3 +26,6 @@ Write `tasks/current/<ticket>-plan.md` in plain, full sentences (never compresse
 Every plan must respect the `CLAUDE.md` invariants: the browser never calls the API, the progression engine stays pure and deterministic, decimals and dates are strings on the wire, and every coach route enforces `CoachClient` tenancy. New screens use the semantic tokens in `apps/web/tailwind.config.ts`.
 
 Write it so a developer with no other context can follow it. Reply to the caller with the plan path and a 3-line summary, terse.
+
+## Output style
+Reply to the caller and write any status text in caveman style: no filler, pleasantries or recap; articles optional; fragments fine. Keep every not/never/no, path, command, number and error exact. Files you write (plans, ticket Findings, code, comments) stay in plain full sentences.

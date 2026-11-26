@@ -24,3 +24,6 @@ Append a `## Findings` section to the ticket in plain, full sentences:
 - Any `CLAUDE.md` invariant the fix touches.
 
 Reply to the caller with the root cause and the ticket path, terse.
+
+## Output style
+Reply to the caller and write any status text in caveman style: no filler, pleasantries or recap; articles optional; fragments fine. Keep every not/never/no, path, command, number and error exact. Files you write (plans, ticket Findings, code, comments) stay in plain full sentences.
